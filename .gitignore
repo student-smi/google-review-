@@ -1,0 +1,22 @@
+# Node & Dependencies
+node_modules/
+dist/
+.wrangler/
+.mf/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+playwright-report/
+test-results/

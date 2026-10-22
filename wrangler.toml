@@ -1,0 +1,29 @@
+name = "reviewqr"
+main = "server/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "reviewqr-db"
+database_id = "cb6d515f-e326-40e4-9025-e2cea1b783ec"
+migrations_dir = "drizzle"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "fd0ebd26529044319c6e71c890356748"
+
+[ai]
+binding = "AI"
+
+[triggers]
+crons = ["0 0 * * *"]
+
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://reviewqr.panchalsmit673.workers.dev"
