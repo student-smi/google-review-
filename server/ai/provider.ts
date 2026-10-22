@@ -1,4 +1,4 @@
-import { validateReviewDraft, getFallbackTemplate } from './guardrails';
+import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates } from './guardrails';
 
 export interface GenerateReviewDraftParams {
   businessName: string;
@@ -11,24 +11,22 @@ export interface GenerateReviewDraftParams {
 export async function generateCustomerReviewDraft(
   aiBinding: any,
   params: GenerateReviewDraftParams
-): Promise<{ draft: string; usedFallback: boolean }> {
-  const { businessName, chips, freeText, language, tone } = params;
+): Promise<{ drafts: Array<{ id: string; title: string; text: string; wordCount: number }>; usedFallback: boolean }> {
+  const { businessName, chips, freeText, language } = params;
+  const fallbacks = getFallbackTemplates(businessName, chips, freeText, language);
 
   if (!aiBinding) {
-    return {
-      draft: getFallbackTemplate(businessName, chips, freeText, language),
-      usedFallback: true
-    };
+    return { drafts: fallbacks, usedFallback: true };
   }
 
-  const systemPrompt = `You are a helpful assistant for real customers writing genuine Google reviews for "${businessName}".
+  const systemPrompt = `You are a review wording assistant for genuine customers at "${businessName}".
 RULES:
-1. Use ONLY the facts provided by the customer in their chips or notes.
+1. Generate THREE DISTINCT review options (short & crisp, warm & detailed, balanced & friendly) using ONLY the facts provided by the customer.
 2. NEVER invent details (no fake staff names, no unmentioned dishes, no fabricated dates or prices).
-3. Tone: ${tone}.
-4. Language: ${language === 'hi' ? 'Hindi (Devanagari script)' : language === 'gu' ? 'Gujarati script' : language === 'hinglish' ? 'Hinglish (conversational Hindi in Latin alphabet)' : 'English'}.
-5. Length: between 30 and 90 words. Short and genuine.
-6. Output ONLY the review text. Do not include quotes, titles, greetings, or explanations.`;
+3. Language: ${language === 'hi' ? 'Hindi (Devanagari script)' : language === 'gu' ? 'Gujarati script' : language === 'hinglish' ? 'Hinglish' : 'English'}.
+4. Return valid JSON only with a "drafts" array containing 3 strings:
+   {"drafts": ["option 1 (short)", "option 2 (detailed)", "option 3 (friendly)"]}
+5. Do not include markdown codeblocks or explanations outside the JSON.`;
 
   const userPrompt = `Customer selected points: ${chips.join(', ') || 'Good experience'}
 Customer specific note: ${freeText || 'None'}`;
@@ -39,30 +37,34 @@ Customer specific note: ${freeText || 'None'}`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 180,
+      max_tokens: 350,
       temperature: 0.6
     });
 
-    const rawDraft = response?.response?.trim() || '';
+    const raw = response?.response?.trim() || '';
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed?.drafts) && parsed.drafts.length >= 2) {
+        const validatedDrafts = parsed.drafts.slice(0, 3).map((text: string, i: number) => {
+          const v = validateReviewDraft(text, chips, freeText);
+          const title = i === 0 ? 'Short & Crisp' : i === 1 ? 'Warm & Detailed' : 'Balanced & Friendly';
+          return {
+            id: `opt_${i + 1}`,
+            title,
+            text: v.isValid ? v.sanitizedDraft : fallbacks[i]?.text || fallbacks[0].text,
+            wordCount: text.split(/\s+/).filter(Boolean).length
+          };
+        });
 
-    // Validate anti-fabrication
-    const validation = validateReviewDraft(rawDraft, chips, freeText);
-    if (validation.isValid) {
-      return { draft: validation.sanitizedDraft, usedFallback: false };
+        return { drafts: validatedDrafts, usedFallback: false };
+      }
     }
-
-    // If validation flagged hallucinated specifics, return clean template fallback
-    return {
-      draft: getFallbackTemplate(businessName, chips, freeText, language),
-      usedFallback: true
-    };
   } catch (err) {
-    console.warn('Workers AI generation failed, using fallback template:', err);
-    return {
-      draft: getFallbackTemplate(businessName, chips, freeText, language),
-      usedFallback: true
-    };
+    console.warn('Workers AI generation failed, using 3 fallback options:', err);
   }
+
+  return { drafts: fallbacks, usedFallback: true };
 }
 
 export interface GenerateOwnerRepliesParams {

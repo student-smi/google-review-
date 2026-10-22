@@ -45,7 +45,7 @@ aiRoutes.post('/review-draft', async (c) => {
         language,
         tone
       });
-      return c.json({ ...fallback, rateLimited: true });
+      return c.json({ ...fallback, draft: fallback.drafts[0]?.text || '', rateLimited: true });
     }
 
     // Increment rate counter
@@ -116,13 +116,14 @@ aiRoutes.post('/review-draft', async (c) => {
           });
 
         // Store anonymized metadata (zero customer private text)
+        const primaryText = result.drafts[0]?.text || '';
         const eventId = `aiev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         await db.insert(aiDraftEvents).values({
           id: eventId,
           businessId,
           language,
           tone,
-          wordCount: result.draft.split(/\s+/).filter(Boolean).length,
+          wordCount: primaryText.split(/\s+/).filter(Boolean).length,
           copied: 0,
           createdAt: now
         });
@@ -140,7 +141,8 @@ aiRoutes.post('/review-draft', async (c) => {
 
   return c.json({
     success: true,
-    draft: result.draft,
+    drafts: result.drafts,
+    draft: result.drafts[0]?.text || '',
     usedFallback: result.usedFallback,
     quotaAvailable
   });

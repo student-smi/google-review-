@@ -14,16 +14,28 @@ import {
   ShieldCheck,
   Store,
   ChevronLeft,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2,
+  ThumbsUp,
+  Heart,
+  MessageCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '@/lib/utils';
+import { getFallbackTemplates } from '@server/ai/guardrails';
+
+export interface ReviewOption {
+  id: string;
+  title: string;
+  text: string;
+  wordCount: number;
+}
 
 export function CustomerFlowPage() {
   const { code } = useParams<{ code: string }>();
   const { t, i18n } = useTranslation();
 
-  // Wizard Step: 1: Welcome / Experience Chips, 2: Draft Review, 3: Success Handoff
+  // Wizard Step: 1: Express visit / Chips, 2: 3 Review Options Selection, 3: Success Handoff
   const [step, setStep] = useState(1);
 
   // Business metadata fetched via /api/public/r/:code
@@ -35,22 +47,26 @@ export function CustomerFlowPage() {
     label?: string;
   }>({
     businessName: 'Royal Sweets & Bakery',
-    googleReviewUrl: 'https://g.page/r/royal-sweets/review',
+    googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
     brandColor: '#4338CA',
     brandColorSecondary: '#D97706',
     label: 'Main Billing Counter'
   });
 
-  // Selected chips
+  // Selected chips & free text
   const [selectedChips, setSelectedChips] = useState<string[]>(['Delicious & fresh', 'Friendly staff']);
   const [freeText, setFreeText] = useState('');
   const [isListening, setIsListening] = useState(false);
 
-  // Draft state
-  const [draftLanguage, setDraftLanguage] = useState<'en' | 'hi' | 'gu' | 'hinglish'>('en');
+  // Language & generation state
+  const [draftLanguage, setDraftLanguage] = useState<'en' | 'hi' | 'gu' | 'hinglish'>('gu'); // Default to Gujarati/English
   const [draftTone, setDraftTone] = useState<'warm' | 'concise' | 'formal'>('warm');
-  const [reviewDraft, setReviewDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // 3 Review Options State
+  const [reviewOptions, setReviewOptions] = useState<ReviewOption[]>([]);
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
+  const [activeReviewText, setActiveReviewText] = useState('');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
 
   useEffect(() => {
@@ -132,11 +148,11 @@ export function CustomerFlowPage() {
     };
   };
 
-  // AI draft generator
-  const handleGenerateDraft = async () => {
+  // Generate 3 Review Options
+  const handleGenerateDrafts = async () => {
     setIsGenerating(true);
 
-    // Call funnel event
+    // Call funnel analytics event
     if (code) {
       fetch(`/api/public/r/${code}/event`, {
         method: 'POST',
@@ -145,30 +161,52 @@ export function CustomerFlowPage() {
       }).catch(() => {});
     }
 
-    // Dynamic generation from provided facts only (anti-fabrication)
-    setTimeout(() => {
-      const parts = [...selectedChips];
-      if (freeText.trim()) parts.push(freeText.trim());
+    try {
+      const res = await fetch('/api/ai/review-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: bizData.businessName,
+          chips: selectedChips,
+          freeText: freeText.trim(),
+          language: draftLanguage,
+          tone: draftTone
+        })
+      });
 
-      let text = '';
-      if (draftLanguage === 'hi') {
-        text = `आज ${bizData.businessName} का अनुभव बहुत बढ़िया रहा। ${parts.join(', ')} विशेष रूप से पसंद आया। स्टाफ़ का व्यवहार भी बहुत अच्छा था।`;
-      } else if (draftLanguage === 'gu') {
-        text = `આજે ${bizData.businessName} ખાતે મુલાકાત લીધી. ${parts.join(', ')} ખૂબ જ સરસ રહ્યું. સેવા પણ ઝડપી અને ઉત્તમ હતી.`;
-      } else if (draftLanguage === 'hinglish') {
-        text = `Visited ${bizData.businessName} today. Overall bohot accha experience tha! ${parts.join(', ')} was genuinely great. Definitely visiting again!`;
-      } else {
-        text = `Visited ${bizData.businessName} today. Really appreciated the ${parts.join(', ')}. The staff was courteous and everything was well-managed.`;
+      const data = (await res.json()) as any;
+      if (Array.isArray(data?.drafts) && data.drafts.length >= 2) {
+        setReviewOptions(data.drafts);
+        setSelectedOptionIndex(0);
+        setActiveReviewText(data.drafts[0].text);
+        setStep(2);
+        setIsGenerating(false);
+        return;
       }
+    } catch (err) {
+      console.warn('API draft call failed, using client fallback:', err);
+    }
 
-      setReviewDraft(text);
-      setIsGenerating(false);
-      setStep(2);
-    }, 400);
+    // Client-side fallback: 3 distinct options
+    const fallbacks = getFallbackTemplates(
+      bizData.businessName,
+      selectedChips,
+      freeText.trim(),
+      draftLanguage
+    );
+
+    setReviewOptions(fallbacks);
+    setSelectedOptionIndex(0);
+    setActiveReviewText(fallbacks[0].text);
+    setIsGenerating(false);
+    setStep(2);
   };
 
-  // Copy & Open Google Handoff
-  const handleCopyAndOpenGoogle = async () => {
+  // Copy specific review & open Google
+  const handleCopyReviewAndOpenGoogle = async (textToCopy?: string) => {
+    const text = textToCopy || activeReviewText || reviewOptions[selectedOptionIndex]?.text;
+    if (!text) return;
+
     // Track click
     if (code) {
       fetch(`/api/public/r/${code}/event`, {
@@ -178,11 +216,12 @@ export function CustomerFlowPage() {
       }).catch(() => {});
     }
 
-    const success = await copyToClipboard(reviewDraft);
+    await copyToClipboard(text);
+    setActiveReviewText(text);
     setCopiedSuccess(true);
     setStep(3);
 
-    // Automatically trigger Google Review link after small delay for clipboard animation
+    // Auto-open Google Review box
     setTimeout(() => {
       window.open(bizData.googleReviewUrl, '_blank');
     }, 700);
@@ -192,13 +231,12 @@ export function CustomerFlowPage() {
     <div
       className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans"
       style={{
-        // Dynamic brand CSS variables
         ['--brand-primary' as any]: bizData.brandColor,
         ['--brand-accent' as any]: bizData.brandColorSecondary
       }}
     >
       {/* Top Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
+      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div
@@ -217,19 +255,19 @@ export function CustomerFlowPage() {
             </div>
           </div>
 
-          {/* Language Selector */}
+          {/* Language Selector (Gujarati, Hindi, English) */}
           <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-semibold">
-            {(['en', 'hi', 'gu'] as const).map((lang) => (
+            {(['gu', 'hi', 'en'] as const).map((lang) => (
               <button
                 key={lang}
                 onClick={() => setDraftLanguage(lang)}
-                className={`px-2 py-1 rounded-lg transition-colors ${
+                className={`px-2.5 py-1 rounded-lg transition-colors ${
                   draftLanguage === lang
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-bold'
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {lang === 'en' ? 'EN' : lang === 'hi' ? 'हिंदी' : 'ગુજરાતી'}
+                {lang === 'gu' ? 'ગુજરાતી' : lang === 'hi' ? 'हिंदी' : 'EN'}
               </button>
             ))}
           </div>
@@ -239,7 +277,7 @@ export function CustomerFlowPage() {
         <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500">
           <span className="flex items-center gap-1">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Real customer feedback only</span>
+            <span>Real customer reviews only</span>
           </span>
           <a
             href={bizData.googleReviewUrl}
@@ -260,10 +298,18 @@ export function CustomerFlowPage() {
           <div className="space-y-5 animate-in fade-in duration-200">
             <div>
               <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                {t('customer.step1Title', 'How was your visit today?')}
+                {draftLanguage === 'gu'
+                  ? 'આજનો તમારો અનુભવ કેવો રહ્યો?'
+                  : draftLanguage === 'hi'
+                  ? 'आज का अनुभव कैसा रहा?'
+                  : 'How was your visit today?'}
               </h3>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                {t('customer.step1Desc', 'Tap what stood out or type details. We never invent details.')}
+                {draftLanguage === 'gu'
+                  ? 'તમને જે ગમ્યું તે સિલેક્ટ કરો. અમે તમારા શબ્દોમાંથી ૩ રિવ્યૂ વિકલ્પો બનાવીશું.'
+                  : draftLanguage === 'hi'
+                  ? 'जो अच्छा लगा उस पर टैप करें। हम आपके लिए ३ सुंदर रिव्यू विकल्प तैयार करेंगे।'
+                  : 'Tap what stood out or describe below. We will craft 3 authentic review options for you.'}
               </p>
             </div>
 
@@ -293,7 +339,11 @@ export function CustomerFlowPage() {
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
                 <Label className="text-slate-600 dark:text-slate-400">
-                  Add any specific detail (Optional)
+                  {draftLanguage === 'gu'
+                    ? 'કોઈ ખાસ વિગત (વૈકલ્પિક)'
+                    : draftLanguage === 'hi'
+                    ? 'कोई विशेष बात (वैकल्पिक)'
+                    : 'Add any specific detail (Optional)'}
                 </Label>
                 <button
                   type="button"
@@ -305,7 +355,7 @@ export function CustomerFlowPage() {
                   }`}
                 >
                   {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-                  <span>{isListening ? 'Listening...' : 'Voice (Tap to speak)'}</span>
+                  <span>{isListening ? 'સાંભળી રહ્યા છીએ...' : '🎙️ બોલીને લખો (Voice)'}</span>
                 </button>
               </div>
 
@@ -313,23 +363,33 @@ export function CustomerFlowPage() {
                 rows={3}
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
-                placeholder="e.g. Loved the samosas, fast billing counter, clean seating..."
+                placeholder={
+                  draftLanguage === 'gu'
+                    ? 'જેમ કે: સ્વાદ ખૂબ સ્વાદિષ્ટ હતો, કાજુ કતરી તાજી હતી, સ્ટાફ વિવેકી હતો...'
+                    : 'e.g. Loved the fresh kaju katli, quick billing, clean seating...'
+                }
                 className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 leading-relaxed"
               />
             </div>
           </div>
         )}
 
-        {/* STEP 2: Review Draft Verification */}
+        {/* STEP 2: 3 REVIEW OPTIONS SELECTION (Requested Feature) */}
         {step === 2 && (
-          <div className="space-y-5 animate-in fade-in duration-200">
+          <div className="space-y-4 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  {t('customer.step2Title', 'Your Review Draft')}
+                  {draftLanguage === 'gu'
+                    ? 'તમારા માટે ૩ રિવ્યૂ વિકલ્પો'
+                    : draftLanguage === 'hi'
+                    ? 'आपके लिए ३ रिव्यू विकल्प'
+                    : '3 Review Options for You'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Check and edit before posting on Google
+                  {draftLanguage === 'gu'
+                    ? 'કોઈપણ ૧ વિકલ્પ પસંદ કરીને Copy કરો અને ગૂગલમાં Paste કરો'
+                    : 'Pick any 1 review, copy it, and paste on Google'}
                 </p>
               </div>
               <button
@@ -337,40 +397,96 @@ export function CustomerFlowPage() {
                 className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-0.5"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Edit chips</span>
+                <span>ફરીથી</span>
               </button>
             </div>
 
-            {/* Editable Review Draft Box */}
-            <div className="rounded-2xl border-2 border-indigo-500/20 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
-              <Textarea
-                rows={5}
-                value={reviewDraft}
-                onChange={(e) => setReviewDraft(e.target.value)}
-                className="bg-transparent border-0 p-0 text-sm leading-relaxed resize-none focus-visible:ring-0 text-slate-900 dark:text-slate-100"
-              />
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
-                <span>{reviewDraft.split(/\s+/).filter(Boolean).length} words</span>
-                <button
-                  onClick={handleGenerateDraft}
-                  disabled={isGenerating}
-                  className="flex items-center gap-1 text-primary hover:underline font-semibold"
-                >
-                  <RefreshCw className={`h-3 w-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                  <span>Regenerate draft</span>
-                </button>
-              </div>
+            {/* 3 Review Options Cards List */}
+            <div className="space-y-3">
+              {reviewOptions.map((opt, idx) => {
+                const isSelected = selectedOptionIndex === idx;
+                return (
+                  <div
+                    key={opt.id || idx}
+                    onClick={() => {
+                      setSelectedOptionIndex(idx);
+                      setActiveReviewText(opt.text);
+                    }}
+                    className={`rounded-2xl border-2 p-4 transition-all cursor-pointer relative shadow-xs ${
+                      isSelected
+                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-md'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Top Card Badge & Radio */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                          }`}
+                        >
+                          {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          {idx === 0 && 'Option 1: Short & Crisp'}
+                          {idx === 1 && 'Option 2: Warm & Detailed'}
+                          {idx === 2 && 'Option 3: Balanced & Friendly'}
+                        </span>
+                      </div>
+
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
+                        {opt.wordCount || opt.text.split(/\s+/).length} words
+                      </Badge>
+                    </div>
+
+                    {/* Review text */}
+                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
+                      "{opt.text}"
+                    </p>
+
+                    {/* Direct Quick Copy Button on Each Card */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-400">
+                        {isSelected ? '✓ પસંદ કરેલ (Selected)' : 'ક્લિક કરીને પસંદ કરો'}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant={isSelected ? 'saffron' : 'outline'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyReviewAndOpenGoogle(opt.text);
+                        }}
+                        className="h-8 px-3 text-xs gap-1.5"
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span>Copy & Go to Google ↗</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Authenticity Verification Note */}
-            <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20 p-3.5 text-xs text-amber-800 dark:text-amber-300 space-y-1">
-              <span className="font-semibold flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <span>Authentic Review Guarantee</span>
+            {/* Editable Box for Selected Review */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 space-y-2 mt-2">
+              <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                <span>પસંદ કરેલ રિવ્યૂમાં ફેરફાર કરવો હોય તો અહીં લખો (Editable):</span>
+              </div>
+              <Textarea
+                rows={3}
+                value={activeReviewText}
+                onChange={(e) => setActiveReviewText(e.target.value)}
+                className="bg-transparent border-0 p-0 text-xs sm:text-sm leading-relaxed resize-none focus-visible:ring-0 text-slate-900 dark:text-slate-100"
+              />
+            </div>
+
+            {/* Authenticity verification guarantee */}
+            <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-[11px] leading-relaxed">
+                આ રિવ્યૂ ફક્ત તમારા આપેલા અનુભવ પરથી જ બનેલ છે. કોઈ ફેક વિગત ઉમેરેલ નથી.
               </span>
-              <p className="text-[11px] leading-relaxed">
-                {t('customer.authenticityNote', 'Please check that this text matches your genuine personal experience before posting on Google.')}
-              </p>
             </div>
           </div>
         )}
@@ -384,10 +500,17 @@ export function CustomerFlowPage() {
 
             <div className="space-y-1.5">
               <h3 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Copied to Clipboard!
+                રિવ્યૂ કૉપી થઈ ગયો!
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                Opening Google Review now. Simply <strong>paste</strong> your review into the box and choose your star rating.
+                ગૂગલ રિવ્યૂ પેજ ખુલી રહ્યું છે. ત્યાં <strong>Paste</strong> કરો અને તમારા મનપસંદ <strong>Star Rating (૧ થી ૫ સ્ટાર)</strong> આપો.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left text-xs space-y-1.5">
+              <span className="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Copied Review:</span>
+              <p className="text-slate-800 dark:text-slate-200 font-medium italic">
+                "{activeReviewText}"
               </p>
             </div>
 
@@ -399,13 +522,13 @@ export function CustomerFlowPage() {
                 className="w-full"
               >
                 <Button size="lg" variant="primary" className="w-full gap-2 text-sm font-semibold h-12">
-                  <span>Open Google Review Box ↗</span>
+                  <span>Open Google Review Box Now ↗</span>
                 </Button>
               </a>
             </div>
 
             <p className="text-[11px] text-slate-400">
-              Thank you for supporting a genuine local business!
+              સાચા સ્થાનિક બિઝનેસને સપોર્ટ કરવા બદલ આભાર!
             </p>
           </div>
         )}
@@ -418,12 +541,18 @@ export function CustomerFlowPage() {
             <Button
               size="lg"
               variant="saffron"
-              onClick={handleGenerateDraft}
+              onClick={handleGenerateDrafts}
               isLoading={isGenerating}
               className="w-full h-12 text-sm font-semibold gap-2 shadow-sm glow-saffron cursor-pointer"
             >
               <Sparkles className="h-4 w-4" />
-              <span>{t('customer.helpMeWrite', 'Help me write my review ✨')}</span>
+              <span>
+                {draftLanguage === 'gu'
+                  ? '૩ રિવ્યૂ વિકલ્પો બનાવો ✨'
+                  : draftLanguage === 'hi'
+                  ? '३ रिव्यू विकल्प बनाएं ✨'
+                  : 'Generate 3 Review Options ✨'}
+              </span>
             </Button>
 
             <a
@@ -449,11 +578,15 @@ export function CustomerFlowPage() {
             <Button
               size="lg"
               variant="primary"
-              onClick={handleCopyAndOpenGoogle}
+              onClick={() => handleCopyReviewAndOpenGoogle()}
               className="w-full h-12 text-sm font-semibold gap-2 shadow-sm glow-indigo cursor-pointer"
             >
               <Copy className="h-4 w-4" />
-              <span>{t('customer.copyAndOpenGoogle', 'Copy & Open Google Review ↗')}</span>
+              <span>
+                {draftLanguage === 'gu'
+                  ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
+                  : 'Copy Selected Review & Open Google ↗'}
+              </span>
             </Button>
 
             <a
@@ -465,9 +598,9 @@ export function CustomerFlowPage() {
               <Button
                 size="md"
                 variant="outline"
-                className="w-full h-11 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border-slate-200 dark:border-slate-800 cursor-pointer"
+                className="w-full h-10 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border-slate-200 dark:border-slate-800 cursor-pointer"
               >
-                <span>Direct link to Google</span>
+                <span>સીધા ગૂગલ પર જાઓ (Direct to Google)</span>
                 <ExternalLink className="h-3.5 w-3.5" />
               </Button>
             </a>

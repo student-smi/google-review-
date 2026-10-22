@@ -19,7 +19,6 @@ app.use('*', cors({
 
 // Public Routes (KV cache, Customer resolution, Funnel tracking, Customer AI draft)
 app.route('/api/public', publicRoutes);
-app.route('/r', publicRoutes); // Direct /r/:code support
 app.route('/api/ai', aiRoutes);
 
 // Authenticated Owner Routes
@@ -39,6 +38,21 @@ app.get('/api/health', (c) => {
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
+});
+
+// Fallback: Serve static assets & SPA routes via Workers ASSETS binding
+app.all('*', async (c) => {
+  if (c.env.ASSETS) {
+    const res = await c.env.ASSETS.fetch(c.req.raw);
+    if (res.status === 404 && !c.req.path.startsWith('/api')) {
+      // SPA fallback: return index.html for client-side routing
+      const url = new URL(c.req.url);
+      url.pathname = '/index.html';
+      return c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+    }
+    return res;
+  }
+  return c.text('Not Found', 404);
 });
 
 export default {

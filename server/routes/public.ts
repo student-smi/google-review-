@@ -8,6 +8,7 @@ export interface Env {
   KV: any;
   R2: any;
   AI: any;
+  ASSETS?: any;
   ENVIRONMENT?: string;
   APP_URL?: string;
 }

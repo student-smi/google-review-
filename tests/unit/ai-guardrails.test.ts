@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateReviewDraft, getFallbackTemplate } from '../../server/ai/guardrails';
+import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates } from '../../server/ai/guardrails';
 
 describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
   it('approves legitimate drafts reflecting customer input', () => {
@@ -43,5 +43,22 @@ describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
     const guFallback = getFallbackTemplate(business, chips, note, 'gu');
     expect(guFallback).toContain('Royal Sweets');
     expect(guFallback).toContain('મુલાકાત');
+  });
+
+  it('produces 3 distinct review options in Gujarati, Hindi and English', () => {
+    const business = 'Royal Sweets';
+    const chips = ['Delicious & fresh', 'Fast service'];
+    const note = 'Loved the kaju katli';
+
+    const guOptions = getFallbackTemplates(business, chips, note, 'gu');
+    expect(guOptions).toHaveLength(3);
+    expect(guOptions[0].title).toContain('Short & Crisp');
+    expect(guOptions[1].title).toContain('Warm & Detailed');
+    expect(guOptions[2].title).toContain('Balanced & Friendly');
+    expect(guOptions[0].text).not.toEqual(guOptions[1].text);
+
+    const enOptions = getFallbackTemplates(business, chips, note, 'en');
+    expect(enOptions).toHaveLength(3);
+    expect(enOptions[0].text).toContain('Royal Sweets');
   });
 });
