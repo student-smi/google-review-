@@ -44,6 +44,7 @@ CREATE TABLE `businesses` (
 	`google_review_url` text NOT NULL,
 	`category` text,
 	`phone` text,
+	`address` text,
 	`city` text,
 	`logo_url` text,
 	`brand_voice` text DEFAULT 'warm_grateful' NOT NULL,

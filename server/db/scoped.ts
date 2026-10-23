@@ -55,6 +55,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       googleReviewUrl: string;
       category?: string;
       phone?: string;
+      address?: string;
       city?: string;
       logoUrl?: string;
       brandVoice?: string;
@@ -83,6 +84,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         googleReviewUrl: string;
         category: string;
         phone: string;
+        address: string;
         city: string;
         logoUrl: string;
         brandVoice: string;

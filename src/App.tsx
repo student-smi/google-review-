@@ -10,7 +10,9 @@ import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
 import { LocalSeoPage } from './pages/dashboard/LocalSeoPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { MediaLibraryPage } from './pages/dashboard/MediaLibraryPage';
+import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
+import { AuthPage } from './pages/AuthPage';
 
 export function App() {
   return (
@@ -18,6 +20,10 @@ export function App() {
       <Routes>
         {/* Marketing Landing Page */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* Auth Pages */}
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/signup" element={<AuthPage />} />
 
         {/* Living Style Guide */}
         <Route path="/design" element={<DesignSystemPage />} />
@@ -28,6 +34,7 @@ export function App() {
         {/* Owner Dashboard */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<OverviewPage />} />
+          <Route path="businesses" element={<BusinessesPage />} />
           <Route path="qr" element={<QrStudioPage />} />
           <Route path="media" element={<MediaLibraryPage />} />
           <Route path="replies" element={<ReviewsRepliesPage />} />

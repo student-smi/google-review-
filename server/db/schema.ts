@@ -54,6 +54,7 @@ export const businesses = sqliteTable('businesses', {
   googleReviewUrl: text('google_review_url').notNull(),
   category: text('category'), // restaurant, retail, salon, healthcare, services
   phone: text('phone'),
+  address: text('address'),
   city: text('city'),
   logoUrl: text('logo_url'),
   brandVoice: text('brand_voice').default('warm_grateful').notNull(), // warm_grateful, professional, concise, enthusiastic

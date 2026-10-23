@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Building2,
   QrCode,
   Image as ImageIcon,
   MessageSquareQuote,
@@ -27,6 +28,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const primaryNavItems = [
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
+    { label: 'Businesses', to: '/dashboard/businesses', icon: Building2, badge: null },
     { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
     { label: 'Media Library', to: '/dashboard/media', icon: ImageIcon, badge: 'Photos' },
     { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote, badge: 'AI Copilot' },
@@ -45,17 +47,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
         <NavLink to="/dashboard" className="flex items-center gap-2.5 overflow-hidden">
-          {/* ClickUp 4.0 Dual-Tone Folded Gradient Logo */}
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7B68EE] via-[#4F46E5] to-[#EC4899] text-white font-black text-sm shadow-md shadow-indigo-500/20 shrink-0">
-            RQ
+          {/* ReviewBoost AI Brand Mark */}
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-sm shadow-md shadow-blue-500/20 shrink-0">
+            RB
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
-                Review<span className="text-[#7B68EE]">QR</span>
+                ReviewBoost <span className="text-[#2563EB] bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider border border-blue-200 dark:border-blue-850">AI</span>
               </span>
               <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
-                Cloudflare Free Tier
+                Google Review QR
               </span>
             </div>
           )}

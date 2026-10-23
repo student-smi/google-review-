@@ -37,10 +37,12 @@ interface HeaderProps {
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Live Overview',
-  '/dashboard/qr-studio': 'QR Studio & Posters',
-  '/dashboard/reviews': 'Reviews & AI Replies',
+  '/dashboard/businesses': 'Business Profiles',
+  '/dashboard/qr': 'QR Studio & Campaigns',
+  '/dashboard/media': 'Media & Photo Assets',
+  '/dashboard/replies': 'Reviews & AI Replies',
   '/dashboard/analytics': 'Conversion Analytics',
-  '/dashboard/seo': 'Local SEO Checklist',
+  '/dashboard/local-seo': 'Local SEO Checklist',
   '/dashboard/settings': 'Settings & Google Link'
 };
 

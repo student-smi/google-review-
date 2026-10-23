@@ -23,6 +23,8 @@ export interface BusinessItem {
   id: string;
   name: string;
   slug: string;
+  category?: string | null;
+  address?: string | null;
   city?: string | null;
   googleReviewUrl: string;
   brandColor: string;

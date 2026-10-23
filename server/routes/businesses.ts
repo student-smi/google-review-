@@ -51,6 +51,7 @@ businessRoutes.post('/', async (c) => {
     googleReviewUrl: body.googleReviewUrl,
     category: body.category || 'general',
     phone: body.phone || null,
+    address: body.address || null,
     city: body.city || null,
     logoUrl: body.logoUrl || null,
     brandVoice: body.brandVoice || 'warm_grateful',
