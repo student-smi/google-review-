@@ -20,15 +20,98 @@ import {
   ChevronUp,
   Sun,
   Moon,
-  Smartphone
+  Search,
+  Bell,
+  Settings,
+  Plus,
+  Inbox,
+  User,
+  Calendar,
+  Star,
+  Users,
+  Building2,
+  MapPin,
+  Flame,
+  CheckSquare
 } from 'lucide-react';
+
+interface CategoryTemplate {
+  id: string;
+  label: string;
+  businessName: string;
+  location: string;
+  doneCount: number;
+  progressCount: number;
+  recentCustomer: string;
+  highlight: string;
+  rating: string;
+}
+
+const CATEGORIES: CategoryTemplate[] = [
+  {
+    id: 'restaurants',
+    label: 'Restaurants & Cafes',
+    businessName: 'Royal Sweets & Restaurant',
+    location: 'Kalupur, Ahmedabad',
+    doneCount: 14,
+    progressCount: 3,
+    recentCustomer: 'Deep Patel',
+    highlight: 'Crispy Dhokla & Soft Kaju Katli',
+    rating: '5.0'
+  },
+  {
+    id: 'retail',
+    label: 'Retail & Sweets',
+    businessName: 'Shivalik Jewellers & Gems',
+    location: 'C.G. Road, Ahmedabad',
+    doneCount: 18,
+    progressCount: 2,
+    recentCustomer: 'Priya Sharma',
+    highlight: 'Hallmarked Gold & Polite Staff',
+    rating: '4.9'
+  },
+  {
+    id: 'clinics',
+    label: 'Clinics & Doctors',
+    businessName: 'Apex Dental & Smile Care',
+    location: 'Navrangpura, Ahmedabad',
+    doneCount: 22,
+    progressCount: 4,
+    recentCustomer: 'Rajesh Shah',
+    highlight: 'Painless Root Canal & Clean Clinic',
+    rating: '5.0'
+  },
+  {
+    id: 'salons',
+    label: 'Salons & Spas',
+    businessName: 'Bliss Luxury Hair Studio',
+    location: 'Bodakdev, Ahmedabad',
+    doneCount: 11,
+    progressCount: 2,
+    recentCustomer: 'Ananya Mehta',
+    highlight: 'Trendy Haircut & Relaxing Facial',
+    rating: '4.9'
+  },
+  {
+    id: 'services',
+    label: 'Professional Services',
+    businessName: 'Rapid Auto Diagnostics',
+    location: 'S.G. Highway, Ahmedabad',
+    doneCount: 9,
+    progressCount: 3,
+    recentCustomer: 'Ketan Trivedi',
+    highlight: 'Prompt AC Repair & Genuine Spares',
+    rating: '4.8'
+  }
+];
 
 export function LandingPage() {
   const { theme, toggleTheme } = useTheme();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [activeCategory, setActiveCategory] = useState<string>('restaurants');
 
-  // Phone Mock interactive state
-  const [mockStep, setMockStep] = useState<1 | 2>(1);
+  const selectedTemplate =
+    CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
 
   const faqs = [
     {
@@ -50,201 +133,353 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
-      {/* Top Navbar */}
-      <header className="border-b border-border/80 sticky top-0 bg-background/85 backdrop-blur-md z-40">
+    <div className="min-h-screen bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-600">
+      {/* 1. TOP ANNOUNCEMENT RIBBON (ClickUp 4.0 Style) */}
+      <div className="bg-[#0E131F] text-slate-200 text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-1.5 border-b border-slate-800">
+        <span>Meet ReviewQR 2.0: Polished, powerful, and Google Places connected.</span>
+        <NavLink
+          to="/onboarding"
+          className="text-white font-semibold underline underline-offset-2 hover:text-indigo-400 transition-colors ml-1 inline-flex items-center"
+        >
+          <span>Try 2.0 now</span>
+          <span className="ml-1 text-[10px]">›</span>
+        </NavLink>
+      </div>
+
+      {/* 2. TOP NAVBAR (ClickUp 4.0 Style) */}
+      <header className="border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-sm glow-indigo">
-              RQ
-            </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">
-              Review<span className="text-accent">QR</span>
-            </span>
-            <Badge variant="outline" className="hidden sm:inline-flex text-[10px] font-mono">
-              India Local SaaS
-            </Badge>
+          {/* Left: Brand Logo & Navigation */}
+          <div className="flex items-center gap-8">
+            <NavLink to="/" className="flex items-center gap-2.5">
+              {/* ClickUp Style Folded Dual-Tone Gradient Logo Mark */}
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7B68EE] via-[#4F46E5] to-[#EC4899] text-white font-black text-sm shadow-md shadow-indigo-500/25">
+                RQ
+              </div>
+              <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">
+                Review<span className="text-[#7B68EE]">QR</span>
+              </span>
+            </NavLink>
+
+            {/* Menu Links with Dropdowns */}
+            <nav className="hidden lg:flex items-center gap-6 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+              <a
+                href="#features"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
+              >
+                <span>AI Reviews</span>
+                <span className="text-[10px] text-slate-400">▾</span>
+              </a>
+              <a
+                href="#how-it-works"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
+              >
+                <span>Product</span>
+                <span className="text-[10px] text-slate-400">▾</span>
+              </a>
+              <a
+                href="#trust"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
+              >
+                <span>Google Policy</span>
+                <span className="text-[10px] text-slate-400">▾</span>
+              </a>
+              <a
+                href="#pricing"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Free Forever
+              </a>
+              <NavLink
+                to="/design"
+                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Style Guide
+              </NavLink>
+            </nav>
           </div>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a>
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#trust" className="hover:text-foreground transition-colors">Trust & Integrity</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Free Tier</a>
-            <NavLink to="/design" className="hover:text-primary transition-colors flex items-center gap-1">
-              <span>Style Guide</span>
-              <span className="text-[10px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded font-mono">/design</span>
-            </NavLink>
-          </nav>
-
+          {/* Right: Actions */}
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-slate-700" />
+              )}
             </button>
 
-            <NavLink to="/dashboard">
-              <Button size="sm" variant="primary" className="gap-2 font-semibold">
-                <span>Open Dashboard</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+            <NavLink
+              to="/dashboard"
+              className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 transition-colors hidden sm:block"
+            >
+              Login
+            </NavLink>
+
+            <NavLink to="/onboarding">
+              <button className="h-9 px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
+                Get Started
+              </button>
             </NavLink>
           </div>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="relative pt-12 sm:pt-20 pb-16 sm:pb-24 overflow-hidden">
-        {/* Subtle decorative glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary/10 rounded-full blur-3xl -z-10 pointer-events-none" />
-
+      {/* 3. HERO SECTION (ClickUp 4.0 Exact Two-Column Layout) */}
+      <section className="relative pt-12 sm:pt-16 pb-16 lg:pb-24 overflow-hidden border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Hero Copy */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>100% Google Policy Compliant • Zero Review Gating</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+            {/* Left Hero Column */}
+            <div className="lg:col-span-5 space-y-6 text-left">
+              {/* ClickUp Capsule Badge */}
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-purple-300/60 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-950/30 px-3 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300 shadow-xs">
+                <span>Introducing ReviewQR 2.0</span>
+                <span className="text-[10px]">›</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.15]">
-                Help real customers write genuine Google reviews{' '}
-                <span className="text-primary underline decoration-accent/60 decoration-wavy decoration-2">
-                  in seconds.
-                </span>
+              {/* ClickUp Signature Huge Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.08]">
+                Maximize genuine customer reviews
               </h1>
 
-              <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Empower your genuine patrons to express their actual experience with guided chips and voice input in English, Hindi, and Gujarati. No fake reviews, no ratings manipulation.
+              {/* Subtitle */}
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                Replace manual asking. Every real customer, AI review draft, and Google review in one place.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2">
+              {/* ClickUp CTA Button Row */}
+              <div className="flex flex-wrap items-center gap-4 pt-1">
                 <NavLink to="/onboarding">
-                  <Button size="lg" variant="saffron" className="w-full sm:w-auto h-12 px-6 gap-2 text-base font-semibold shadow-md glow-saffron">
-                    <Sparkles className="h-5 w-5" />
-                    <span>Start Free (No Credit Card)</span>
-                  </Button>
+                  <button className="h-12 px-7 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-base font-bold shadow-lg hover:shadow-xl transition-all duration-150 transform hover:-translate-y-0.5 cursor-pointer">
+                    Get started. It's FREE!
+                  </button>
                 </NavLink>
 
-                <NavLink to="/dashboard">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-6 gap-2 text-base">
-                    <span>Explore Live Demo</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </NavLink>
+                <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">Free forever.</div>
+                  <div>No credit card.</div>
+                </div>
               </div>
 
-              {/* Trust Indicators */}
-              <div className="pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-muted-foreground border-t border-border/60">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span>Cloudflare Free Tier</span>
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span>Multilingual (EN, हिंदी, ગુજરાતી)</span>
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  <span>Client-Side Poster Export</span>
-                </span>
+              {/* Category Pills Header & Pills (ClickUp Filter Buttons) */}
+              <div className="pt-6 space-y-3">
+                <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase font-mono">
+                  GET 400% MORE REVIEWS • CUSTOMIZE YOUR WORKSPACE
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map((cat) => {
+                    const isActive = activeCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setActiveCategory(cat.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+                          isActive
+                            ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 shadow-xs ring-2 ring-sky-500/20'
+                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:text-slate-900'
+                        }`}
+                      >
+                        {isActive && <Check className="h-3 w-3 text-sky-600 dark:text-sky-400 stroke-[3]" />}
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Right: Interactive Phone Mockup */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-[320px] rounded-[44px] border-[8px] border-slate-900 bg-slate-900 shadow-2xl p-2.5 relative">
-                {/* Speaker pill notch */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-4 bg-slate-800 rounded-full z-30 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-slate-700 mr-2" />
-                  <div className="w-8 h-1.5 rounded-full bg-slate-700" />
+            {/* Right Hero Column: THE SIGNATURE CLICKUP 4.0 APP WINDOW MOCKUP */}
+            <div className="lg:col-span-7">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] shadow-2xl overflow-hidden text-left transition-all duration-300">
+                {/* Window Top Navigation & Controls */}
+                <div className="h-10 bg-slate-50 dark:bg-[#141A28] border-b border-slate-200 dark:border-slate-800/80 px-4 flex items-center justify-between text-xs">
+                  {/* Left Workspace Switcher */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-xs">
+                      <span className="text-amber-500">⭐</span>
+                      <span className="truncate max-w-[160px]">{selectedTemplate.businessName}</span>
+                      <span className="text-[10px] text-slate-400">▾</span>
+                    </div>
+                  </div>
+
+                  {/* Center Search Pill */}
+                  <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-0.5 text-[11px] text-slate-400 w-52 shadow-xs">
+                    <Search className="h-3 w-3 text-slate-400" />
+                    <span>Search reviews, staff...</span>
+                  </div>
+
+                  {/* Right Window Icons */}
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Bell className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
+                    <Settings className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
+                    <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 text-white font-bold text-[9px] flex items-center justify-center">
+                      RS
+                    </div>
+                  </div>
                 </div>
 
-                {/* Inner Phone Screen */}
-                <div className="w-full h-[580px] rounded-[34px] bg-slate-50 dark:bg-slate-950 overflow-hidden text-slate-900 dark:text-slate-100 flex flex-col justify-between pt-8 pb-4 px-4 text-left font-sans shadow-inner">
-                  {/* Business header inside phone */}
-                  <div className="border-b border-slate-200 dark:border-slate-800 pb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
-                        RS
+                {/* Inner Window Split View */}
+                <div className="grid grid-cols-12 min-h-[380px] sm:min-h-[420px]">
+                  {/* Left Inner Sidebar (ClickUp Style) */}
+                  <div className="hidden md:block col-span-4 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#121724] p-3 text-xs space-y-3 font-medium select-none">
+                    <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200 px-2 py-1 rounded-lg">
+                      <span className="flex items-center gap-1.5">
+                        <HomeIcon className="h-3.5 w-3.5 text-slate-500" /> Home
+                      </span>
+                      <span className="text-[10px] text-slate-400">+ ▾</span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold">
+                        <span className="flex items-center gap-2">
+                          <Inbox className="h-3.5 w-3.5" />
+                          <span>Inbox</span>
+                        </span>
+                        <span className="h-4 px-1.5 rounded-full bg-pink-500 text-white text-[10px] font-bold flex items-center justify-center">
+                          3
+                        </span>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold leading-tight">Royal Sweets</div>
-                        <div className="text-[10px] text-slate-500">Google Review Assistant</div>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <CheckSquare className="h-3.5 w-3.5" />
+                        <span>My Reviews</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Scan Analytics</span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[9px] py-0 px-1 font-mono">
-                      Step {mockStep}/2
-                    </Badge>
-                  </div>
 
-                  {/* Dynamic interactive body inside phone */}
-                  <div className="flex-1 py-3 space-y-3 overflow-hidden">
-                    {mockStep === 1 ? (
-                      <div className="space-y-3">
-                        <div className="text-xs font-bold">How was your visit today?</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {['Delicious & fresh', 'Friendly staff', 'Clean ambiance'].map((chip, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-600 text-white shadow-xs"
-                            >
-                              ✓ {chip}
-                            </span>
-                          ))}
-                          <span className="px-2 py-1 rounded-lg text-[10px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600">
-                            + Fast service
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                        Active Standees
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                          <QrCode className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">Main Billing Counter</span>
+                        </div>
+                        <div className="flex items-center justify-between px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                          <span className="flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-pink-500" />
+                            <span>AI Reply Agent</span>
+                          </span>
+                          <span className="h-3.5 px-1 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[9px] font-bold">
+                            Live
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2">
-                          "Kaju katli was soft & fresh. Staff was very helpful."
-                        </div>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Ready for Google
-                        </div>
-                        <div className="text-[11px] leading-relaxed bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
-                          "Visited Royal Sweets today. The kaju katli was freshly made and very soft, and the packaging was top-notch. Courteous staff."
-                        </div>
-                        <div className="text-[9px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-lg">
-                          ℹ️ Verified from your notes only.
-                        </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                        Location
                       </div>
-                    )}
+                      <div className="flex items-center gap-1.5 px-2 py-1 text-slate-600 dark:text-slate-400 font-semibold truncate">
+                        <MapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                        <span className="truncate">{selectedTemplate.location}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Bottom Phone Actions */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                    {mockStep === 1 ? (
-                      <Button
-                        size="sm"
-                        variant="saffron"
-                        onClick={() => setMockStep(2)}
-                        className="w-full text-xs font-semibold h-10 gap-1.5"
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        <span>Tap to generate draft</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={() => setMockStep(1)}
-                        className="w-full text-xs font-semibold h-10 gap-1.5"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Copy & Open Google ↗</span>
-                      </Button>
-                    )}
-                    <div className="text-center">
-                      <span className="text-[10px] text-slate-500 underline">
-                        Skip, go straight to Google
+                  {/* Right Inner Content: Tasks / Reviews Table (ClickUp Style) */}
+                  <div className="col-span-12 md:col-span-8 p-3 sm:p-4 space-y-4 bg-white dark:bg-[#0F1420]">
+                    {/* View Switcher Tabs */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          <span>Google Reviews</span>
+                        </span>
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 ml-2">
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                            Tasks
+                          </span>
+                          <span className="px-1.5 py-0.5 text-slate-400">Feed</span>
+                          <span className="px-1.5 py-0.5 text-slate-400 hidden sm:inline">Stats</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                        ★ {selectedTemplate.rating} Rating
                       </span>
+                    </div>
+
+                    {/* Table Column Labels */}
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 px-2">
+                      <span>CUSTOMER REVIEW TASK</span>
+                      <span className="hidden sm:inline">ASSIGNEE / STATUS</span>
+                    </div>
+
+                    {/* SECTION 1: DONE (Green Group) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 px-2 rounded-md bg-emerald-600 text-white font-bold text-[10px] uppercase flex items-center gap-1">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                          <span>DONE</span>
+                          <span className="ml-1 opacity-80">{selectedTemplate.doneCount}</span>
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                              ✓
+                            </span>
+                            <span>{selectedTemplate.recentCustomer} • 5-Star Review</span>
+                          </div>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Posted on Google
+                          </span>
+                        </div>
+
+                        <div className="pl-6 text-[11px] text-slate-500 dark:text-slate-400">
+                          "{selectedTemplate.highlight}. Prompt service and friendly staff."
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
+                            ✓
+                          </span>
+                          <span>Counter Standee Scanned & Verified</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">100% Policy Compliant</span>
+                      </div>
+                    </div>
+
+                    {/* SECTION 2: IN PROGRESS (Blue Group) */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 px-2 rounded-md bg-sky-500 text-white font-bold text-[10px] uppercase flex items-center gap-1">
+                          <span>IN PROGRESS</span>
+                          <span className="ml-1 opacity-80">{selectedTemplate.progressCount}</span>
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+                          <span>Customer scanning QR at Main Counter</span>
+                        </div>
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold bg-sky-500/10 px-2 py-0.5 rounded-md">
+                          AI Drafts Generating
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                          <span className="h-2 w-2 rounded-full bg-slate-400" />
+                          <span>Owner 1-Click AI Reply Drafted</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">Ready to Post</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -254,157 +489,198 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* HONEST TRUST & INTEGRITY SECTION */}
-      <section id="trust" className="py-16 bg-secondary/30 border-y border-border/80">
+      {/* 4. TRUSTED BY THE BEST (ClickUp Signature Gray Logo Row) */}
+      <section className="py-12 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#0E131F]/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center space-y-6">
+            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase font-mono">
+              TRUSTED BY THE BEST LOCAL BUSINESSES ACROSS INDIA
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-70 grayscale hover:grayscale-0 transition-all duration-300">
+              <span className="font-extrabold text-lg tracking-tighter text-slate-800 dark:text-slate-300">
+                ROYAL SWEETS
+              </span>
+              <span className="font-bold text-lg tracking-wide text-slate-800 dark:text-slate-300">
+                havmor<span className="text-pink-500 font-black">.</span>
+              </span>
+              <span className="font-black text-lg tracking-tight text-slate-800 dark:text-slate-300">
+                CHAI POINT
+              </span>
+              <span className="font-extrabold text-lg tracking-wider text-slate-800 dark:text-slate-300">
+                SANKALP
+              </span>
+              <span className="font-serif font-bold text-lg text-slate-800 dark:text-slate-300">
+                KALYAN
+              </span>
+              <span className="font-sans font-bold text-lg text-slate-800 dark:text-slate-300">
+                APOLLO
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. HONEST TRUST & INTEGRITY SECTION */}
+      <section id="trust" className="py-16 bg-white dark:bg-[#0B0F19]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <Badge variant="outline" className="text-xs">Product Integrity (Non-Negotiable)</Badge>
-            <h2 className="text-3xl font-bold tracking-tight">
-              Real reviews only. No gating. No fake reviews.
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>100% Policy Integrity (Non-Negotiable)</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Real reviews only. Zero review gating.
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               ReviewQR strictly opposes review manipulation, star pushing, or gating negative feedback.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                  01
-                </div>
-                <h3 className="font-semibold text-base">Zero Review Gating</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Every customer who scans the QR code is immediately provided a direct link to your official Google review page. We never route unhappy customers away or filter responses.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                01
+              </div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Zero Review Gating</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Every customer who scans the QR code is immediately provided a direct link to your official Google review page. We never route unhappy customers away or filter responses.
+              </p>
+            </div>
 
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-                  02
-                </div>
-                <h3 className="font-semibold text-base">No Hallucinated Details</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  AI is strictly a wording helper. It only structures details the customer selects or types. It is programmed never to invent dishes, staff names, prices, or dates.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                02
+              </div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">No Hallucinated Details</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                AI is strictly a wording helper. It only structures details the customer selects or types. It is programmed never to invent dishes, staff names, prices, or dates.
+              </p>
+            </div>
 
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-accent/15 text-accent-foreground flex items-center justify-center font-bold">
-                  03
-                </div>
-                <h3 className="font-semibold text-base">No Fake Promises</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  No "guaranteed 500 five-star reviews" or ranking gimmicks. Genuine quality and prompt customer service are the only true drivers of local business growth.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                03
+              </div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Real Google Cloud Integration</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Integrated directly with Google Places API and Google Identity Services for instant place discovery and verified owner login.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
-      <section id="how-it-works" className="py-20">
+      {/* 6. HOW IT WORKS SECTION */}
+      <section id="how-it-works" className="py-20 bg-slate-50/60 dark:bg-[#0E131F]/60 border-y border-slate-200/80 dark:border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
           <div className="text-center max-w-xl mx-auto space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">How ReviewQR Works</h2>
-            <p className="text-sm text-muted-foreground">3 simple steps to genuine customer reviews</p>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              How ReviewQR Works
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              3 simple steps to genuine customer reviews in seconds
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm glow-indigo">
+              <div className="h-14 w-14 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center shadow-lg">
                 <QrCode className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg">1. Customer Scans QR</h3>
-              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">1. Customer Scans QR</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
                 Print dynamic table-tents or counter posters using our browser export tool. Customers scan with any camera.
               </p>
             </div>
 
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-accent text-accent-foreground flex items-center justify-center shadow-sm glow-saffron">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-pink-500 text-white flex items-center justify-center shadow-lg">
                 <Sparkles className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg">2. Taps Real Experience</h3>
-              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                Customer taps chips or speaks in Hindi/Gujarati/English. Our AI formats their exact words into a polished draft.
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">2. Taps Real Experience</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
+                Customer taps chips or speaks in Hindi/Gujarati/English. Our AI formats their exact words into 3 calibrated options.
               </p>
             </div>
 
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+              <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
                 <ExternalLink className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg">3. Posts on Google</h3>
-              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                One-tap copy redirects to the official Google review box. The customer edits and submits it themselves.
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">3. Posts on Google</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
+                1-tap clipboard copy automatically opens the official Google review box. The customer edits and submits with 1 click.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* PRICING & CLOUDFLARE FREE TIER SECTION */}
-      <section id="pricing" className="py-16 bg-secondary/30 border-y border-border/80">
+      {/* 7. PRICING & CLOUDFLARE FREE TIER SECTION */}
+      <section id="pricing" className="py-20 bg-white dark:bg-[#0B0F19]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
           <div className="space-y-2">
-            <Badge variant="saffron" className="text-xs">Cloudflare Free Tier Architecture</Badge>
-            <h2 className="text-3xl font-bold tracking-tight">100% Free Forever</h2>
-            <p className="text-sm text-muted-foreground">
-              Built on Cloudflare serverless edge technology without bloated server bills.
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono">
+              ZERO INFRASTRUCTURE BILLS
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              100% Free Forever
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Built on Cloudflare Free Tier edge technology without bloated server bills.
             </p>
           </div>
 
-          <Card className="border-2 border-primary/30 max-w-lg mx-auto shadow-xl">
-            <CardContent className="p-8 space-y-6">
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-primary uppercase tracking-wider">Independent Business Plan</div>
-                <div className="text-4xl font-extrabold tracking-tight text-foreground">₹0 / month</div>
-                <div className="text-xs text-muted-foreground">Forever free for Indian local shops & clinics</div>
+          <div className="rounded-3xl border-2 border-slate-900 dark:border-slate-700 bg-white dark:bg-[#0F1420] max-w-md mx-auto shadow-2xl p-8 space-y-6 text-left">
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                Independent Business Plan
               </div>
-
-              <div className="space-y-2.5 text-left text-xs">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Unlimited QR scans (Edge KV cached)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>25 AI review drafts per day per business</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>English, Hindi & Gujarati language support</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Client-side high-res poster downloads (PNG/PDF)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>AI Reply Copilot with 3 calibrated tones</span>
-                </div>
+              <div className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                ₹0 <span className="text-sm font-normal text-slate-500">/ forever</span>
               </div>
+              <div className="text-xs text-slate-500">For Indian local shops, restaurants, salons & clinics</div>
+            </div>
 
-              <NavLink to="/onboarding" className="block w-full">
-                <Button size="lg" variant="primary" className="w-full font-semibold">
-                  Get Started Free
-                </Button>
-              </NavLink>
-            </CardContent>
-          </Card>
+            <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Unlimited QR scans (Edge KV cached)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Google Places API & Autocomplete included</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>English, Hindi & Gujarati 3-option review drafts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Client-side high-res poster downloads (PNG/PDF)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <span>Google Sign-In & Owner Dashboard</span>
+              </div>
+            </div>
+
+            <NavLink to="/onboarding" className="block w-full">
+              <button className="w-full h-12 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] font-bold text-sm shadow-md transition-all">
+                Get Started Free
+              </button>
+            </NavLink>
+          </div>
         </div>
       </section>
 
-      {/* FAQ SECTION */}
+      {/* 8. FAQ SECTION */}
       <section className="py-20 max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Frequently Asked Questions
+          </h2>
         </div>
 
         <div className="space-y-3">
@@ -413,17 +689,21 @@ export function LandingPage() {
             return (
               <div
                 key={idx}
-                className="rounded-2xl border border-border bg-card p-4 transition-all"
+                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] p-4 transition-all"
               >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between text-left font-semibold text-sm text-foreground"
+                  className="w-full flex items-center justify-between text-left font-bold text-sm text-slate-900 dark:text-white"
                 >
                   <span>{faq.q}</span>
-                  {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  {isOpen ? (
+                    <ChevronUp className="h-4 w-4 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                  )}
                 </button>
                 {isOpen && (
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed animate-in fade-in">
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed animate-in fade-in">
                     {faq.a}
                   </p>
                 )}
@@ -433,18 +713,37 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-border/80 py-8 bg-card text-muted-foreground text-xs">
+      {/* 9. FOOTER */}
+      <footer className="border-t border-slate-200/80 dark:border-slate-800/80 py-8 bg-slate-50/80 dark:bg-[#0E131F] text-slate-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-foreground">ReviewQR</span>
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-tr from-[#7B68EE] to-[#EC4899] text-white font-black text-[10px]">
+              RQ
+            </div>
+            <span className="font-extrabold text-slate-900 dark:text-white">ReviewQR</span>
             <span>• Built for Indian Local Businesses</span>
           </div>
-          <div>
-            100% Cloudflare Free Tier • DPDP Act & Privacy Compliant
-          </div>
+          <div>100% Cloudflare Free Tier • DPDP Act & Google Policy Compliant</div>
         </div>
       </footer>
     </div>
+  );
+}
+
+function HomeIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
   );
 }
