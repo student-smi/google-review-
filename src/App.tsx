@@ -9,6 +9,7 @@ import { ReviewsRepliesPage } from './pages/dashboard/ReviewsRepliesPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
 import { LocalSeoPage } from './pages/dashboard/LocalSeoPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
+import { MediaLibraryPage } from './pages/dashboard/MediaLibraryPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
 
 export function App() {
@@ -28,6 +29,7 @@ export function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="qr" element={<QrStudioPage />} />
+          <Route path="media" element={<MediaLibraryPage />} />
           <Route path="replies" element={<ReviewsRepliesPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="local-seo" element={<LocalSeoPage />} />

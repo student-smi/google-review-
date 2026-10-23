@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   QrCode,
+  Image as ImageIcon,
   MessageSquareQuote,
   TrendingUp,
   MapPin,
@@ -27,6 +28,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const primaryNavItems = [
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
     { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
+    { label: 'Media Library', to: '/dashboard/media', icon: ImageIcon, badge: 'Photos' },
     { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote, badge: 'AI Copilot' },
     { label: 'Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Local SEO', to: '/dashboard/local-seo', icon: MapPin, badge: null },

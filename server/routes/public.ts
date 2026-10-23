@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { qrCodes, businesses, scanDailyStats, scans } from '../db/schema';
+import { qrCodes, businesses, scanDailyStats, scans, mediaAssets } from '../db/schema';
 
 export interface Env {
   DB: any;
@@ -193,9 +193,32 @@ publicRoutes.get('/r/:code', async (c) => {
     scanTrackingPromise.catch(() => {});
   }
 
+  // Fetch recommended media photos for the business
+  let mediaList: any[] = [];
+  try {
+    const db = getDb(c.env.DB);
+    mediaList = await db
+      .select({
+        id: mediaAssets.id,
+        title: mediaAssets.title,
+        url: mediaAssets.url,
+        category: mediaAssets.category,
+        mimeType: mediaAssets.mimeType
+      })
+      .from(mediaAssets)
+      .where(and(eq(mediaAssets.businessId, qrData.businessId), eq(mediaAssets.isRecommended, 1)))
+      .orderBy(desc(mediaAssets.createdAt))
+      .limit(6);
+  } catch (err) {
+    console.warn('Could not fetch media for business:', err);
+  }
+
   return c.json({
     success: true,
-    data: qrData
+    data: {
+      ...qrData,
+      media: mediaList
+    }
   });
 });
 

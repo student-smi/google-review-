@@ -173,3 +173,17 @@ export const rateLimits = sqliteTable('rate_limits', {
 }, (t) => [
   index('idx_rate_limits_expires').on(t.expiresAt)
 ]);
+
+export const mediaAssets = sqliteTable('media_assets', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  category: text('category').default('general').notNull(),
+  mimeType: text('mime_type').default('image/jpeg').notNull(),
+  isRecommended: integer('is_recommended').default(1).notNull(),
+  createdAt: integer('created_at').notNull()
+}, (t) => [
+  index('idx_media_assets_business').on(t.businessId)
+]);
+

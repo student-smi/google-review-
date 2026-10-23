@@ -5,6 +5,7 @@ import { businessRoutes } from './routes/businesses';
 import { qrRoutes } from './routes/qr';
 import { analyticsRoutes } from './routes/analytics';
 import { aiRoutes } from './routes/ai';
+import { mediaRoutes } from './routes/media';
 import { requireAuth } from './middleware/auth';
 
 const app = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
@@ -25,10 +26,12 @@ app.route('/api/ai', aiRoutes);
 app.use('/api/businesses/*', requireAuth);
 app.use('/api/qr/*', requireAuth);
 app.use('/api/analytics/*', requireAuth);
+app.use('/api/media/*', requireAuth);
 
 app.route('/api/businesses', businessRoutes);
 app.route('/api/qr', qrRoutes);
 app.route('/api/analytics', analyticsRoutes);
+app.route('/api/media', mediaRoutes);
 
 // Health check
 app.get('/api/health', (c) => {
