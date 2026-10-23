@@ -21,6 +21,7 @@ import {
   Palette,
   Eye
 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
 
 export function QrStudioPage() {
@@ -44,11 +45,26 @@ export function QrStudioPage() {
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    if (activeBusiness?.slug && (shortCode === 'royal-counter' || shortCode === 'counter')) {
-      setShortCode(`${activeBusiness.slug}-counter`);
-    }
-    if (activeBusiness?.brandColor) {
-      setDotColor(activeBusiness.brandColor);
+    if (activeBusiness?.id) {
+      if (activeBusiness.brandColor) {
+        setDotColor(activeBusiness.brandColor);
+      }
+      // Check existing QR codes for this business
+      apiFetch<{ qrCodes: Array<{ code: string; label: string }> }>(
+        `/api/qr/business/${activeBusiness.id}`
+      )
+        .then((res) => {
+          if (res?.qrCodes && res.qrCodes.length > 0) {
+            setShortCode(res.qrCodes[0].code);
+          } else if (activeBusiness.slug) {
+            setShortCode(`${activeBusiness.slug}-counter`);
+          }
+        })
+        .catch(() => {
+          if (activeBusiness.slug) {
+            setShortCode(`${activeBusiness.slug}-counter`);
+          }
+        });
     }
   }, [activeBusiness]);
 

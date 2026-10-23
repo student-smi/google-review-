@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { qrCodes, businesses, scanDailyStats, scans } from '../db/schema';
 
@@ -70,13 +70,64 @@ publicRoutes.get('/r/:code', async (c) => {
       .limit(1);
 
     if (!results.length) {
-      return c.json({ error: 'QR Code not found or inactive' }, 404);
+      const cleanCode = code.toLowerCase().trim();
+      
+      // Fetch businesses ordered by latest created
+      const allBiz = await db
+        .select()
+        .from(businesses)
+        .orderBy(desc(businesses.createdAt))
+        .limit(20);
+
+      // Match best business:
+      // a) exact or prefix match on slug
+      // b) base slug match (e.g., 'upmark' from 'upmark-o9qi')
+      // c) name match
+      // d) fallback to latest created business
+      const matched = allBiz.find((b) => {
+        const slug = (b.slug || '').toLowerCase();
+        const baseSlug = slug.split('-')[0];
+        const bizNameClean = (b.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const codeClean = cleanCode.replace(/[^a-z0-9]/g, '');
+
+        return (
+          cleanCode === slug ||
+          cleanCode.startsWith(slug) ||
+          slug.startsWith(cleanCode) ||
+          (baseSlug && baseSlug.length >= 3 && cleanCode.includes(baseSlug)) ||
+          (bizNameClean && bizNameClean.length >= 3 && codeClean.includes(bizNameClean))
+        );
+      }) || allBiz[0];
+
+      if (matched) {
+        qrData = {
+          id: `qr_${matched.id}`,
+          code,
+          label: 'Main Standee',
+          businessId: matched.id,
+          businessName: matched.name,
+          googleReviewUrl: matched.googleReviewUrl.startsWith('http')
+            ? matched.googleReviewUrl
+            : `https://${matched.googleReviewUrl}`,
+          logoUrl: matched.logoUrl,
+          brandColor: matched.brandColor,
+          brandColorSecondary: matched.brandColorSecondary,
+          styleJson: '{}'
+        };
+      } else {
+        return c.json({ error: 'QR Code not found or inactive' }, 404);
+      }
+    } else {
+      qrData = {
+        ...results[0],
+        googleReviewUrl: results[0].googleReviewUrl.startsWith('http')
+          ? results[0].googleReviewUrl
+          : `https://${results[0].googleReviewUrl}`
+      };
     }
 
-    qrData = results[0];
-
     // Cache in KV for subsequent scans (only writes on cache miss, never per request)
-    if (c.env.KV) {
+    if (c.env.KV && qrData) {
       try {
         await c.env.KV.put(kvKey, JSON.stringify(qrData), { expirationTtl: 86400 * 7 });
       } catch (err) {

@@ -220,10 +220,26 @@ export function CustomerFlowPage() {
     setStep(2);
   };
 
-  // Copy specific review & open Google
+  function formatReviewUrl(url?: string): string {
+    if (url && url.trim()) {
+      let clean = url.trim();
+      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+        clean = `https://${clean}`;
+      }
+      return clean;
+    }
+    if (bizData.businessName && bizData.businessName !== 'Business Review') {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bizData.businessName)}`;
+    }
+    return 'https://maps.google.com';
+  }
+
+  // Copy specific review & open Google Maps without popup blocker
   const handleCopyReviewAndOpenGoogle = async (textToCopy?: string) => {
     const text = textToCopy || activeReviewText || reviewOptions[selectedOptionIndex]?.text;
     if (!text) return;
+
+    const targetUrl = formatReviewUrl(bizData.googleReviewUrl);
 
     // Track click
     if (code) {
@@ -234,15 +250,21 @@ export function CustomerFlowPage() {
       }).catch(() => {});
     }
 
-    await copyToClipboard(text);
+    try {
+      await copyToClipboard(text);
+    } catch {}
+
     setActiveReviewText(text);
     setCopiedSuccess(true);
     setStep(3);
 
-    // Auto-open Google Review box
-    setTimeout(() => {
-      window.open(bizData.googleReviewUrl, '_blank');
-    }, 700);
+    // Immediate unblocked redirection
+    // Directly assigning window.location.href triggers native Google Maps app or browser review page
+    try {
+      window.location.href = targetUrl;
+    } catch {
+      window.open(targetUrl, '_blank');
+    }
   };
 
   return (
@@ -298,7 +320,7 @@ export function CustomerFlowPage() {
             <span>Real customer reviews only</span>
           </span>
           <a
-            href={bizData.googleReviewUrl}
+            href={formatReviewUrl(bizData.googleReviewUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline font-semibold flex items-center gap-0.5"
@@ -534,14 +556,13 @@ export function CustomerFlowPage() {
 
             <div className="pt-2">
               <a
-                href={bizData.googleReviewUrl}
+                href={formatReviewUrl(bizData.googleReviewUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full"
+                className="w-full h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
               >
-                <Button size="lg" variant="primary" className="w-full gap-2 text-sm font-semibold h-12">
-                  <span>Open Google Review Box Now ↗</span>
-                </Button>
+                <span>Open Google Review Box Now ↗</span>
+                <ExternalLink className="h-4 w-4" />
               </a>
             </div>
 
@@ -574,19 +595,13 @@ export function CustomerFlowPage() {
             </Button>
 
             <a
-              href={bizData.googleReviewUrl}
+              href={formatReviewUrl(bizData.googleReviewUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full text-center"
+              className="inline-flex items-center justify-center w-full h-11 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <Button
-                size="md"
-                variant="outline"
-                className="w-full h-11 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border-slate-200 dark:border-slate-800 cursor-pointer"
-              >
-                <span>{t('customer.skipToGoogle', 'Skip, go straight to Google Review')}</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
+              <span>{t('customer.skipToGoogle', 'Skip, go straight to Google Review')}</span>
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </>
         )}
@@ -608,19 +623,13 @@ export function CustomerFlowPage() {
             </Button>
 
             <a
-              href={bizData.googleReviewUrl}
+              href={formatReviewUrl(bizData.googleReviewUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full text-center"
+              className="inline-flex items-center justify-center w-full h-10 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <Button
-                size="md"
-                variant="outline"
-                className="w-full h-10 text-xs text-slate-600 dark:text-slate-300 gap-1.5 border-slate-200 dark:border-slate-800 cursor-pointer"
-              >
-                <span>સીધા ગૂગલ પર જાઓ (Direct to Google)</span>
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
+              <span>સીધા ગૂગલ પર જાઓ (Direct to Google)</span>
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </>
         )}
