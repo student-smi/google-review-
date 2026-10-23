@@ -133,7 +133,7 @@ export function GooglePlacesAutocomplete({
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
           <Badge variant="outline" className="text-[10px] font-medium border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
-            Google Places
+            🇮🇳 India • Places
           </Badge>
         </div>
       </div>
@@ -144,8 +144,9 @@ export function GooglePlacesAutocomplete({
           style={{ backgroundColor: 'hsl(var(--card))' }}
           className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-border p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95"
         >
-          <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Google Maps Listings
+          <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Google Maps Listings (India)</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal lowercase">region: in</span>
           </div>
           {suggestions.map((s) => (
             <button

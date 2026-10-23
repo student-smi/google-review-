@@ -252,7 +252,8 @@ publicRoutes.get('/places/search', async (c) => {
         'X-Goog-Api-Key': apiKey
       },
       body: JSON.stringify({
-        input: query.trim()
+        input: query.trim(),
+        includedRegionCodes: ['in']
       })
     });
 
