@@ -67,11 +67,11 @@ export function Header({
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all cursor-pointer shadow-xs"
           >
-            <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-gradient-to-tr from-[#7B68EE] to-[#EC4899] text-white text-[10px] font-black">
-              {activeBusiness?.name?.charAt(0) || 'R'}
+            <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-gradient-to-tr from-[#7B68EE] to-[#EC4899] text-white text-[10px] font-black uppercase">
+              {activeBusiness?.name ? activeBusiness.name.charAt(0) : '★'}
             </div>
             <span className="truncate max-w-[140px] sm:max-w-[200px]">
-              {activeBusiness?.name || 'Select Business'}
+              {activeBusiness?.name || 'My Location'}
             </span>
             {activeBusiness?.city && (
               <span className="hidden sm:inline-flex rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold text-[10px] px-1.5 py-0.5">

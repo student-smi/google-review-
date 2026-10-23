@@ -26,15 +26,31 @@ import type { BusinessItem } from './DashboardLayout';
 export function QrStudioPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
 
-  // QR Customization State
-  const [shortCode, setShortCode] = useState('royal-counter');
+  // QR Customization State - Dynamic based on active business
+  const defaultShortCode = activeBusiness?.slug
+    ? `${activeBusiness.slug}-counter`
+    : activeBusiness?.id
+    ? `qr-${activeBusiness.id.slice(-6)}`
+    : 'counter';
+
+  const [shortCode, setShortCode] = useState(defaultShortCode);
   const [headline, setHeadline] = useState('Share Your Real Experience On Google');
   const [subheadline, setSubheadline] = useState('Scan with your phone camera or Google Lens');
-  const [dotColor, setDotColor] = useState('#4338CA');
+  const [dotColor, setDotColor] = useState(activeBusiness?.brandColor || '#4338CA');
   const [dotType, setDotType] = useState<'rounded' | 'dots' | 'classy' | 'square'>('rounded');
   const [cornerSquareType, setCornerSquareType] = useState<'extra-rounded' | 'square' | 'dot'>('extra-rounded');
   const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4' | 'round-sticker'>('table-tent');
   const [copied, setCopied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (activeBusiness?.slug && (shortCode === 'royal-counter' || shortCode === 'counter')) {
+      setShortCode(`${activeBusiness.slug}-counter`);
+    }
+    if (activeBusiness?.brandColor) {
+      setDotColor(activeBusiness.brandColor);
+    }
+  }, [activeBusiness]);
 
   const qrRef = useRef<HTMLDivElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
@@ -331,23 +347,54 @@ export function QrStudioPage() {
                 </div>
               </div>
 
-              {/* Download Buttons */}
-              <div className="pt-2 flex gap-2">
+              {/* Save & Download Buttons */}
+              <div className="pt-2 space-y-2">
                 <Button
-                  onClick={() => handleDownloadQr('png')}
-                  className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
+                  onClick={async () => {
+                    if (!activeBusiness?.id) return;
+                    try {
+                      await apiFetch(`/api/qr/business/${activeBusiness.id}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          label: headline || `${posterFormat.toUpperCase()} Standee`,
+                          code: shortCode,
+                          styleJson: {
+                            dots: dotType,
+                            cornersSquare: cornerSquareType,
+                            cornersDot: 'dot',
+                            color: dotColor
+                          }
+                        })
+                      });
+                      setIsSaved(true);
+                      setTimeout(() => setIsSaved(false), 2500);
+                    } catch (err) {
+                      console.warn('Could not save QR to business:', err);
+                    }
+                  }}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Download PNG</span>
+                  {isSaved ? <Check className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  <span>{isSaved ? 'Saved to Your Active Standees!' : 'Save This Standee to Location'}</span>
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadQr('svg')}
-                  className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Vector SVG</span>
-                </Button>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleDownloadQr('png')}
+                    className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Download PNG</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadQr('svg')}
+                    className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Vector SVG</span>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -373,7 +420,7 @@ export function QrStudioPage() {
               <div className="space-y-1.5 mb-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-extrabold shadow-2xs">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
-                  <span>{activeBusiness?.name || 'Royal Sweets & Bakery'}</span>
+                  <span>{activeBusiness?.name || 'My Business'}</span>
                 </div>
                 <h3 className="text-lg font-black tracking-tight text-slate-900 leading-snug">
                   {headline}

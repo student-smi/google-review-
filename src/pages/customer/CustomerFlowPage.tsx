@@ -46,20 +46,20 @@ export function CustomerFlowPage() {
     brandColorSecondary: string;
     label?: string;
   }>({
-    businessName: 'Royal Sweets & Bakery',
-    googleReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+    businessName: '',
+    googleReviewUrl: '',
     brandColor: '#4338CA',
     brandColorSecondary: '#D97706',
-    label: 'Main Billing Counter'
+    label: ''
   });
 
   // Selected chips & free text
-  const [selectedChips, setSelectedChips] = useState<string[]>(['Delicious & fresh', 'Friendly staff']);
+  const [selectedChips, setSelectedChips] = useState<string[]>(['Prompt service', 'Clean & hygienic']);
   const [freeText, setFreeText] = useState('');
   const [isListening, setIsListening] = useState(false);
 
   // Language & generation state
-  const [draftLanguage, setDraftLanguage] = useState<'en' | 'hi' | 'gu' | 'hinglish'>('gu'); // Default to Gujarati/English
+  const [draftLanguage, setDraftLanguage] = useState<'en' | 'hi' | 'gu' | 'hinglish'>('en');
   const [draftTone, setDraftTone] = useState<'warm' | 'concise' | 'formal'>('warm');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -74,7 +74,7 @@ export function CustomerFlowPage() {
       fetch(`/api/public/r/${code}`)
         .then((res) => (res.ok ? (res.json() as Promise<any>) : null))
         .then((payload) => {
-          if (payload?.data) {
+          if (payload?.data?.businessName) {
             setBizData({
               businessName: payload.data.businessName,
               googleReviewUrl: payload.data.googleReviewUrl,
@@ -82,6 +82,24 @@ export function CustomerFlowPage() {
               brandColorSecondary: payload.data.brandColorSecondary || '#D97706',
               label: payload.data.label
             });
+          } else {
+            // Check local stored businesses
+            try {
+              const raw = localStorage.getItem('reviewqr_businesses');
+              if (raw) {
+                const list = JSON.parse(raw);
+                if (Array.isArray(list) && list.length > 0) {
+                  const b = list[0];
+                  setBizData({
+                    businessName: b.name,
+                    googleReviewUrl: b.googleReviewUrl,
+                    brandColor: b.brandColor || '#4338CA',
+                    brandColorSecondary: b.brandColorSecondary || '#D97706',
+                    label: 'Main Billing Counter'
+                  });
+                }
+              }
+            } catch {}
           }
         })
         .catch(() => {});

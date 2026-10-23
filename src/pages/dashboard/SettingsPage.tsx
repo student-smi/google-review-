@@ -1,34 +1,77 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   ExternalLink,
   CheckCircle2,
   ShieldCheck,
   Building2,
   Save,
-  MapPin,
-  Sparkles,
-  Phone,
-  Server,
   Cloud
 } from 'lucide-react';
 import { GooglePlacesAutocomplete } from '@/components/google/GooglePlacesAutocomplete';
+import type { BusinessItem } from './DashboardLayout';
+import { apiFetch, getStoredBusinesses, saveStoredBusinesses } from '@/lib/api';
 
 export function SettingsPage() {
-  const [name, setName] = useState('Royal Sweets & Bakery');
-  const [googleUrl, setGoogleUrl] = useState('https://g.page/r/royal-sweets/review');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [city, setCity] = useState('Ahmedabad');
-  const [resolutionContact, setResolutionContact] = useState('+91 98765 43210 (Mr. Rajesh)');
-  const [voice, setVoice] = useState('warm_grateful');
-  const [saved, setSaved] = useState(false);
+  const { activeBusiness, refreshBusinesses } = useOutletContext<{
+    activeBusiness: BusinessItem | null;
+    refreshBusinesses?: () => void;
+  }>();
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const [name, setName] = useState(activeBusiness?.name || '');
+  const [googleUrl, setGoogleUrl] = useState(activeBusiness?.googleReviewUrl || '');
+  const [phone, setPhone] = useState(activeBusiness?.phone || '');
+  const [city, setCity] = useState(activeBusiness?.city || '');
+  const [resolutionContact, setResolutionContact] = useState('');
+  const [voice, setVoice] = useState(activeBusiness?.brandVoice || 'warm_grateful');
+  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (activeBusiness) {
+      setName(activeBusiness.name || '');
+      setGoogleUrl(activeBusiness.googleReviewUrl || '');
+      setPhone(activeBusiness.phone || '');
+      setCity(activeBusiness.city || '');
+      setVoice(activeBusiness.brandVoice || 'warm_grateful');
+    }
+  }, [activeBusiness]);
+
+  const handleSave = async () => {
+    if (!activeBusiness?.id) return;
+    setIsSaving(true);
+
+    const payload = {
+      name: name.trim(),
+      googleReviewUrl: googleUrl.trim(),
+      city: city.trim(),
+      phone: phone.trim(),
+      brandVoice: voice,
+      contactResolutionLine: resolutionContact.trim() || undefined
+    };
+
+    try {
+      await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      });
+
+      // Update local storage
+      const existing = getStoredBusinesses();
+      const updated = existing.map((b) => (b.id === activeBusiness.id ? { ...b, ...payload } : b));
+      saveStoredBusinesses(updated);
+
+      refreshBusinesses?.();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.warn('Settings save error:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -44,7 +87,7 @@ export function SettingsPage() {
           </span>
         </div>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Configure official Google review links, brand reply persona, and private escalation channels.
+          Configure official Google review links, brand reply persona, and store parameters for <span className="font-bold text-slate-700 dark:text-slate-200">{activeBusiness?.name || 'My Business'}</span>.
         </p>
       </div>
 
@@ -68,7 +111,7 @@ export function SettingsPage() {
             </Label>
             <GooglePlacesAutocomplete
               initialValue={name}
-              placeholder="Type business name e.g. Royal Sweets Navrangpura..."
+              placeholder="Search your business on Google Maps..."
               onSelect={(place) => {
                 setName(place.name);
                 setGoogleUrl(place.googleReviewUrl);
@@ -90,6 +133,7 @@ export function SettingsPage() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. My Clinic / My Restaurant"
                 className="text-xs rounded-xl"
               />
             </div>
@@ -100,6 +144,7 @@ export function SettingsPage() {
               <Input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                placeholder="e.g. Ahmedabad, Surat, Mumbai"
                 className="text-xs rounded-xl"
               />
             </div>
@@ -107,23 +152,26 @@ export function SettingsPage() {
 
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Official Google Review URL (CID or Place ID link)
+              Official Google Review URL (Direct Review Window)
             </Label>
             <div className="flex gap-2">
               <Input
                 value={googleUrl}
                 onChange={(e) => setGoogleUrl(e.target.value)}
+                placeholder="https://g.page/r/... or https://maps.app.goo.gl/..."
                 className="text-xs font-mono rounded-xl"
               />
-              <a href={googleUrl} target="_blank" rel="noopener noreferrer">
-                <Button
-                  variant="outline"
-                  className="gap-1.5 shrink-0 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold shadow-xs"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Test Link</span>
-                </Button>
-              </a>
+              {googleUrl && (
+                <a href={googleUrl} target="_blank" rel="noopener noreferrer">
+                  <Button
+                    variant="outline"
+                    className="gap-1.5 shrink-0 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Test Link</span>
+                  </Button>
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold pt-1">
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -149,7 +197,7 @@ export function SettingsPage() {
 
             <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Offline Escalation Contact
+                Offline Escalation Contact (Optional)
               </Label>
               <Input
                 value={resolutionContact}
@@ -173,7 +221,8 @@ export function SettingsPage() {
 
           <Button
             onClick={handleSave}
-            className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5 px-5"
+            isLoading={isSaving}
+            className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5 px-5 cursor-pointer"
           >
             <Save className="h-3.5 w-3.5" />
             <span>Save Settings</span>

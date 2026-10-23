@@ -1,8 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from '@/components/app/Sidebar';
 import { Header } from '@/components/app/Header';
 import { CommandPalette } from '@/components/app/CommandPalette';
+import { Button } from '@/components/ui/button';
+import {
+  Building2,
+  Plus,
+  Sparkles,
+  ArrowRight,
+  Store
+} from 'lucide-react';
+import {
+  apiFetch,
+  getStoredBusinesses,
+  saveStoredBusinesses,
+  getActiveBusinessId,
+  saveActiveBusinessId
+} from '@/lib/api';
 
 export interface BusinessItem {
   id: string;
@@ -13,38 +28,55 @@ export interface BusinessItem {
   brandColor: string;
   brandColorSecondary: string;
   logoUrl?: string | null;
+  brandVoice?: string;
+  phone?: string | null;
 }
 
 export function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // Active business & locations state
-  const [businesses, setBusinesses] = useState<BusinessItem[]>([
-    {
-      id: 'demo-biz-1',
-      name: 'Royal Sweets & Bakery',
-      slug: 'royal-sweets',
-      city: 'Ahmedabad',
-      googleReviewUrl: 'https://g.page/r/royal-sweets/review',
-      brandColor: '#4338CA',
-      brandColorSecondary: '#D97706'
+  // Active business & locations state loaded from persistent storage - ZERO dummy fallback
+  const [businesses, setBusinesses] = useState<BusinessItem[]>(() => getStoredBusinesses());
+  const [activeBusinessId, setActiveBusinessId] = useState<string>(() => {
+    const stored = getActiveBusinessId();
+    if (stored) return stored;
+    const initialList = getStoredBusinesses();
+    return initialList[0]?.id || '';
+  });
+
+  const refreshBusinesses = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ businesses: BusinessItem[] }>('/api/businesses');
+      if (data?.businesses && Array.isArray(data.businesses)) {
+        if (data.businesses.length > 0) {
+          setBusinesses(data.businesses);
+          saveStoredBusinesses(data.businesses);
+          setActiveBusinessId((curr) => {
+            const exists = data.businesses.some((b) => b.id === curr);
+            const nextId = exists ? curr : data.businesses[0].id;
+            saveActiveBusinessId(nextId);
+            return nextId;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync businesses from API:', err);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
-  const [activeBusinessId, setActiveBusinessId] = useState<string>('demo-biz-1');
+  }, []);
 
   useEffect(() => {
-    // Attempt to load from API
-    fetch('/api/businesses')
-      .then((res) => (res.ok ? (res.json() as Promise<any>) : null))
-      .then((data) => {
-        if (data?.businesses && data.businesses.length > 0) {
-          setBusinesses(data.businesses);
-          setActiveBusinessId(data.businesses[0].id);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    refreshBusinesses();
+  }, [refreshBusinesses]);
+
+  const handleSelectBusiness = (id: string) => {
+    setActiveBusinessId(id);
+    saveActiveBusinessId(id);
+  };
 
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || businesses[0] || null;
 
@@ -62,11 +94,44 @@ export function DashboardLayout() {
           onOpenCommand={() => setCommandOpen(true)}
           activeBusiness={activeBusiness}
           businesses={businesses}
-          onSelectBusiness={(id) => setActiveBusinessId(id)}
+          onSelectBusiness={handleSelectBusiness}
         />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F8FAFC] dark:bg-[#090D16]">
-          <Outlet context={{ activeBusiness, businesses }} />
+          {businesses.length === 0 && !isLoading ? (
+            /* Empty State: If user has not created any business yet */
+            <div className="max-w-xl mx-auto my-12 text-center p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xl space-y-5">
+              <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 border border-purple-200 dark:border-purple-800">
+                <Store className="h-8 w-8" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                  Welcome to ReviewQR
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
+                  You haven't set up your business location yet. Add your Google Maps listing to generate your first live QR standee.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Button
+                  onClick={() => navigate('/onboarding')}
+                  className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-2 px-6 py-2.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Set Up Your Business Location</span>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Outlet
+              context={{
+                activeBusiness,
+                businesses,
+                refreshBusinesses,
+                onSelectBusiness: handleSelectBusiness
+              }}
+            />
+          )}
         </main>
       </div>
 
