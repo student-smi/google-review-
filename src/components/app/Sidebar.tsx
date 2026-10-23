@@ -9,7 +9,12 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Inbox,
+  CheckSquare,
+  Sparkles,
+  Store,
+  Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,35 +24,36 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const navItems = [
-    { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-    { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode },
-    { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote },
-    { label: 'Analytics', to: '/dashboard/analytics', icon: TrendingUp },
-    { label: 'Local SEO', to: '/dashboard/local-seo', icon: MapPin },
-    { label: 'Settings', to: '/dashboard/settings', icon: Settings }
+  const primaryNavItems = [
+    { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
+    { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
+    { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote, badge: 'AI Copilot' },
+    { label: 'Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
+    { label: 'Local SEO', to: '/dashboard/local-seo', icon: MapPin, badge: null },
+    { label: 'Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
   return (
     <aside
       className={cn(
-        'relative flex flex-col border-r border-border bg-card transition-all duration-300 ease-in-out shrink-0 select-none z-20',
+        'relative flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0E131F] transition-all duration-300 ease-in-out shrink-0 select-none z-20 font-sans',
         collapsed ? 'w-[72px]' : 'w-64'
       )}
     >
       {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-border/70">
-        <NavLink to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold shadow-sm glow-indigo shrink-0">
-            <span className="text-base tracking-tighter">RQ</span>
+      <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
+        <NavLink to="/dashboard" className="flex items-center gap-2.5 overflow-hidden">
+          {/* ClickUp 4.0 Dual-Tone Folded Gradient Logo */}
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7B68EE] via-[#4F46E5] to-[#EC4899] text-white font-black text-sm shadow-md shadow-indigo-500/20 shrink-0">
+            RQ
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-base tracking-tight text-foreground truncate">
-                Review<span className="text-accent">QR</span>
+              <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
+                Review<span className="text-[#7B68EE]">QR</span>
               </span>
-              <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">
-                India Local SaaS
+              <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
+                Cloudflare Free Tier
               </span>
             </div>
           )}
@@ -56,58 +62,102 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <button
           onClick={onToggle}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 space-y-1.5 p-3 overflow-y-auto">
-        <div className={cn('px-2 py-1 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80', collapsed && 'text-center')}>
-          {collapsed ? '•' : 'Main Menu'}
+      <nav className="flex-1 space-y-4 p-3 overflow-y-auto">
+        {/* Workspace Quick Switcher / Home Pill */}
+        {!collapsed && (
+          <div className="p-1">
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-xs">
+              <span className="flex items-center gap-2 truncate">
+                <span className="text-amber-500">⭐</span>
+                <span className="truncate">Google Review Space</span>
+              </span>
+              <span className="text-[10px] text-slate-400">▾</span>
+            </div>
+          </div>
+        )}
+
+        {/* Section: Main Menu */}
+        <div className="space-y-1">
+          <div
+            className={cn(
+              'px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono',
+              collapsed && 'text-center'
+            )}
+          >
+            {collapsed ? '•' : 'Core Tools'}
+          </div>
+
+          {primaryNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/dashboard'}
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-150',
+                  isActive
+                    ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold border-l-2 border-indigo-600 dark:border-indigo-400 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'
+                )
+              }
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <item.icon className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110" />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </div>
+
+              {!collapsed && item.badge && (
+                <span
+                  className={cn(
+                    'h-4 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center font-mono',
+                    item.badge === 'AI Copilot'
+                      ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
+                      : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                  )}
+                >
+                  {item.badge}
+                </span>
+              )}
+            </NavLink>
+          ))}
         </div>
 
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/dashboard'}
-            className={({ isActive }) =>
-              cn(
-                'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
-                isActive
-                  ? 'bg-primary/10 text-primary font-semibold shadow-xs'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )
-            }
+        {/* Section: Design & Dev */}
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div
+            className={cn(
+              'px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono',
+              collapsed && 'text-center'
+            )}
           >
-            <item.icon className="h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </NavLink>
-        ))}
-
-        <div className="pt-4 mt-4 border-t border-border/60">
-          <div className={cn('px-2 py-1 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80', collapsed && 'text-center')}>
-            {collapsed ? '•' : 'Developer & Design'}
+            {collapsed ? '•' : 'Design System'}
           </div>
 
           <NavLink
             to="/design"
             className={({ isActive }) =>
               cn(
-                'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150',
+                'group flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-150',
                 isActive
-                  ? 'bg-accent/15 text-accent-foreground font-semibold'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white'
               )
             }
           >
-            <Palette className="h-5 w-5 shrink-0 transition-transform duration-150 group-hover:scale-105 text-accent" />
+            <Palette className="h-4 w-4 shrink-0 text-pink-500" />
             {!collapsed && (
               <div className="flex items-center justify-between w-full">
-                <span className="truncate">Style Guide</span>
-                <span className="text-[10px] bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded font-mono">/design</span>
+                <span>Living Style Guide</span>
+                <span className="text-[9px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">
+                  /design
+                </span>
               </div>
             )}
           </NavLink>
@@ -115,21 +165,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Free Tier Status & Compliance Pill */}
-      <div className="p-3 border-t border-border/60">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800">
         {!collapsed ? (
-          <div className="rounded-xl border border-border/80 bg-secondary/40 p-3">
-            <div className="flex items-center justify-between mb-1">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-2.5 space-y-1">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span className="text-xs font-semibold text-foreground">Cloudflare Free</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Cloudflare Free
+                </span>
               </div>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
             </div>
-            <p className="text-[11px] text-muted-foreground leading-tight">
-              100% policy-compliant. Real reviews only.
+            <p className="text-[10px] text-slate-500 leading-tight">
+              100% Policy-compliant • Zero Gating
             </p>
           </div>
         ) : (

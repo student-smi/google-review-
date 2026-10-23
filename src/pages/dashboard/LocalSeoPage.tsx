@@ -3,7 +3,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
-import { CheckCircle2, Circle, AlertCircle, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  ShieldCheck,
+  Check
+} from 'lucide-react';
 
 interface ChecklistGroup {
   group: string;
@@ -24,22 +34,22 @@ export function LocalSeoPage() {
         {
           id: 'hours',
           title: 'Accurate Opening & Festival Hours',
-          desc: 'Ensure operating hours including Sunday/Holiday timings are current.',
-          tip: 'Customers check Google Maps on festivals like Diwali & Eid. Updating special hours builds trust.',
+          desc: 'Ensure operating hours including Sunday/Holiday timings are current on Google Maps.',
+          tip: 'Indian customers always check timings before travelling during Diwali, Eid & national holidays. Special hours preserve rating sentiment.',
           done: true
         },
         {
           id: 'photos',
           title: 'High-Resolution Store & Product Photos',
-          desc: 'Upload at least 15 photos: storefront, interior, billing counter, and top dishes/products.',
-          tip: 'Profiles with real storefront photos get 42% more direction requests on Google Maps.',
+          desc: 'Upload at least 15 photos: storefront, interior dining/sales area, billing counter, and signature items.',
+          tip: 'Profiles with storefront signage photos receive 42% more direction requests on Google Maps.',
           done: true
         },
         {
           id: 'category',
           title: 'Specific Primary Business Category',
-          desc: 'Choose the most specific category (e.g. "Indian Sweet Shop" instead of "Store").',
-          tip: 'Google ranks specific primary categories significantly higher in "near me" map pack searches.',
+          desc: 'Select the most specific category (e.g. "Indian Sweet Shop" or "Vegetarian Restaurant" instead of generic "Store").',
+          tip: 'Google Map algorithms heavily favor exact primary categories for "near me" local pack queries.',
           done: false
         }
       ]
@@ -49,16 +59,16 @@ export function LocalSeoPage() {
       items: [
         {
           id: 'reply_rate',
-          title: 'Reply to 100% of Incoming Reviews',
-          desc: 'Acknowledge both positive compliments and constructive feedback within 48 hours.',
-          tip: 'Google explicitly confirms that replying to reviews improves your local SEO ranking prominence.',
+          title: 'Maintain 100% Review Reply Rate',
+          desc: 'Acknowledge both glowing 5-star compliments and critical constructive feedback within 48 hours.',
+          tip: 'Google explicitly confirms in official docs that merchant responses directly improve local SEO ranking prominence.',
           done: false
         },
         {
           id: 'counter_qr',
-          title: 'Place ReviewQR Table-Tent at Billing Counter',
-          desc: 'Ask satisfied customers at checkout to scan and share their authentic experience.',
-          tip: 'Review requests made right after a great transaction have an 8x higher completion rate.',
+          title: 'Deploy Acrylic Standee at Billing Counter',
+          desc: 'Invite happy customers to scan the QR while their bill or takeaway order is being packaged.',
+          tip: 'Asking right after an enjoyable interaction yields an 8x higher submission completion rate.',
           done: true
         }
       ]
@@ -68,75 +78,100 @@ export function LocalSeoPage() {
   const [expandedTip, setExpandedTip] = useState<string | null>(null);
 
   const toggleItem = (groupIdx: number, itemIdx: number) => {
-    setGroups(prev => {
+    setGroups((prev) => {
       const copy = [...prev];
       copy[groupIdx].items[itemIdx].done = !copy[groupIdx].items[itemIdx].done;
       return copy;
     });
   };
 
-  const totalItems = groups.flatMap(g => g.items).length;
-  const completedItems = groups.flatMap(g => g.items).filter(i => i.done).length;
+  const totalItems = groups.flatMap((g) => g.items).length;
+  const completedItems = groups.flatMap((g) => g.items).filter((i) => i.done).length;
   const percent = Math.round((completedItems / totalItems) * 100);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* ClickUp 4.0 Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Local SEO Checklist
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Local SEO & Maps Optimization
             </h1>
-            <Badge variant="saffron" className="text-xs">Interactive Audit</Badge>
+            <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 text-[10px] font-bold">
+              Google Maps 3-Pack
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Actionable optimization steps for Google Maps and Local 3-Pack prominence. No bogus ranking promises.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Actionable optimization criteria proven to elevate visibility in Google Maps local pack without gimmicks.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <ProgressRing progress={percent} size={50} strokeWidth={5}>
-            <span className="text-xs font-bold">{percent}%</span>
+        {/* Score Pill */}
+        <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <ProgressRing progress={percent} size={46} strokeWidth={4.5}>
+            <span className="text-[11px] font-black">{percent}%</span>
           </ProgressRing>
-          <div className="text-left">
-            <div className="text-xs font-semibold text-foreground">{completedItems} of {totalItems} Done</div>
-            <div className="text-[11px] text-muted-foreground">Audit Score</div>
+          <div className="text-left pr-2">
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              {completedItems} of {totalItems} Completed
+            </div>
+            <div className="text-[10px] text-slate-400">Readiness Score</div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-6">
+      {/* Task Groups */}
+      <div className="space-y-5">
         {groups.map((group, groupIdx) => (
-          <Card key={group.group}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
+          <Card
+            key={group.group}
+            className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs"
+          >
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-purple-600" />
                 <span>{group.group}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-4 space-y-2.5">
               {group.items.map((item, itemIdx) => {
                 const isExpanded = expandedTip === item.id;
                 return (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-border p-4 transition-all hover:bg-secondary/20"
+                    className={`rounded-xl border p-4 transition-all ${
+                      item.done
+                        ? 'bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/60 dark:border-slate-800/60'
+                        : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 shadow-2xs'
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <button
                         onClick={() => toggleItem(groupIdx, itemIdx)}
-                        className="flex items-start gap-3 text-left flex-1"
+                        className="flex items-start gap-3 text-left flex-1 cursor-pointer"
                       >
-                        {item.done ? (
-                          <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                        )}
+                        <div
+                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all ${
+                            item.done
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'border-slate-300 dark:border-slate-700 hover:border-purple-500'
+                          }`}
+                        >
+                          {item.done && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                        </div>
+
                         <div>
-                          <div className={`text-sm font-semibold ${item.done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          <div
+                            className={`text-xs sm:text-sm font-bold ${
+                              item.done
+                                ? 'line-through text-slate-400 dark:text-slate-500'
+                                : 'text-slate-900 dark:text-white'
+                            }`}
+                          >
                             {item.title}
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                             {item.desc}
                           </div>
                         </div>
@@ -144,17 +179,23 @@ export function LocalSeoPage() {
 
                       <button
                         onClick={() => setExpandedTip(isExpanded ? null : item.id)}
-                        className="text-xs text-primary font-medium flex items-center gap-1 hover:underline shrink-0"
+                        className="text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline shrink-0 cursor-pointer pt-0.5"
                       >
-                        <span>Tip</span>
-                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                        <span>SEO Tip</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
                       </button>
                     </div>
 
                     {isExpanded && (
-                      <div className="mt-3 pt-3 border-t border-border/70 text-xs text-muted-foreground bg-secondary/40 p-3 rounded-xl animate-in fade-in">
-                        <span className="font-semibold text-foreground">Pro-Tip: </span>
-                        {item.tip}
+                      <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 bg-purple-50/60 dark:bg-purple-950/30 p-3 rounded-xl animate-in fade-in space-y-1">
+                        <span className="font-bold text-purple-700 dark:text-purple-300">
+                          Google Maps Insight:
+                        </span>
+                        <p className="leading-relaxed">{item.tip}</p>
                       </div>
                     )}
                   </div>

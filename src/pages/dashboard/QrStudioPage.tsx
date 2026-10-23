@@ -16,7 +16,10 @@ import {
   FileText,
   Layers,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Sliders,
+  Palette,
+  Eye
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 
@@ -26,7 +29,7 @@ export function QrStudioPage() {
   // QR Customization State
   const [shortCode, setShortCode] = useState('royal-counter');
   const [headline, setHeadline] = useState('Share Your Real Experience On Google');
-  const [subheadline, setSubheadline] = useState('Scan with any camera app or Google Lens');
+  const [subheadline, setSubheadline] = useState('Scan with your phone camera or Google Lens');
   const [dotColor, setDotColor] = useState('#4338CA');
   const [dotType, setDotType] = useState<'rounded' | 'dots' | 'classy' | 'square'>('rounded');
   const [cornerSquareType, setCornerSquareType] = useState<'extra-rounded' | 'square' | 'dot'>('extra-rounded');
@@ -40,7 +43,7 @@ export function QrStudioPage() {
   // Target customer URL
   const targetUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/r/${shortCode}`
-    : `https://reviewqr.in/r/${shortCode}`;
+    : `https://reviewqr.panchalsmit.workers.dev/r/${shortCode}`;
 
   useEffect(() => {
     if (!qrInstanceRef.current) {
@@ -101,32 +104,43 @@ export function QrStudioPage() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(targetUrl);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setTimeout(() => setCopied(false), 2200);
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Top Banner */}
+      {/* ClickUp 4.0 Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              QR Studio & Poster Generator
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              QR Studio & Poster Designer
             </h1>
-            <Badge variant="saffron" className="text-xs">Client-Side Export</Badge>
+            <span className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs">
+              Client Vector Engine
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Custom branded QR posters rendered right in your browser. Saves Workers CPU and bandwidth.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Generate high-resolution acrylic table-tents and counter stands with zero print raster distortion.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleCopyLink} className="gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
+          >
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             <span>{copied ? 'Link Copied!' : 'Copy Short Link'}</span>
           </Button>
+
           <a href={`/r/${shortCode}`} target="_blank" rel="noopener noreferrer">
-            <Button variant="primary" size="sm" className="gap-1.5 text-xs">
+            <Button
+              size="sm"
+              className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
+            >
               <ExternalLink className="h-3.5 w-3.5" />
               <span>Preview Customer Flow</span>
             </Button>
@@ -134,128 +148,165 @@ export function QrStudioPage() {
         </div>
       </div>
 
-      {/* Split Layout: Controls on Left, Live Poster Preview on Right */}
+      {/* Split Grid: Left Studio Controls, Right Photorealistic Mockup Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Controls (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">1. Format Template</CardTitle>
-              <CardDescription>Choose poster dimensions for your physical setup</CardDescription>
+        {/* Left Column (5 cols): Design Controls */}
+        <div className="lg:col-span-5 space-y-4">
+          {/* Format Selector */}
+          <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Sliders className="h-3.5 w-3.5 text-purple-600" />
+                <span>1. Form Factor & Dimensions</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4">
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setPosterFormat('table-tent')}
-                  className={`rounded-xl border p-3 text-xs font-semibold text-center transition-all ${
+                  className={`rounded-xl border p-3 text-center transition-all cursor-pointer ${
                     posterFormat === 'table-tent'
-                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                      : 'border-border hover:bg-secondary text-muted-foreground'
+                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-500/10 font-bold shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-medium'
                   }`}
                 >
-                  <FileText className="h-4 w-4 mx-auto mb-1.5" />
-                  <span>Table-Tent (A6)</span>
+                  <FileText className="h-4 w-4 mx-auto mb-1.5 text-purple-600" />
+                  <span className="text-xs block">Table-Tent</span>
+                  <span className="text-[10px] text-slate-400">A6 Acrylic</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setPosterFormat('counter-a4')}
-                  className={`rounded-xl border p-3 text-xs font-semibold text-center transition-all ${
+                  className={`rounded-xl border p-3 text-center transition-all cursor-pointer ${
                     posterFormat === 'counter-a4'
-                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                      : 'border-border hover:bg-secondary text-muted-foreground'
+                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-500/10 font-bold shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-medium'
                   }`}
                 >
-                  <Printer className="h-4 w-4 mx-auto mb-1.5" />
-                  <span>Counter (A4)</span>
+                  <Printer className="h-4 w-4 mx-auto mb-1.5 text-indigo-600" />
+                  <span className="text-xs block">Counter Stand</span>
+                  <span className="text-[10px] text-slate-400">A4 Acrylic</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setPosterFormat('round-sticker')}
-                  className={`rounded-xl border p-3 text-xs font-semibold text-center transition-all ${
+                  className={`rounded-xl border p-3 text-center transition-all cursor-pointer ${
                     posterFormat === 'round-sticker'
-                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
-                      : 'border-border hover:bg-secondary text-muted-foreground'
+                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-500/10 font-bold shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-medium'
                   }`}
                 >
-                  <Layers className="h-4 w-4 mx-auto mb-1.5" />
-                  <span>Sticker (Round)</span>
+                  <Layers className="h-4 w-4 mx-auto mb-1.5 text-pink-600" />
+                  <span className="text-xs block">Round Sticker</span>
+                  <span className="text-[10px] text-slate-400">Vinyl 3"</span>
                 </button>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">2. Branding & Text</CardTitle>
+          {/* Copy & Branding */}
+          <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-purple-600" />
+                <span>2. Headline & Dynamic Link</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Dynamic Short-Code Slug</Label>
+            <CardContent className="p-4 space-y-3.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Short-Code Identifier
+                </Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-mono bg-secondary px-2.5 py-2 rounded-xl border border-border">
+                  <span className="text-xs text-slate-400 font-mono bg-slate-100 dark:bg-slate-900 px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
                     /r/
                   </span>
                   <Input
                     value={shortCode}
                     onChange={(e) => setShortCode(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                    className="font-mono text-xs"
+                    className="font-mono text-xs rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Poster Headline</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Poster Call to Action
+                </Label>
                 <Input
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
+                  className="text-xs rounded-xl"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Subheadline / Instructions</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Instruction Subtext
+                </Label>
                 <Input
                   value={subheadline}
                   onChange={(e) => setSubheadline(e.target.value)}
+                  className="text-xs rounded-xl"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">3. QR Style & Colors</CardTitle>
+          {/* Palette & QR Dot Style */}
+          <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <Palette className="h-3.5 w-3.5 text-purple-600" />
+                <span>3. Vector QR Style & Colors</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 space-y-4">
               <div className="space-y-1.5">
-                <Label>Primary QR Color</Label>
-                <div className="flex items-center gap-3">
+                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Theme Color Palette
+                </Label>
+                <div className="flex items-center gap-2.5">
                   <input
                     type="color"
                     value={dotColor}
                     onChange={(e) => setDotColor(e.target.value)}
-                    className="h-10 w-12 rounded-lg cursor-pointer border border-border p-1"
+                    className="h-9 w-10 rounded-xl cursor-pointer border border-slate-200 dark:border-slate-800 p-0.5"
                   />
                   <div className="flex gap-2">
-                    {['#4338CA', '#065F46', '#09090B', '#D97706'].map((c) => (
+                    {[
+                      { hex: '#4338CA', label: 'Indigo' },
+                      { hex: '#059669', label: 'Emerald' },
+                      { hex: '#D97706', label: 'Saffron' },
+                      { hex: '#09090B', label: 'Obsidian' }
+                    ].map((c) => (
                       <button
-                        key={c}
-                        onClick={() => setDotColor(c)}
-                        className="h-7 w-7 rounded-full border border-border transition-transform hover:scale-110"
-                        style={{ backgroundColor: c }}
+                        key={c.hex}
+                        type="button"
+                        onClick={() => setDotColor(c.hex)}
+                        title={c.label}
+                        className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer ${
+                          dotColor === c.hex ? 'border-purple-600 ring-2 ring-purple-500/20' : 'border-slate-300 dark:border-slate-700'
+                        }`}
+                        style={{ backgroundColor: c.hex }}
                       />
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Dot Style</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Dot Pattern
+                  </Label>
                   <select
                     value={dotType}
                     onChange={(e) => setDotType(e.target.value as any)}
-                    className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold"
                   >
                     <option value="rounded">Rounded</option>
                     <option value="dots">Dots</option>
@@ -264,12 +315,14 @@ export function QrStudioPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Corner Frame</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Corner Frame
+                  </Label>
                   <select
                     value={cornerSquareType}
                     onChange={(e) => setCornerSquareType(e.target.value as any)}
-                    className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold"
                   >
                     <option value="extra-rounded">Extra Rounded</option>
                     <option value="square">Square</option>
@@ -281,81 +334,84 @@ export function QrStudioPage() {
               {/* Download Buttons */}
               <div className="pt-2 flex gap-2">
                 <Button
-                  variant="saffron"
-                  size="sm"
                   onClick={() => handleDownloadQr('png')}
-                  className="flex-1 gap-1.5 text-xs"
+                  className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3.5 w-3.5" />
                   <span>Download PNG</span>
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => handleDownloadQr('svg')}
-                  className="flex-1 gap-1.5 text-xs"
+                  className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
                 >
-                  <Download className="h-4 w-4" />
-                  <span>Download SVG</span>
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Vector SVG</span>
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right: Live Poster Mock Preview (7 cols) */}
+        {/* Right Column (7 cols): Studio Presentation Canvas */}
         <div className="lg:col-span-7 flex flex-col items-center">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Live Print Preview ({posterFormat})
+          <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <Eye className="h-3.5 w-3.5 text-purple-600" />
+            <span>Photorealistic Mockup ({posterFormat.toUpperCase()})</span>
           </div>
 
-          {/* Printable Poster Mock Box */}
-          <div
-            ref={posterRef}
-            className={`w-full max-w-sm rounded-3xl border-2 border-border/80 bg-white text-slate-900 p-8 shadow-2xl flex flex-col items-center text-center transition-all ${
-              posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-10' : ''
-            }`}
-          >
-            {/* Top Business Name */}
-            <div className="space-y-1 mb-5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
-                <span>{activeBusiness?.name || 'Royal Sweets & Bakery'}</span>
+          {/* Standee Shadow Stage */}
+          <div className="w-full max-w-md p-6 sm:p-10 rounded-3xl bg-radial from-slate-100 to-slate-200/50 dark:from-slate-900/60 dark:to-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 flex flex-col items-center justify-center shadow-inner">
+            {/* Real Mockup Box */}
+            <div
+              ref={posterRef}
+              className={`w-full max-w-sm rounded-3xl bg-white text-slate-900 p-7 shadow-2xl flex flex-col items-center text-center transition-all border border-slate-200/90 ${
+                posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-9' : ''
+              }`}
+            >
+              {/* Business Badge */}
+              <div className="space-y-1.5 mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-extrabold shadow-2xs">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
+                  <span>{activeBusiness?.name || 'Royal Sweets & Bakery'}</span>
+                </div>
+                <h3 className="text-lg font-black tracking-tight text-slate-900 leading-snug">
+                  {headline}
+                </h3>
               </div>
-              <h3 className="text-xl font-bold tracking-tight text-slate-900 leading-snug">
-                {headline}
-              </h3>
+
+              {/* QR Container Frame */}
+              <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-sm my-1">
+                <div ref={qrRef} className="flex items-center justify-center" />
+              </div>
+
+              {/* Official Google Badge */}
+              <div className="space-y-1.5 mt-4">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-slate-800">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>Google Reviews</span>
+                </div>
+                <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                  {subheadline}
+                </p>
+                <div className="text-[10px] font-mono text-slate-400">
+                  reviewqr.in/r/{shortCode}
+                </div>
+              </div>
             </div>
 
-            {/* QR Center Container with subtle frame */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm my-2">
-              <div ref={qrRef} className="flex items-center justify-center" />
-            </div>
-
-            {/* Google Badge & Instructions */}
-            <div className="space-y-2 mt-4">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-700">
-                <svg className="h-4 w-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>Google Reviews</span>
-              </div>
-              <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                {subheadline}
-              </p>
-              <div className="text-[10px] font-mono text-slate-400">
-                reviewqr.in/r/{shortCode}
-              </div>
-            </div>
+            {/* Reflection / Stand base shadow */}
+            <div className="w-56 h-3 bg-slate-400/20 dark:bg-black/40 rounded-full blur-xs mt-3" />
           </div>
 
-          {/* Quick Notice */}
-          <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span>High-res vector QR works with all smartphones and Google Lens</span>
+            <span>High-res vector QR works with any smartphone camera and Google Lens</span>
           </div>
         </div>
       </div>

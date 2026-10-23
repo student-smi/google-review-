@@ -135,31 +135,31 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4 sm:p-6">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] flex flex-col justify-center items-center p-4 sm:p-6 antialiased">
       <div className="w-full max-w-xl space-y-6">
         {/* Header & Steps */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/60 px-3.5 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 shadow-xs">
+            <span className="flex h-2 w-2 rounded-full bg-gradient-to-tr from-[#7B68EE] to-[#EC4899]" />
             <span>Guided Setup • Step {step} of 3</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
             {step === 1 && 'Tell us about your business'}
             {step === 2 && 'Connect your Google Review link'}
             {step === 3 && 'Customize your QR & brand style'}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {step === 1 && 'Enter your shop or clinic details to personalize customer review posters.'}
             {step === 2 && 'Every customer will be seamlessly directed to this official Google link.'}
             {step === 3 && 'Pick your colors and live-preview your dynamic QR code.'}
           </p>
         </div>
 
-        {/* Step Progress Bar */}
+        {/* Step Progress Bar (ClickUp 4.0 Style) */}
         <div className="grid grid-cols-3 gap-2">
-          <div className={`h-1.5 rounded-full transition-all ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-          <div className={`h-1.5 rounded-full transition-all ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-          <div className={`h-1.5 rounded-full transition-all ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
+          <div className={`h-1.5 rounded-full transition-all ${step >= 1 ? 'bg-gradient-to-r from-[#7B68EE] to-[#4F46E5]' : 'bg-slate-200 dark:bg-slate-800'}`} />
+          <div className={`h-1.5 rounded-full transition-all ${step >= 2 ? 'bg-gradient-to-r from-[#4F46E5] to-[#EC4899]' : 'bg-slate-200 dark:bg-slate-800'}`} />
+          <div className={`h-1.5 rounded-full transition-all ${step >= 3 ? 'bg-gradient-to-r from-[#EC4899] to-[#7B68EE]' : 'bg-slate-200 dark:bg-slate-800'}`} />
         </div>
 
         {/* STEP 1: Business Details */}

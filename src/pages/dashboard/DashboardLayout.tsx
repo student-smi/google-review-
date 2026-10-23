@@ -49,7 +49,7 @@ export function DashboardLayout() {
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || businesses[0] || null;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#090D16] text-slate-900 dark:text-slate-100 antialiased font-sans">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -65,7 +65,7 @@ export function DashboardLayout() {
           onSelectBusiness={(id) => setActiveBusinessId(id)}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F8FAFC] dark:bg-[#090D16]">
           <Outlet context={{ activeBusiness, businesses }} />
         </main>
       </div>
