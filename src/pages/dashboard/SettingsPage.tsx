@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, CheckCircle2, ShieldCheck, Building2, Save } from 'lucide-react';
+import { GooglePlacesAutocomplete } from '@/components/google/GooglePlacesAutocomplete';
 
 export function SettingsPage() {
   const [name, setName] = useState('Royal Sweets & Bakery');
@@ -36,6 +37,25 @@ export function SettingsPage() {
           <CardDescription>Public details printed on posters and shown on customer review flow</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Live Google Maps Linking */}
+          <div className="space-y-1.5 pb-2 border-b border-border">
+            <Label>Auto-detect from Google Maps</Label>
+            <GooglePlacesAutocomplete
+              initialValue={name}
+              placeholder="Search business on Google Maps..."
+              onSelect={(place) => {
+                setName(place.name);
+                setGoogleUrl(place.googleReviewUrl);
+                if (place.address) {
+                  const parts = place.address.split(',').map((p) => p.trim());
+                  if (parts.length >= 3) {
+                    setCity(parts[parts.length - 3] || parts[0]);
+                  }
+                }
+              }}
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Business Name</Label>

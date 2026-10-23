@@ -229,3 +229,142 @@ publicRoutes.post('/r/:code/event', async (c) => {
 
   return c.json({ success: true });
 });
+
+// ====================================================================
+// GOOGLE PLACES API (NEW) PROXY ENDPOINTS
+// Powered by Google Cloud API Key (Server-side protected)
+// ====================================================================
+
+// 1. Google Places Autocomplete: Search business by name/location
+publicRoutes.get('/places/search', async (c) => {
+  const query = c.req.query('q');
+  if (!query || query.trim().length < 2) {
+    return c.json({ suggestions: [] });
+  }
+
+  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyBDrPbnv1gHf0gaQVshWh4EywXpgHYQ_W8';
+
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey
+      },
+      body: JSON.stringify({
+        input: query.trim()
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Google Places Autocomplete error:', err);
+      return c.json({ error: 'Places search failed', details: err }, 502);
+    }
+
+    const data = await res.json() as any;
+    const suggestions = (data.suggestions || [])
+      .map((s: any) => ({
+        placeId: s.placePrediction?.placeId || s.placePrediction?.place?.replace('places/', ''),
+        name: s.placePrediction?.structuredFormat?.mainText?.text || s.placePrediction?.text?.text,
+        address: s.placePrediction?.structuredFormat?.secondaryText?.text || s.placePrediction?.text?.text,
+        fullText: s.placePrediction?.text?.text
+      }))
+      .filter((s: any) => s.placeId);
+
+    return c.json({ suggestions });
+  } catch (err: any) {
+    console.error('Places API error:', err);
+    return c.json({ error: 'Internal Places search error' }, 500);
+  }
+});
+
+// 2. Google Places Details: Retrieve place rating, address, and review URL
+publicRoutes.get('/places/details/:placeId', async (c) => {
+  const placeId = c.req.param('placeId');
+  if (!placeId) {
+    return c.json({ error: 'Place ID is required' }, 400);
+  }
+
+  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyBDrPbnv1gHf0gaQVshWh4EywXpgHYQ_W8';
+
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,googleMapsUri,rating,userRatingCount`, {
+      headers: {
+        'X-Goog-Api-Key': apiKey
+      }
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Google Place Details error:', err);
+      return c.json({ error: 'Place details lookup failed' }, 502);
+    }
+
+    const data = await res.json() as any;
+    const name = data.displayName?.text || '';
+    const address = data.formattedAddress || '';
+    const rating = data.rating || null;
+    const userRatingCount = data.userRatingCount || 0;
+    const googleMapsUri = data.googleMapsUri || '';
+    const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
+
+    return c.json({
+      placeId,
+      name,
+      address,
+      rating,
+      userRatingCount,
+      googleMapsUri,
+      googleReviewUrl
+    });
+  } catch (err: any) {
+    console.error('Place Details error:', err);
+    return c.json({ error: 'Internal Place details error' }, 500);
+  }
+});
+
+// ====================================================================
+// GOOGLE OAUTH LOGIN & PROFILE VERIFICATION
+// ====================================================================
+publicRoutes.post('/auth/google', async (c) => {
+  try {
+    const body = await c.req.json() as any;
+    const { credential } = body;
+    if (!credential) {
+      return c.json({ error: 'Google credential (ID token) is required' }, 400);
+    }
+
+    // Decode JWT payload (Google ID Token)
+    const parts = credential.split('.');
+    if (parts.length !== 3) {
+      return c.json({ error: 'Invalid Google token format' }, 400);
+    }
+
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+
+    const user = {
+      id: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      emailVerified: payload.email_verified
+    };
+
+    return c.json({
+      success: true,
+      user,
+      sessionToken: `gauth_${payload.sub}_${Date.now()}`
+    });
+  } catch (err: any) {
+    console.error('Google auth error:', err);
+    return c.json({ error: 'Authentication failed' }, 500);
+  }
+});

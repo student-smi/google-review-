@@ -15,6 +15,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 interface HeaderProps {
   onOpenCommand: () => void;
@@ -153,10 +154,8 @@ export function Header({
           {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-700" />}
         </button>
 
-        {/* User Profile Avatar */}
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 select-none">
-          RS
-        </div>
+        {/* Google Authentication */}
+        <GoogleAuthButton compact />
       </div>
     </header>
   );

@@ -18,8 +18,11 @@ import {
   UtensilsCrossed,
   Scissors,
   Stethoscope,
-  Briefcase
+  Briefcase,
+  Star
 } from 'lucide-react';
+import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 interface OnboardingPageProps {
   onComplete: (business: any) => void;
@@ -35,7 +38,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [city, setCity] = useState('Ahmedabad');
   const [phone, setPhone] = useState('+91 98765 43210');
 
-  // Step 2: Google Link
+  // Step 2: Google Link & Place Details
+  const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
+  const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
   const [googleReviewUrl, setGoogleReviewUrl] = useState('https://g.page/r/royal-sweets/review');
   const [urlTested, setUrlTested] = useState(false);
 
@@ -67,6 +72,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         category,
         city,
         phone,
+        googlePlaceId: googlePlaceId || undefined,
         googleReviewUrl,
         brandColor,
         brandColorSecondary
@@ -160,8 +166,54 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         {step === 1 && (
           <Card className="animate-in fade-in duration-200">
             <CardContent className="p-6 space-y-4">
+              {/* Optional Google Sign-In Header */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-border/80">
+                <div>
+                  <p className="text-xs font-bold text-foreground">Sign in with Google (Optional)</p>
+                  <p className="text-[11px] text-muted-foreground">Keep your business & QR stats synced</p>
+                </div>
+                <GoogleAuthButton
+                  compact
+                  onSuccess={(u) => {
+                    if (!name || name === 'Royal Sweets & Bakery') {
+                      setName(`${u.name}'s Business`);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Google Maps Search & Autocomplete */}
               <div className="space-y-1.5">
-                <Label>Business / Store Name</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Search on Google Maps</Label>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    Auto-fills Review Link
+                  </span>
+                </div>
+                <GooglePlacesAutocomplete
+                  initialValue={name}
+                  onSelect={(place) => {
+                    setName(place.name);
+                    setGooglePlaceId(place.placeId);
+                    setGoogleReviewUrl(place.googleReviewUrl);
+                    setVerifiedPlace(place);
+                    setUrlTested(true);
+                    if (place.address) {
+                      const parts = place.address.split(',').map((p) => p.trim());
+                      if (parts.length >= 3) {
+                        setCity(parts[parts.length - 3] || parts[0]);
+                      }
+                    }
+                  }}
+                  placeholder="Type shop name, e.g. Royal Sweets, Ahmedabad..."
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Or edit business name below if you prefer a custom display title.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Business Display Name</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -227,10 +279,30 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
           </Card>
         )}
 
+
         {/* STEP 2: Google Review Link */}
         {step === 2 && (
           <Card className="animate-in fade-in duration-200">
             <CardContent className="p-6 space-y-5">
+              {verifiedPlace && (
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      Google Maps Listing Connected
+                    </span>
+                    {verifiedPlace.rating && (
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-500/15 px-2 py-0.5 rounded-lg">
+                        <Star className="h-3.5 w-3.5 fill-current" />
+                        {verifiedPlace.rating} ({verifiedPlace.userRatingCount || 0} reviews)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-foreground font-semibold">{verifiedPlace.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{verifiedPlace.address}</p>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label>Google Review Destination URL</Label>
                 <Input
