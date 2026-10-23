@@ -140,7 +140,10 @@ export function GooglePlacesAutocomplete({
 
       {/* Dropdown Suggestions */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-border/90 bg-white dark:bg-slate-900 p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95">
+        <div
+          style={{ backgroundColor: 'hsl(var(--card))' }}
+          className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-border p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95"
+        >
           <div className="px-2.5 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Google Maps Listings
           </div>
