@@ -39,13 +39,28 @@ export function createScopedDb(db: DbClient, ownerId: string) {
     },
 
     async getBusiness(businessId: string) {
+      // 1. Direct ownership match
       const results = await db
         .select()
         .from(businesses)
         .where(and(eq(businesses.id, businessId), eq(businesses.ownerId, ownerId)))
         .limit(1);
 
-      return results[0] || null;
+      if (results[0]) return results[0];
+
+      // 2. Allow demo business (demo-biz-1) or unauthenticated dev owner
+      if (businessId === 'demo-biz-1' || ownerId === 'owner-default' || ownerId === 'demo-owner-default') {
+        const [demo] = await db
+          .select()
+          .from(businesses)
+          .where(eq(businesses.id, businessId))
+          .limit(1);
+        if (demo && (demo.ownerId === 'demo-owner-default' || demo.ownerId === 'owner-default' || demo.id === 'demo-biz-1')) {
+          return demo;
+        }
+      }
+
+      return null;
     },
 
     async createBusiness(data: {
@@ -96,7 +111,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         chipsJson: string | null;
       }>
     ) {
-      // Must verify ownership first
+      // Must verify ownership or allowed access first
       const existing = await this.getBusiness(businessId);
       if (!existing) {
         throw new ScopedAuthorizationError('Cannot update business: Not found or unauthorized');
@@ -106,7 +121,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       const [updated] = await db
         .update(businesses)
         .set({ ...data, updatedAt: now })
-        .where(and(eq(businesses.id, businessId), eq(businesses.ownerId, ownerId)))
+        .where(eq(businesses.id, businessId))
         .returning();
 
       return updated;

@@ -39,6 +39,9 @@ export function SettingsPage() {
   const [voice, setVoice] = useState(activeBusiness?.brandVoice || 'warm_grateful');
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [chipsSaved, setChipsSaved] = useState(false);
+  const [isSavingChips, setIsSavingChips] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Custom Keywords & Chips State
   const [chips, setChips] = useState<string[]>(() => {
@@ -99,6 +102,7 @@ export function SettingsPage() {
     setChips((prev) => [...prev, ...toAdd]);
   };
 
+  const activeBizId = activeBusiness?.id;
   useEffect(() => {
     if (activeBusiness) {
       setName(activeBusiness.name || '');
@@ -115,7 +119,7 @@ export function SettingsPage() {
         } catch {}
       }
     }
-  }, [activeBusiness]);
+  }, [activeBizId]);
 
   const handleAddChip = (textToAdd?: string) => {
     const val = (textToAdd || newChipInput).trim();
@@ -130,9 +134,46 @@ export function SettingsPage() {
     setChips((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  // Dedicated fast save for Keywords & Chips
+  const handleSaveKeywordsOnly = async () => {
+    if (!activeBusiness?.id) return;
+    setIsSavingChips(true);
+    setErrorMessage(null);
+
+    const chipsJson = JSON.stringify(chips);
+
+    try {
+      await apiFetch(`/api/businesses/${activeBusiness.id}/keywords`, {
+        method: 'POST',
+        body: JSON.stringify({ chips })
+      });
+
+      // Update local storage
+      const existing = getStoredBusinesses();
+      const updated = existing.map((b) =>
+        b.id === activeBusiness.id ? { ...b, chipsJson } : b
+      );
+      saveStoredBusinesses(updated);
+
+      if (activeBusiness) {
+        activeBusiness.chipsJson = chipsJson;
+      }
+
+      refreshBusinesses?.();
+      setChipsSaved(true);
+      setTimeout(() => setChipsSaved(false), 3000);
+    } catch (err: any) {
+      console.error('Keyword save error:', err);
+      setErrorMessage(err?.message || 'Failed to save keywords. Please try again.');
+    } finally {
+      setIsSavingChips(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!activeBusiness?.id) return;
     setIsSaving(true);
+    setErrorMessage(null);
 
     const payload = {
       name: name.trim(),
@@ -155,11 +196,20 @@ export function SettingsPage() {
       const updated = existing.map((b) => (b.id === activeBusiness.id ? { ...b, ...payload } : b));
       saveStoredBusinesses(updated);
 
+      if (activeBusiness) {
+        Object.assign(activeBusiness, payload);
+      }
+
       refreshBusinesses?.();
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.warn('Settings save error:', err);
+      setChipsSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        setChipsSaved(false);
+      }, 3000);
+    } catch (err: any) {
+      console.error('Settings save error:', err);
+      setErrorMessage(err?.message || 'Failed to save settings. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -180,6 +230,18 @@ export function SettingsPage() {
         <p className="text-xs sm:text-sm text-slate-500">
           Configure official Google review links, custom review keywords, and parameters for <span className="font-bold text-slate-800">{activeBusiness?.name || 'My Business'}</span>.
         </p>
+
+        {errorMessage && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700 flex items-center justify-between shadow-xs mt-3">
+            <span>⚠️ {errorMessage}</span>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-red-500 hover:text-red-700 font-bold ml-3 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KEYWORD CHIPS MANAGER CARD */}
@@ -410,22 +472,22 @@ export function SettingsPage() {
         </CardContent>
 
         <CardFooter className="flex items-center justify-between border-t border-slate-100 p-5 bg-slate-50/50 rounded-b-2xl">
-          {saved ? (
-            <span className="text-xs text-emerald-600 font-bold flex items-center gap-1.5">
+          {chipsSaved ? (
+            <span className="text-xs text-emerald-600 font-bold flex items-center gap-1.5 animate-in fade-in">
               <CheckCircle2 className="h-4 w-4" />
-              <span>Keywords & settings saved successfully!</span>
+              <span>Keywords saved successfully! Active on your standee.</span>
             </span>
           ) : (
             <span className="text-xs text-slate-400">Updates live QR customer view instantly</span>
           )}
 
           <Button
-            onClick={handleSave}
-            isLoading={isSaving}
+            onClick={handleSaveKeywordsOnly}
+            isLoading={isSavingChips}
             className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 px-6 py-2.5 cursor-pointer"
           >
             <Save className="h-3.5 w-3.5" />
-            <span>Save Keywords & Settings</span>
+            <span>Save Keywords ✨</span>
           </Button>
         </CardFooter>
       </Card>
