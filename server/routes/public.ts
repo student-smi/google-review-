@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, or, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { qrCodes, businesses, scanDailyStats, scans, mediaAssets } from '../db/schema';
+import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews } from '../db/schema';
 
 export interface Env {
   DB: any;
@@ -29,6 +29,11 @@ publicRoutes.get('/r/:code', async (c) => {
     label: string;
     businessId: string;
     businessName: string;
+    category?: string | null;
+    address?: string | null;
+    city?: string | null;
+    googlePlaceId?: string | null;
+    chipsJson?: string | null;
     googleReviewUrl: string;
     logoUrl?: string | null;
     brandColor: string;
@@ -58,6 +63,11 @@ publicRoutes.get('/r/:code', async (c) => {
         label: qrCodes.label,
         businessId: qrCodes.businessId,
         businessName: businesses.name,
+        category: businesses.category,
+        address: businesses.address,
+        city: businesses.city,
+        googlePlaceId: businesses.googlePlaceId,
+        chipsJson: businesses.chipsJson,
         googleReviewUrl: businesses.googleReviewUrl,
         logoUrl: businesses.logoUrl,
         brandColor: businesses.brandColor,
@@ -106,6 +116,11 @@ publicRoutes.get('/r/:code', async (c) => {
           label: 'Main Standee',
           businessId: matched.id,
           businessName: matched.name,
+          category: matched.category,
+          address: matched.address,
+          city: matched.city,
+          googlePlaceId: matched.googlePlaceId,
+          chipsJson: matched.chipsJson,
           googleReviewUrl: matched.googleReviewUrl.startsWith('http')
             ? matched.googleReviewUrl
             : `https://${matched.googleReviewUrl}`,
@@ -213,10 +228,22 @@ publicRoutes.get('/r/:code', async (c) => {
     console.warn('Could not fetch media for business:', err);
   }
 
+  // Fetch custom chips configured by shopkeeper
+  let customChips: string[] = [];
+  if (qrData.chipsJson) {
+    try {
+      const parsed = JSON.parse(qrData.chipsJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customChips = parsed;
+      }
+    } catch {}
+  }
+
   return c.json({
     success: true,
     data: {
       ...qrData,
+      chips: customChips,
       media: mediaList
     }
   });
@@ -238,22 +265,39 @@ publicRoutes.post('/r/:code/event', async (c) => {
   const eventTrackingPromise = (async () => {
     try {
       const db = getDb(c.env.DB);
-      const [qr] = await db
+      let [qr] = await db
         .select({ id: qrCodes.id, businessId: qrCodes.businessId })
         .from(qrCodes)
         .where(eq(qrCodes.code, code))
         .limit(1);
 
-      if (!qr) return;
+      let businessId = qr?.businessId;
+      let qrId = qr?.id;
 
-      const dailyId = `stat_${qr.id}_${today}`;
+      if (!businessId) {
+        const cleanCode = code.toLowerCase().trim();
+        const [matchedBiz] = await db
+          .select({ id: businesses.id })
+          .from(businesses)
+          .where(or(eq(businesses.id, code), eq(businesses.slug, cleanCode)))
+          .limit(1);
+
+        if (matchedBiz) {
+          businessId = matchedBiz.id;
+          qrId = `qr_${matchedBiz.id}`;
+        }
+      }
+
+      if (!businessId) return;
+
+      const dailyId = `stat_${qrId || businessId}_${today}`;
       if (eventType === 'help_me_write') {
         await db
           .insert(scanDailyStats)
           .values({
             id: dailyId,
-            qrId: qr.id,
-            businessId: qr.businessId,
+            qrId: qrId || `qr_${businessId}`,
+            businessId: businessId,
             day: today,
             scanCount: 0,
             helpMeWriteCount: 1,
@@ -273,8 +317,8 @@ publicRoutes.post('/r/:code/event', async (c) => {
           .insert(scanDailyStats)
           .values({
             id: dailyId,
-            qrId: qr.id,
-            businessId: qr.businessId,
+            qrId: qrId || `qr_${businessId}`,
+            businessId: businessId,
             day: today,
             scanCount: 0,
             helpMeWriteCount: 0,
@@ -289,9 +333,24 @@ publicRoutes.post('/r/:code/event', async (c) => {
               updatedAt: now
             }
           });
+
+        // Persist customer review into customer_reviews table
+        if (body.reviewText && typeof body.reviewText === 'string' && body.reviewText.trim().length > 0) {
+          const reviewId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          await db.insert(customerReviews).values({
+            id: reviewId,
+            businessId: businessId,
+            customerName: typeof body.customerName === 'string' && body.customerName.trim() ? body.customerName.trim() : 'Verified Customer',
+            rating: typeof body.rating === 'number' && body.rating >= 1 && body.rating <= 5 ? body.rating : 5,
+            reviewText: body.reviewText.trim(),
+            chipsJson: Array.isArray(body.chips) ? JSON.stringify(body.chips) : (typeof body.chipsJson === 'string' ? body.chipsJson : null),
+            language: typeof body.language === 'string' ? body.language : 'en',
+            createdAt: now
+          });
+        }
       }
     } catch (err) {
-      console.error('Funnel event tracking error:', err);
+      console.error('Funnel event / review tracking error:', err);
     }
   })();
 
@@ -364,7 +423,7 @@ publicRoutes.get('/places/details/:placeId', async (c) => {
   const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyBDrPbnv1gHf0gaQVshWh4EywXpgHYQ_W8';
 
   try {
-    const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,googleMapsUri,rating,userRatingCount`, {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,googleMapsUri,rating,userRatingCount,primaryTypeDisplayName,types,editorialSummary`, {
       headers: {
         'X-Goog-Api-Key': apiKey
       }
@@ -383,6 +442,8 @@ publicRoutes.get('/places/details/:placeId', async (c) => {
     const userRatingCount = data.userRatingCount || 0;
     const googleMapsUri = data.googleMapsUri || '';
     const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${placeId}`;
+    const category = data.primaryTypeDisplayName?.text || data.types?.[0]?.replace(/_/g, ' ') || '';
+    const summary = data.editorialSummary?.text || '';
 
     return c.json({
       placeId,
@@ -391,7 +452,9 @@ publicRoutes.get('/places/details/:placeId', async (c) => {
       rating,
       userRatingCount,
       googleMapsUri,
-      googleReviewUrl
+      googleReviewUrl,
+      category,
+      summary
     });
   } catch (err: any) {
     console.error('Place Details error:', err);

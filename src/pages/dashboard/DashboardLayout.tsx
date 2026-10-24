@@ -32,6 +32,7 @@ export interface BusinessItem {
   logoUrl?: string | null;
   brandVoice?: string;
   phone?: string | null;
+  chipsJson?: string | null;
 }
 
 export function DashboardLayout() {
@@ -83,7 +84,7 @@ export function DashboardLayout() {
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || businesses[0] || null;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] dark:bg-[#090D16] text-slate-900 dark:text-slate-100 antialiased font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 antialiased font-sans">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -99,15 +100,22 @@ export function DashboardLayout() {
           onSelectBusiness={handleSelectBusiness}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F8FAFC] dark:bg-[#090D16]">
-          {businesses.length === 0 && !isLoading ? (
-            /* Empty State: If user has not created any business yet */
-            <div className="max-w-xl mx-auto my-12 text-center p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xl space-y-5">
-              <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 border border-purple-200 dark:border-purple-800">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#F8FAFC]">
+          {isLoading && businesses.length === 0 ? (
+            <div className="flex h-full min-h-[400px] items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-3 border-blue-600 border-t-transparent" />
+                <p className="text-xs font-semibold text-slate-500">Restoring your workspace & standees...</p>
+              </div>
+            </div>
+          ) : businesses.length === 0 ? (
+            /* Empty State: Only shown if user has truly zero businesses */
+            <div className="max-w-xl mx-auto my-12 text-center p-8 rounded-3xl border border-slate-200 bg-white shadow-xl space-y-5">
+              <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200">
                 <Store className="h-8 w-8" />
               </div>
               <div className="space-y-1.5">
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">
                   Welcome to ReviewQR
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
@@ -117,7 +125,7 @@ export function DashboardLayout() {
               <div className="pt-2">
                 <Button
                   onClick={() => navigate('/onboarding')}
-                  className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-2 px-6 py-2.5"
+                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-xl shadow-xs gap-2 px-6 py-2.5 cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Set Up Your Business Location</span>

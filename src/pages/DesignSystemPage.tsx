@@ -5,7 +5,6 @@ import { Input, Textarea, Label } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/badge';
 import { ProgressRing } from '@/components/ui/progress-ring';
-import { useTheme } from '@/hooks/useTheme';
 import {
   Sparkles,
   QrCode,
@@ -13,8 +12,6 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
-  Sun,
-  Moon,
   ArrowRight,
   ShieldCheck,
   Search,
@@ -22,7 +19,6 @@ import {
 } from 'lucide-react';
 
 export function DesignSystemPage() {
-  const { theme, toggleTheme } = useTheme();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -46,10 +42,6 @@ export function DesignSystemPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={toggleTheme} className="gap-2">
-            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
-            <span>Theme: {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
-          </Button>
           <a href="/dashboard">
             <Button size="sm" className="gap-2">
               <span>Go to App</span>

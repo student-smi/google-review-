@@ -57,7 +57,8 @@ businessRoutes.post('/', async (c) => {
     brandVoice: body.brandVoice || 'warm_grateful',
     brandColor: body.brandColor || '#4338CA',
     brandColorSecondary: body.brandColorSecondary || '#D97706',
-    contactResolutionLine: body.contactResolutionLine || null
+    contactResolutionLine: body.contactResolutionLine || null,
+    chipsJson: body.chipsJson || (Array.isArray(body.chips) ? JSON.stringify(body.chips) : null)
   });
 
   return c.json({ business }, 201);
@@ -86,10 +87,58 @@ businessRoutes.patch('/:id', async (c) => {
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
 
+  // If client passed `chips` array, serialize it to `chipsJson`
+  const updatePayload = { ...body };
+  if (Array.isArray(body.chips)) {
+    updatePayload.chipsJson = JSON.stringify(body.chips);
+    delete updatePayload.chips;
+  }
+
   try {
-    const updated = await scoped.updateBusiness(businessId, body);
+    const updated = await scoped.updateBusiness(businessId, updatePayload);
     return c.json({ business: updated });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }
 });
+
+// Get customer reviews for a business
+businessRoutes.get('/:id/reviews', async (c) => {
+  const ownerId = c.get('ownerId');
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const reviews = await scoped.getCustomerReviews(businessId);
+    return c.json({ reviews });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// Save reply to customer review
+businessRoutes.post('/:id/reviews/:reviewId/reply', async (c) => {
+  const ownerId = c.get('ownerId');
+  const businessId = c.req.param('id');
+  const reviewId = c.req.param('reviewId');
+  const body = await c.req.json();
+
+  if (!body.replyText || typeof body.replyText !== 'string' || !body.replyText.trim()) {
+    return c.json({ error: 'Reply text is required' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const updated = await scoped.updateCustomerReviewReply(businessId, reviewId, {
+      replyText: body.replyText.trim(),
+      replyStyle: body.replyStyle || 'warm'
+    });
+    return c.json({ review: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+

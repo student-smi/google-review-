@@ -1,27 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
-export type Theme = 'light' | 'dark';
+export type Theme = 'light';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('reviewqr_theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
-
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('reviewqr_theme', theme);
-  }, [theme]);
+    root.classList.remove('dark');
+    try {
+      localStorage.setItem('reviewqr_theme', 'light');
+    } catch {}
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+    // Pure Light Mode only - dark mode removed
+    const root = document.documentElement;
+    root.classList.remove('dark');
   };
 
-  return { theme, setTheme, toggleTheme, isDark: theme === 'dark' };
+  return {
+    theme: 'light' as const,
+    setTheme: () => {},
+    toggleTheme,
+    isDark: false
+  };
 }

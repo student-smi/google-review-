@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { businesses, aiUsageDaily, aiDraftEvents, rateLimits } from '../db/schema';
-import { generateCustomerReviewDraft, generateOwnerReplies } from '../ai/provider';
+import { generateCustomerReviewDraft, generateOwnerReplies, generateBusinessKeywords } from '../ai/provider';
 import type { Env } from './public';
 
 export const aiRoutes = new Hono<{ Bindings: Env }>();
@@ -13,6 +13,12 @@ aiRoutes.post('/review-draft', async (c) => {
   const {
     businessId,
     businessName = 'Local Business',
+    category,
+    address,
+    city,
+    googlePlaceId,
+    rating,
+    summary,
     chips = [],
     freeText = '',
     language = 'en',
@@ -23,6 +29,28 @@ aiRoutes.post('/review-draft', async (c) => {
   const today = new Date().toISOString().split('T')[0];
   const now = Math.floor(Date.now() / 1000);
   const db = getDb(c.env.DB);
+
+  // If category/city/address are missing, query from businesses table in D1
+  let resolvedCategory = category;
+  let resolvedCity = city;
+  let resolvedAddress = address;
+
+  if (businessId && (!resolvedCategory || !resolvedCity || !resolvedAddress)) {
+    try {
+      const [biz] = await db
+        .select()
+        .from(businesses)
+        .where(eq(businesses.id, businessId))
+        .limit(1);
+      if (biz) {
+        resolvedCategory = resolvedCategory || biz.category;
+        resolvedCity = resolvedCity || biz.city;
+        resolvedAddress = resolvedAddress || biz.address;
+      }
+    } catch (err) {
+      console.warn('Could not query business metadata for AI context:', err);
+    }
+  }
 
   // 1. Sliding IP Rate Limiter (No KV writes!)
   const clientIp = c.req.header('cf-connecting-ip') || 'anonymous-ip';
@@ -36,10 +64,16 @@ aiRoutes.post('/review-draft', async (c) => {
       .where(eq(rateLimits.key, rateLimitKey))
       .limit(1);
 
-    if (rateCheck && rateCheck.count >= 10) {
+    if (rateCheck && rateCheck.count >= 100) {
       // Return fallback without blocking customer
       const fallback = await generateCustomerReviewDraft(null, {
         businessName,
+        category: resolvedCategory,
+        address: resolvedAddress,
+        city: resolvedCity,
+        googlePlaceId,
+        rating,
+        summary,
         chips,
         freeText,
         language,
@@ -64,7 +98,7 @@ aiRoutes.post('/review-draft', async (c) => {
     console.warn('Rate limiter error:', err);
   }
 
-  // 2. Per-Business Daily Quota Safeguard (Free Tier: 25/day max per business)
+  // 2. Per-Business Daily Quota Safeguard (Free Tier: 100/day max per business)
   let quotaAvailable = true;
   if (businessId) {
     try {
@@ -74,7 +108,7 @@ aiRoutes.post('/review-draft', async (c) => {
         .where(and(eq(aiUsageDaily.businessId, businessId), eq(aiUsageDaily.day, today)))
         .limit(1);
 
-      if (usage && usage.callCount >= 25) {
+      if (usage && usage.callCount >= 100) {
         quotaAvailable = false;
       }
     } catch (err) {
@@ -82,9 +116,15 @@ aiRoutes.post('/review-draft', async (c) => {
     }
   }
 
-  // 3. Generate Draft (Workers AI if quota available, otherwise instant fallback)
+  // 3. Generate Draft (Workers AI with Google Place details if quota available, otherwise instant fallback)
   const result = await generateCustomerReviewDraft(quotaAvailable ? c.env.AI : null, {
     businessName,
+    category: resolvedCategory,
+    address: resolvedAddress,
+    city: resolvedCity,
+    googlePlaceId,
+    rating,
+    summary,
     chips,
     freeText,
     language,
@@ -144,7 +184,8 @@ aiRoutes.post('/review-draft', async (c) => {
     drafts: result.drafts,
     draft: result.drafts[0]?.text || '',
     usedFallback: result.usedFallback,
-    quotaAvailable
+    quotaAvailable,
+    debug: (result as any).debug
   });
 });
 
@@ -157,7 +198,9 @@ aiRoutes.post('/reply-draft', async (c) => {
     reviewText,
     rating,
     brandVoice,
-    resolutionContact
+    resolutionContact,
+    city,
+    category
   } = body;
 
   if (!reviewText) {
@@ -169,9 +212,51 @@ aiRoutes.post('/reply-draft', async (c) => {
     customerName,
     reviewText,
     rating,
+    city,
+    category,
     brandVoice,
     resolutionContact
   });
 
   return c.json({ success: true, replies });
 });
+
+// AI Keyword / Highlights Suggestion Endpoint for Businesses
+aiRoutes.post('/suggest-keywords', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  let { businessId, businessName, category, city, address } = body;
+
+  const db = getDb(c.env.DB);
+
+  if (businessId && (!businessName || !category || !city)) {
+    try {
+      const [biz] = await db
+        .select()
+        .from(businesses)
+        .where(eq(businesses.id, businessId))
+        .limit(1);
+      if (biz) {
+        businessName = businessName || biz.name;
+        category = category || biz.category;
+        city = city || biz.city;
+        address = address || biz.address;
+      }
+    } catch (err) {
+      console.warn('Could not query business info for keyword generation:', err);
+    }
+  }
+
+  const result = await generateBusinessKeywords(c.env.AI, {
+    businessName: businessName || 'Local Business',
+    category,
+    city,
+    address
+  });
+
+  return c.json({
+    success: true,
+    keywords: result.keywords,
+    usedFallback: result.usedFallback
+  });
+});
+

@@ -8,7 +8,8 @@ import {
   aiUsageDaily,
   seoChecklistItems,
   replyDrafts,
-  locations
+  locations,
+  customerReviews
 } from './schema';
 
 export class ScopedAuthorizationError extends Error {
@@ -62,6 +63,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       brandColor?: string;
       brandColorSecondary?: string;
       contactResolutionLine?: string;
+      chipsJson?: string | null;
     }) {
       const now = Math.floor(Date.now() / 1000);
       const [created] = await db
@@ -91,6 +93,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         brandColor: string;
         brandColorSecondary: string;
         contactResolutionLine: string;
+        chipsJson: string | null;
       }>
     ) {
       // Must verify ownership first
@@ -356,6 +359,46 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         .returning();
 
       return saved;
+    },
+
+    // ──────────────────────────────────────────────
+    // Customer Reviews & AI Replies
+    // ──────────────────────────────────────────────
+    async getCustomerReviews(businessId: string) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot get customer reviews: Unauthorized business');
+      }
+
+      return db
+        .select()
+        .from(customerReviews)
+        .where(eq(customerReviews.businessId, businessId))
+        .orderBy(desc(customerReviews.createdAt))
+        .limit(100);
+    },
+
+    async updateCustomerReviewReply(businessId: string, reviewId: string, data: {
+      replyText: string;
+      replyStyle?: string;
+    }) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot reply to review: Unauthorized business');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const [updated] = await db
+        .update(customerReviews)
+        .set({
+          replyText: data.replyText,
+          replyStyle: data.replyStyle || 'warm',
+          repliedAt: now
+        })
+        .where(and(eq(customerReviews.id, reviewId), eq(customerReviews.businessId, businessId)))
+        .returning();
+
+      return updated;
     }
   };
 }

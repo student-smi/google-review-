@@ -61,6 +61,7 @@ export const businesses = sqliteTable('businesses', {
   brandColor: text('brand_color').default('#4338CA').notNull(), // Primary accent
   brandColorSecondary: text('brand_color_secondary').default('#D97706').notNull(), // Saffron accent
   contactResolutionLine: text('contact_resolution_line'), // offline resolution phone or email
+  chipsJson: text('chips_json'), // Custom keywords / highlights chosen by shopkeeper
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull()
 }, (t) => [
@@ -142,6 +143,23 @@ export const aiUsageDaily = sqliteTable('ai_usage_daily', {
   updatedAt: integer('updated_at').notNull()
 }, (t) => [
   uniqueIndex('idx_ai_usage_business_day').on(t.businessId, t.day)
+]);
+
+export const customerReviews = sqliteTable('customer_reviews', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  customerName: text('customer_name').default('Verified Customer').notNull(),
+  rating: integer('rating').default(5).notNull(),
+  reviewText: text('review_text').notNull(),
+  chipsJson: text('chips_json'),
+  language: text('language').default('en').notNull(),
+  replyText: text('reply_text'),
+  replyStyle: text('reply_style'),
+  repliedAt: integer('replied_at'),
+  createdAt: integer('created_at').notNull()
+}, (t) => [
+  index('idx_customer_reviews_business').on(t.businessId),
+  index('idx_customer_reviews_created').on(t.createdAt)
 ]);
 
 export const replyDrafts = sqliteTable('reply_drafts', {

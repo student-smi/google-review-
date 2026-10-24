@@ -51,11 +51,16 @@ export function CustomerFlowPage() {
 
   // Business metadata fetched via /api/public/r/:code
   const [bizData, setBizData] = useState<{
+    businessId?: string;
     businessName: string;
     googleReviewUrl: string;
     brandColor: string;
     brandColorSecondary: string;
     label?: string;
+    category?: string | null;
+    address?: string | null;
+    city?: string | null;
+    googlePlaceId?: string | null;
   }>({
     businessName: '',
     googleReviewUrl: '',
@@ -91,12 +96,22 @@ export function CustomerFlowPage() {
         .then((payload) => {
           if (payload?.data) {
             setBizData({
+              businessId: payload.data.businessId,
               businessName: payload.data.businessName || 'Business Review',
               googleReviewUrl: payload.data.googleReviewUrl,
               brandColor: payload.data.brandColor || '#4338CA',
               brandColorSecondary: payload.data.brandColorSecondary || '#D97706',
-              label: payload.data.label
+              label: payload.data.label,
+              category: payload.data.category,
+              address: payload.data.address,
+              city: payload.data.city,
+              googlePlaceId: payload.data.googlePlaceId
             });
+
+            if (Array.isArray(payload.data.chips) && payload.data.chips.length > 0) {
+              setCustomChips(payload.data.chips);
+              setSelectedChips([payload.data.chips[0], payload.data.chips[1] || payload.data.chips[0]]);
+            }
 
             if (Array.isArray(payload.data.media) && payload.data.media.length > 0) {
               setMediaPhotos(payload.data.media);
@@ -147,6 +162,15 @@ export function CustomerFlowPage() {
                     brandColorSecondary: b.brandColorSecondary || '#D97706',
                     label: 'Main Billing Counter'
                   });
+                  if (b.chipsJson) {
+                    try {
+                      const parsed = JSON.parse(b.chipsJson);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        setCustomChips(parsed);
+                        setSelectedChips([parsed[0], parsed[1] || parsed[0]]);
+                      }
+                    } catch {}
+                  }
                 }
               }
             } catch {}
@@ -163,8 +187,9 @@ export function CustomerFlowPage() {
     }
   }, [draftLanguage, i18n]);
 
-  // Chips catalog
-  const chipsCatalog = [
+  // Dynamic chips catalog: Shopkeeper custom chips or intelligent defaults
+  const [customChips, setCustomChips] = useState<string[]>([]);
+  const defaultChips = [
     'Delicious & fresh',
     'Fast service',
     'Clean & hygienic',
@@ -173,6 +198,7 @@ export function CustomerFlowPage() {
     'Neat packaging',
     'Attentive service'
   ];
+  const chipsCatalog = customChips.length > 0 ? customChips : defaultChips;
 
   const toggleChip = (chip: string) => {
     setSelectedChips((prev) =>
@@ -234,7 +260,12 @@ export function CustomerFlowPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          businessId: bizData.businessId,
           businessName: bizData.businessName,
+          category: bizData.category,
+          address: bizData.address,
+          city: bizData.city,
+          googlePlaceId: bizData.googlePlaceId,
           chips: selectedChips,
           freeText: freeText.trim(),
           language: draftLanguage,
@@ -260,7 +291,9 @@ export function CustomerFlowPage() {
       bizData.businessName,
       selectedChips,
       freeText.trim(),
-      draftLanguage
+      draftLanguage,
+      bizData.category,
+      bizData.city
     );
 
     setReviewOptions(fallbacks);
@@ -291,12 +324,18 @@ export function CustomerFlowPage() {
 
     const targetUrl = formatReviewUrl(bizData.googleReviewUrl);
 
-    // Track click
+    // Track click & save customer review for owner dashboard
     if (code) {
       fetch(`/api/public/r/${code}/event`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'google_click' })
+        body: JSON.stringify({
+          event: 'google_click',
+          reviewText: text,
+          chips: selectedChips,
+          language: draftLanguage,
+          rating: 5
+        })
       }).catch(() => {});
     }
 
@@ -456,14 +495,22 @@ export function CustomerFlowPage() {
                 <button
                   type="button"
                   onClick={handleVoiceInput}
-                  className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+                  className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full shadow-md transition-all active:scale-95 cursor-pointer ${
                     isListening
-                      ? 'border-red-500 bg-red-50 text-red-600 animate-pulse'
-                      : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-rose-600 text-white ring-4 ring-rose-200 animate-pulse shadow-rose-500/30'
+                      : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.03]'
                   }`}
                 >
-                  {isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-                  <span>{isListening ? 'સાંભળી રહ્યા છીએ...' : '🎙️ બોલીને લખો (Voice)'}</span>
+                  {isListening ? (
+                    <MicOff className="h-3.5 w-3.5 animate-bounce" />
+                  ) : (
+                    <Mic className="h-3.5 w-3.5 text-white" />
+                  )}
+                  <span>
+                    {isListening
+                      ? (draftLanguage === 'gu' ? 'સાંભળી રહ્યા છીએ... (ટેપ કરી રોકો)' : draftLanguage === 'hi' ? 'सुन रहे हैं... (रोकने के लिए टैપ करें)' : 'Listening... (Tap to stop)')
+                      : (draftLanguage === 'gu' ? '🎙️ બોલીને લખો (Voice)' : draftLanguage === 'hi' ? '🎙️ बोलकर लिखें (Voice)' : '🎙️ Speak to Type (Voice)')}
+                  </span>
                 </button>
               </div>
 
@@ -757,13 +804,12 @@ export function CustomerFlowPage() {
           <>
             <Button
               size="lg"
-              variant="saffron"
               onClick={handleGenerateDrafts}
               isLoading={isGenerating}
-              className="w-full h-12 text-sm font-semibold gap-2 shadow-sm glow-saffron cursor-pointer"
+              className="w-full h-13 text-base font-bold gap-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer border-0"
             >
-              <Sparkles className="h-4 w-4" />
-              <span>
+              <Sparkles className="h-5 w-5 text-amber-300 animate-pulse shrink-0" />
+              <span className="tracking-wide">
                 {draftLanguage === 'gu'
                   ? '૩ રિવ્યૂ વિકલ્પો બનાવો ✨'
                   : draftLanguage === 'hi'
@@ -788,12 +834,11 @@ export function CustomerFlowPage() {
           <>
             <Button
               size="lg"
-              variant="primary"
               onClick={() => handleCopyReviewAndOpenGoogle()}
-              className="w-full h-12 text-sm font-semibold gap-2 shadow-sm glow-indigo cursor-pointer"
+              className="w-full h-13 text-base font-bold gap-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer border-0"
             >
-              <Copy className="h-4 w-4" />
-              <span>
+              <Copy className="h-5 w-5 text-indigo-200 shrink-0" />
+              <span className="tracking-wide">
                 {draftLanguage === 'gu'
                   ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
                   : 'Copy Selected Review & Open Google ↗'}

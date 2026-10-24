@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import QRCodeStyling from 'qr-code-styling';
+import { jsPDF } from 'jspdf';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -133,10 +134,108 @@ export function QrStudioPage() {
     }
   };
 
+  const handlePrintA4Poster = async () => {
+    if (!qrInstanceRef.current) return;
+    // Generate a high-res PNG data URL for embedding in PDF
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 800;
+    // Render QR to a temp div for SVG → canvas conversion
+    const tempDiv = document.createElement('div');
+    document.body.appendChild(tempDiv);
+    const tempQr = new QRCodeStyling({
+      width: 800,
+      height: 800,
+      type: 'canvas',
+      data: targetUrl,
+      dotsOptions: { color: dotColor, type: dotType as any },
+      cornersSquareOptions: { color: dotColor, type: cornerSquareType as any },
+      cornersDotOptions: { color: dotColor, type: 'dot' },
+      backgroundOptions: { color: '#ffffff' },
+      imageOptions: { crossOrigin: 'anonymous', margin: 10 }
+    });
+    tempQr.append(tempDiv);
+
+    // Allow rendering time then capture canvas
+    await new Promise((res) => setTimeout(res, 400));
+
+    const qrCanvas = tempDiv.querySelector('canvas') as HTMLCanvasElement | null;
+    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
+    document.body.removeChild(tempDiv);
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210; // A4 width mm
+    const H = 297; // A4 height mm
+
+    // Background
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, W, H, 'F');
+
+    // Top accent bar
+    doc.setFillColor(...hexToRgb(dotColor));
+    doc.rect(0, 0, W, 12, 'F');
+
+    // Business name
+    doc.setTextColor(20, 20, 30);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text(activeBusiness?.name || 'My Business', W / 2, 38, { align: 'center' });
+
+    // Headline
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(70, 70, 90);
+    doc.text(headline || 'Share Your Experience on Google', W / 2, 52, { align: 'center', maxWidth: 160 });
+
+    // QR Code image
+    if (qrDataUrl) {
+      const qrSize = 110;
+      const qrX = (W - qrSize) / 2;
+      doc.addImage(qrDataUrl, 'PNG', qrX, 62, qrSize, qrSize);
+    }
+
+    // Google badge text
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(66, 133, 244);
+    doc.text('★ Google Reviews', W / 2, 182, { align: 'center' });
+
+    // Subheadline
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 140);
+    doc.text(subheadline || 'Scan with your phone camera or Google Lens', W / 2, 192, { align: 'center', maxWidth: 140 });
+
+    // Short URL
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...hexToRgb(dotColor));
+    doc.text(`reviewqr.in/r/${shortCode}`, W / 2, 204, { align: 'center' });
+
+    // Bottom accent bar
+    doc.setFillColor(...hexToRgb(dotColor));
+    doc.rect(0, H - 10, W, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Powered by ReviewBoost AI', W / 2, H - 3.5, { align: 'center' });
+
+    doc.save(`${shortCode}-a4-poster.pdf`);
+  };
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(targetUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
+  };
+
+  // Helper: hex color to [r, g, b] tuple for jsPDF
+  const hexToRgb = (hex: string): [number, number, number] => {
+    const cleaned = hex.replace('#', '');
+    const r = parseInt(cleaned.substring(0, 2), 16);
+    const g = parseInt(cleaned.substring(2, 4), 16);
+    const b = parseInt(cleaned.substring(4, 6), 16);
+    return [isNaN(r) ? 67 : r, isNaN(g) ? 56 : g, isNaN(b) ? 202 : b];
   };
 
   return (
@@ -396,19 +495,30 @@ export function QrStudioPage() {
 
                 <div className="flex gap-2">
                   <Button
+                    id="download-png-btn"
                     onClick={() => handleDownloadQr('png')}
                     className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    <span>Download PNG</span>
+                    <span>PNG</span>
                   </Button>
                   <Button
+                    id="download-svg-btn"
                     variant="outline"
                     onClick={() => handleDownloadQr('svg')}
                     className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    <span>Vector SVG</span>
+                    <span>SVG</span>
+                  </Button>
+                  <Button
+                    id="print-a4-btn"
+                    variant="outline"
+                    onClick={handlePrintA4Poster}
+                    className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold gap-1.5 shadow-xs hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>A4 PDF</span>
                   </Button>
                 </div>
               </div>

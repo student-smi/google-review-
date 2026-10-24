@@ -7,7 +7,6 @@ import {
   TrendingUp,
   MapPin,
   Settings,
-  Palette,
   ExternalLink,
   PlusCircle,
   Search,
@@ -48,7 +47,6 @@ export function CommandPalette({ isOpen, onClose, activeBusiness }: CommandPalet
     { label: 'View Conversion Analytics', icon: TrendingUp, action: () => navigate('/dashboard/analytics') },
     { label: 'Local SEO Audit Checklist', icon: MapPin, action: () => navigate('/dashboard/local-seo') },
     { label: 'Business & Brand Settings', icon: Settings, action: () => navigate('/dashboard/settings') },
-    { label: 'Component & Design Style Guide', icon: Palette, action: () => navigate('/design') },
     { label: 'Add New Location', icon: PlusCircle, action: () => navigate('/onboarding') },
     ...(activeBusiness?.googleReviewUrl ? [
       {

@@ -6,6 +6,7 @@ import { qrRoutes } from './routes/qr';
 import { analyticsRoutes } from './routes/analytics';
 import { aiRoutes } from './routes/ai';
 import { mediaRoutes } from './routes/media';
+import { authRoutes } from './routes/auth';
 import { requireAuth } from './middleware/auth';
 
 const app = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
@@ -14,13 +15,14 @@ const app = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
 app.use('*', cors({
   origin: (origin) => origin || '*',
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Dev-Owner-Id'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Dev-Owner-Id', 'X-Owner-Id'],
   credentials: true
 }));
 
-// Public Routes (KV cache, Customer resolution, Funnel tracking, Customer AI draft)
+// Public Routes (KV cache, Customer resolution, Funnel tracking, Customer AI draft, Auth)
 app.route('/api/public', publicRoutes);
 app.route('/api/ai', aiRoutes);
+app.route('/api/auth', authRoutes);
 
 // Authenticated Owner Routes
 app.use('/api/businesses/*', requireAuth);
@@ -61,9 +63,24 @@ app.all('*', async (c) => {
 export default {
   fetch: app.fetch,
 
-  // Scheduled Cron Handler for Free-Tier Database Rollups and Pruning
-  async scheduled(event: any, env: Env, ctx: ExecutionContext) {
-    console.log('Daily midnight cron triggered at:', new Date().toISOString());
-    // Daily cleanup logic will be refined in Phase 4
+  // Scheduled Cron: Daily midnight cleanup — prune expired rate-limit rows & old raw scan events
+  async scheduled(_event: any, env: Env, _ctx: ExecutionContext) {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const db = (await import('./db/client')).getDb(env.DB);
+      const { rateLimits, scans } = await import('./db/schema');
+      const { lt } = await import('drizzle-orm');
+
+      // 1. Delete expired rate-limit rows (TTL based)
+      await db.delete(rateLimits).where(lt(rateLimits.expiresAt, now));
+
+      // 2. Prune raw scan events older than 90 days (keep aggregated daily stats)
+      const cutoff90 = now - 90 * 24 * 60 * 60;
+      await db.delete(scans).where(lt(scans.createdAt, cutoff90));
+
+      console.log('[Cron] Nightly cleanup complete at', new Date().toISOString());
+    } catch (err) {
+      console.error('[Cron] Cleanup error:', err);
+    }
   }
 };

@@ -13,12 +13,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] select-none cursor-pointer';
 
     const variants = {
-      primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow',
-      saffron: 'bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm font-semibold',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50',
-      outline: 'border border-border bg-transparent hover:bg-muted text-foreground',
-      ghost: 'hover:bg-muted text-foreground',
-      destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm'
+      primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow font-semibold',
+      saffron: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white hover:from-amber-600 hover:to-orange-600 shadow-md font-semibold',
+      secondary: 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200',
+      outline: 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700',
+      ghost: 'hover:bg-slate-100 text-slate-700',
+      destructive: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm'
     };
 
     const sizes = {

@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { useTheme } from '@/hooks/useTheme';
+import { isAuthenticated } from '@/lib/auth';
 import {
   Sparkles,
   QrCode,
@@ -18,8 +18,6 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-  Sun,
-  Moon,
   Search,
   Bell,
   Settings,
@@ -106,7 +104,6 @@ const CATEGORIES: CategoryTemplate[] = [
 ];
 
 export function LandingPage() {
-  const { theme, toggleTheme } = useTheme();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [activeCategory, setActiveCategory] = useState<string>('restaurants');
 
@@ -133,31 +130,30 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-indigo-500/20 selection:text-indigo-600">
-      {/* 1. TOP ANNOUNCEMENT RIBBON (ClickUp 4.0 Style) */}
-      <div className="bg-[#0E131F] text-slate-200 text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-1.5 border-b border-slate-800">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-blue-500/20 selection:text-blue-600">
+      {/* 1. TOP ANNOUNCEMENT RIBBON */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 text-indigo-900 text-xs py-2 px-4 text-center font-semibold flex items-center justify-center gap-1.5 border-b border-indigo-100/80">
         <span>Meet ReviewQR 2.0: Polished, powerful, and Google Places connected.</span>
         <NavLink
-          to="/onboarding"
-          className="text-white font-semibold underline underline-offset-2 hover:text-indigo-400 transition-colors ml-1 inline-flex items-center"
+          to="/signup"
+          className="text-[#2563EB] font-bold underline underline-offset-2 hover:text-[#1D4ED8] transition-colors ml-1 inline-flex items-center"
         >
           <span>Try 2.0 now</span>
           <span className="ml-1 text-[10px]">›</span>
         </NavLink>
       </div>
 
-      {/* 2. TOP NAVBAR (ClickUp 4.0 Style) */}
-      <header className="border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md z-40">
+      {/* 2. TOP NAVBAR */}
+      <header className="border-b border-slate-200/80 sticky top-0 bg-white/95 backdrop-blur-md z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Left: Brand Logo & Navigation */}
           <div className="flex items-center gap-8">
             <NavLink to="/" className="flex items-center gap-2.5">
-              {/* ClickUp Style Folded Dual-Tone Gradient Logo Mark */}
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#7B68EE] via-[#4F46E5] to-[#EC4899] text-white font-black text-sm shadow-md shadow-indigo-500/25">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-sm shadow-md shadow-blue-500/20">
                 RQ
               </div>
-              <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">
-                Review<span className="text-[#7B68EE]">QR</span>
+              <span className="font-extrabold text-xl tracking-tight text-slate-900">
+                Review<span className="text-[#2563EB]">QR</span>
               </span>
             </NavLink>
 
@@ -186,45 +182,37 @@ export function LandingPage() {
               </a>
               <a
                 href="#pricing"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="hover:text-slate-900 transition-colors"
               >
                 Free Forever
               </a>
-              <NavLink
-                to="/design"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors"
-              >
-                Style Guide
-              </NavLink>
             </nav>
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-4 w-4 text-amber-400" />
-              ) : (
-                <Moon className="h-4 w-4 text-slate-700" />
-              )}
-            </button>
+            {isAuthenticated() ? (
+              <NavLink to="/dashboard">
+                <button className="h-9 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm">
+                  Go to Dashboard
+                </button>
+              </NavLink>
+            ) : (
+              <>
+                <NavLink
+                  to="/login"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 transition-colors hidden sm:block"
+                >
+                  Login
+                </NavLink>
 
-            <NavLink
-              to="/dashboard"
-              className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 transition-colors hidden sm:block"
-            >
-              Login
-            </NavLink>
-
-            <NavLink to="/onboarding">
-              <button className="h-9 px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
-                Get Started
-              </button>
-            </NavLink>
+                <NavLink to="/signup">
+                  <button className="h-9 px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
+                    Get Started Free
+                  </button>
+                </NavLink>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -253,21 +241,21 @@ export function LandingPage() {
 
               {/* ClickUp CTA Button Row */}
               <div className="flex flex-wrap items-center gap-4 pt-1">
-                <NavLink to="/onboarding">
-                  <button className="h-12 px-7 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white text-base font-bold shadow-lg hover:shadow-xl transition-all duration-150 transform hover:-translate-y-0.5 cursor-pointer">
-                    Get started. It's FREE!
+                <NavLink to={isAuthenticated() ? '/dashboard' : '/signup'}>
+                  <button className="h-12 px-7 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl transition-all duration-150 transform hover:-translate-y-0.5 cursor-pointer">
+                    {isAuthenticated() ? 'Open Dashboard' : "Get started. It's FREE!"}
                   </button>
                 </NavLink>
 
-                <div className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
-                  <div className="font-semibold text-slate-700 dark:text-slate-300">Free forever.</div>
-                  <div>No credit card.</div>
+                <div className="text-xs text-slate-500 leading-tight">
+                  <div className="font-semibold text-slate-700">Free forever.</div>
+                  <div>No credit card required.</div>
                 </div>
               </div>
 
-              {/* Category Pills Header & Pills (ClickUp Filter Buttons) */}
+              {/* Category Pills Header & Pills */}
               <div className="pt-6 space-y-3">
-                <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase font-mono">
+                <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase font-mono">
                   GET 400% MORE REVIEWS • CUSTOMIZE YOUR WORKSPACE
                 </div>
 
@@ -281,11 +269,11 @@ export function LandingPage() {
                         onClick={() => setActiveCategory(cat.id)}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
                           isActive
-                            ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 shadow-xs ring-2 ring-sky-500/20'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:text-slate-900'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs ring-2 ring-blue-500/20'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
                         }`}
                       >
-                        {isActive && <Check className="h-3 w-3 text-sky-600 dark:text-sky-400 stroke-[3]" />}
+                        {isActive && <Check className="h-3 w-3 text-blue-600 stroke-[3]" />}
                         <span>{cat.label}</span>
                       </button>
                     );
@@ -294,14 +282,14 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right Hero Column: THE SIGNATURE CLICKUP 4.0 APP WINDOW MOCKUP */}
+            {/* Right Hero Column: LIGHT MODERN APP WINDOW MOCKUP */}
             <div className="lg:col-span-7">
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] shadow-2xl overflow-hidden text-left transition-all duration-300">
+              <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-indigo-100/70 overflow-hidden text-left transition-all duration-300">
                 {/* Window Top Navigation & Controls */}
-                <div className="h-10 bg-slate-50 dark:bg-[#141A28] border-b border-slate-200 dark:border-slate-800/80 px-4 flex items-center justify-between text-xs">
+                <div className="h-10 bg-slate-50 border-b border-slate-200/80 px-4 flex items-center justify-between text-xs">
                   {/* Left Workspace Switcher */}
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-0.5 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-xs">
+                    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-xs">
                       <span className="text-amber-500">⭐</span>
                       <span className="truncate max-w-[160px]">{selectedTemplate.businessName}</span>
                       <span className="text-[10px] text-slate-400">▾</span>
@@ -309,7 +297,7 @@ export function LandingPage() {
                   </div>
 
                   {/* Center Search Pill */}
-                  <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-0.5 text-[11px] text-slate-400 w-52 shadow-xs">
+                  <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-0.5 text-[11px] text-slate-400 w-52 shadow-xs">
                     <Search className="h-3 w-3 text-slate-400" />
                     <span>Search reviews, staff...</span>
                   </div>
@@ -318,7 +306,7 @@ export function LandingPage() {
                   <div className="flex items-center gap-2 text-slate-400">
                     <Bell className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
                     <Settings className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
-                    <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 text-white font-bold text-[9px] flex items-center justify-center">
+                    <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white font-bold text-[9px] flex items-center justify-center">
                       RS
                     </div>
                   </div>
@@ -326,9 +314,9 @@ export function LandingPage() {
 
                 {/* Inner Window Split View */}
                 <div className="grid grid-cols-12 min-h-[380px] sm:min-h-[420px]">
-                  {/* Left Inner Sidebar (ClickUp Style) */}
-                  <div className="hidden md:block col-span-4 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#121724] p-3 text-xs space-y-3 font-medium select-none">
-                    <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200 px-2 py-1 rounded-lg">
+                  {/* Left Inner Sidebar */}
+                  <div className="hidden md:block col-span-4 border-r border-slate-200 bg-slate-50/80 p-3 text-xs space-y-3 font-medium select-none">
+                    <div className="flex items-center justify-between font-bold text-slate-800 px-2 py-1 rounded-lg">
                       <span className="flex items-center gap-1.5">
                         <HomeIcon className="h-3.5 w-3.5 text-slate-500" /> Home
                       </span>
@@ -336,75 +324,75 @@ export function LandingPage() {
                     </div>
 
                     <div className="space-y-0.5">
-                      <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold">
+                      <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold">
                         <span className="flex items-center gap-2">
                           <Inbox className="h-3.5 w-3.5" />
                           <span>Inbox</span>
                         </span>
-                        <span className="h-4 px-1.5 rounded-full bg-pink-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        <span className="h-4 px-1.5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                           3
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
                         <CheckSquare className="h-3.5 w-3.5" />
                         <span>My Reviews</span>
                       </div>
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>Scan Analytics</span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                    <div className="pt-2 border-t border-slate-200">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
                         Active Standees
                       </div>
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
                           <QrCode className="h-3.5 w-3.5 text-slate-400" />
                           <span className="truncate">Main Billing Counter</span>
                         </div>
-                        <div className="flex items-center justify-between px-2 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <div className="flex items-center justify-between px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
                           <span className="flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-pink-500" />
+                            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                             <span>AI Reply Agent</span>
                           </span>
-                          <span className="h-3.5 px-1 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 text-[9px] font-bold">
+                          <span className="h-3.5 px-1.5 rounded-full bg-indigo-50 text-indigo-600 text-[9px] font-bold">
                             Live
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                    <div className="pt-2 border-t border-slate-200">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
                         Location
                       </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 text-slate-600 dark:text-slate-400 font-semibold truncate">
+                      <div className="flex items-center gap-1.5 px-2 py-1 text-slate-600 font-semibold truncate">
                         <MapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                         <span className="truncate">{selectedTemplate.location}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Inner Content: Tasks / Reviews Table (ClickUp Style) */}
-                  <div className="col-span-12 md:col-span-8 p-3 sm:p-4 space-y-4 bg-white dark:bg-[#0F1420]">
+                  {/* Right Inner Content: Tasks / Reviews Table */}
+                  <div className="col-span-12 md:col-span-8 p-3 sm:p-4 space-y-4 bg-white">
                     {/* View Switcher Tabs */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                       <div className="flex items-center gap-1 sm:gap-2">
-                        <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white flex items-center gap-1">
+                        <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
                           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                           <span>Google Reviews</span>
                         </span>
                         <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 ml-2">
-                          <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 font-semibold">
                             Tasks
                           </span>
                           <span className="px-1.5 py-0.5 text-slate-400">Feed</span>
                           <span className="px-1.5 py-0.5 text-slate-400 hidden sm:inline">Stats</span>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] font-mono bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
                         ★ {selectedTemplate.rating} Rating
                       </span>
                     </div>
@@ -425,26 +413,26 @@ export function LandingPage() {
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 space-y-1 text-xs">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1 text-xs">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                          <div className="flex items-center gap-2 font-semibold text-slate-800">
                             <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
                               ✓
                             </span>
                             <span>{selectedTemplate.recentCustomer} • 5-Star Review</span>
                           </div>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
                             <CheckCircle2 className="h-3 w-3" /> Posted on Google
                           </span>
                         </div>
 
-                        <div className="pl-6 text-[11px] text-slate-500 dark:text-slate-400">
+                        <div className="pl-6 text-[11px] text-slate-500">
                           "{selectedTemplate.highlight}. Prompt service and friendly staff."
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-semibold text-slate-800">
                           <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
                             ✓
                           </span>
@@ -457,24 +445,24 @@ export function LandingPage() {
                     {/* SECTION 2: IN PROGRESS (Blue Group) */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex items-center gap-2">
-                        <span className="h-5 px-2 rounded-md bg-sky-500 text-white font-bold text-[10px] uppercase flex items-center gap-1">
+                        <span className="h-5 px-2 rounded-md bg-blue-600 text-white font-bold text-[10px] uppercase flex items-center gap-1">
                           <span>IN PROGRESS</span>
                           <span className="ml-1 opacity-80">{selectedTemplate.progressCount}</span>
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
-                          <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+                      <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 font-semibold text-slate-800">
+                          <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                           <span>Customer scanning QR at Main Counter</span>
                         </div>
-                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold bg-sky-500/10 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] text-blue-600 font-semibold bg-blue-100/70 px-2 py-0.5 rounded-md">
                           AI Drafts Generating
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-slate-600">
                           <span className="h-2 w-2 rounded-full bg-slate-400" />
                           <span>Owner 1-Click AI Reply Drafted</span>
                         </div>
@@ -489,31 +477,31 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 4. TRUSTED BY THE BEST (ClickUp Signature Gray Logo Row) */}
-      <section className="py-12 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#0E131F]/60">
+      {/* 4. TRUSTED BY THE BEST */}
+      <section className="py-12 border-b border-slate-200/80 bg-slate-50/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center space-y-6">
-            <div className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase font-mono">
+            <div className="text-xs font-bold text-slate-400 tracking-widest uppercase font-mono">
               TRUSTED BY THE BEST LOCAL BUSINESSES ACROSS INDIA
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-70 grayscale hover:grayscale-0 transition-all duration-300">
-              <span className="font-extrabold text-lg tracking-tighter text-slate-800 dark:text-slate-300">
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
+              <span className="font-extrabold text-lg tracking-tighter text-slate-800">
                 ROYAL SWEETS
               </span>
-              <span className="font-bold text-lg tracking-wide text-slate-800 dark:text-slate-300">
+              <span className="font-bold text-lg tracking-wide text-slate-800">
                 havmor<span className="text-pink-500 font-black">.</span>
               </span>
-              <span className="font-black text-lg tracking-tight text-slate-800 dark:text-slate-300">
+              <span className="font-black text-lg tracking-tight text-slate-800">
                 CHAI POINT
               </span>
-              <span className="font-extrabold text-lg tracking-wider text-slate-800 dark:text-slate-300">
+              <span className="font-extrabold text-lg tracking-wider text-slate-800">
                 SANKALP
               </span>
-              <span className="font-serif font-bold text-lg text-slate-800 dark:text-slate-300">
+              <span className="font-serif font-bold text-lg text-slate-800">
                 KALYAN
               </span>
-              <span className="font-sans font-bold text-lg text-slate-800 dark:text-slate-300">
+              <span className="font-sans font-bold text-lg text-slate-800">
                 APOLLO
               </span>
             </div>
@@ -522,48 +510,48 @@ export function LandingPage() {
       </section>
 
       {/* 5. HONEST TRUST & INTEGRITY SECTION */}
-      <section id="trust" className="py-16 bg-white dark:bg-[#0B0F19]">
+      <section id="trust" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
               <ShieldCheck className="h-3.5 w-3.5" />
               <span>100% Policy Integrity (Non-Negotiable)</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
               Real reviews only. Zero review gating.
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-slate-600">
               ReviewQR strictly opposes review manipulation, star pushing, or gating negative feedback.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
                 01
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Zero Review Gating</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <h3 className="font-bold text-base text-slate-900">Zero Review Gating</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
                 Every customer who scans the QR code is immediately provided a direct link to your official Google review page. We never route unhappy customers away or filter responses.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
                 02
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">No Hallucinated Details</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <h3 className="font-bold text-base text-slate-900">No Hallucinated Details</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
                 AI is strictly a wording helper. It only structures details the customer selects or types. It is programmed never to invent dishes, staff names, prices, or dates.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-6 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
                 03
               </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Real Google Cloud Integration</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <h3 className="font-bold text-base text-slate-900">Real Google Cloud Integration</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
                 Integrated directly with Google Places API and Google Identity Services for instant place discovery and verified owner login.
               </p>
             </div>
@@ -572,44 +560,44 @@ export function LandingPage() {
       </section>
 
       {/* 6. HOW IT WORKS SECTION */}
-      <section id="how-it-works" className="py-20 bg-slate-50/60 dark:bg-[#0E131F]/60 border-y border-slate-200/80 dark:border-slate-800/80">
+      <section id="how-it-works" className="py-20 bg-slate-50/70 border-y border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
           <div className="text-center max-w-xl mx-auto space-y-2">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
               How ReviewQR Works
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-slate-600">
               3 simple steps to genuine customer reviews in seconds
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-[#0F172A] text-white flex items-center justify-center shadow-lg">
+              <div className="h-14 w-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <QrCode className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">1. Customer Scans QR</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
+              <h3 className="font-bold text-lg text-slate-900">1. Customer Scans QR</h3>
+              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
                 Print dynamic table-tents or counter posters using our browser export tool. Customers scan with any camera.
               </p>
             </div>
 
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-pink-500 text-white flex items-center justify-center shadow-lg">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <Sparkles className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">2. Taps Real Experience</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
+              <h3 className="font-bold text-lg text-slate-900">2. Taps Real Experience</h3>
+              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
                 Customer taps chips or speaks in Hindi/Gujarati/English. Our AI formats their exact words into 3 calibrated options.
               </p>
             </div>
 
             <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
+              <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <ExternalLink className="h-7 w-7" />
               </div>
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white">3. Posts on Google</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs leading-relaxed">
+              <h3 className="font-bold text-lg text-slate-900">3. Posts on Google</h3>
+              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
                 1-tap clipboard copy automatically opens the official Google review box. The customer edits and submits with 1 click.
               </p>
             </div>
@@ -618,32 +606,32 @@ export function LandingPage() {
       </section>
 
       {/* 7. PRICING & CLOUDFLARE FREE TIER SECTION */}
-      <section id="pricing" className="py-20 bg-white dark:bg-[#0B0F19]">
+      <section id="pricing" className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
           <div className="space-y-2">
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-mono">
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider font-mono">
               ZERO INFRASTRUCTURE BILLS
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
               100% Free Forever
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-slate-600">
               Built on Cloudflare Free Tier edge technology without bloated server bills.
             </p>
           </div>
 
-          <div className="rounded-3xl border-2 border-slate-900 dark:border-slate-700 bg-white dark:bg-[#0F1420] max-w-md mx-auto shadow-2xl p-8 space-y-6 text-left">
+          <div className="rounded-3xl border-2 border-blue-600 bg-white max-w-md mx-auto shadow-xl shadow-blue-500/10 p-8 space-y-6 text-left">
             <div className="space-y-1">
-              <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+              <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                 Independent Business Plan
               </div>
-              <div className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+              <div className="text-4xl font-black tracking-tight text-slate-900">
                 ₹0 <span className="text-sm font-normal text-slate-500">/ forever</span>
               </div>
               <div className="text-xs text-slate-500">For Indian local shops, restaurants, salons & clinics</div>
             </div>
 
-            <div className="space-y-2.5 text-xs text-slate-700 dark:text-slate-300">
+            <div className="space-y-2.5 text-xs text-slate-700">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                 <span>Unlimited QR scans (Edge KV cached)</span>
@@ -666,9 +654,9 @@ export function LandingPage() {
               </div>
             </div>
 
-            <NavLink to="/onboarding" className="block w-full">
-              <button className="w-full h-12 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] font-bold text-sm shadow-md transition-all">
-                Get Started Free
+            <NavLink to={isAuthenticated() ? '/dashboard' : '/signup'} className="block w-full">
+              <button className="w-full h-12 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer">
+                {isAuthenticated() ? 'Open Dashboard' : 'Get Started Free'}
               </button>
             </NavLink>
           </div>
@@ -678,7 +666,7 @@ export function LandingPage() {
       {/* 8. FAQ SECTION */}
       <section className="py-20 max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
             Frequently Asked Questions
           </h2>
         </div>
@@ -689,11 +677,11 @@ export function LandingPage() {
             return (
               <div
                 key={idx}
-                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] p-4 transition-all"
+                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 transition-all"
               >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between text-left font-bold text-sm text-slate-900 dark:text-white"
+                  className="w-full flex items-center justify-between text-left font-bold text-sm text-slate-900 cursor-pointer"
                 >
                   <span>{faq.q}</span>
                   {isOpen ? (
@@ -703,7 +691,7 @@ export function LandingPage() {
                   )}
                 </button>
                 {isOpen && (
-                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed animate-in fade-in">
+                  <p className="mt-2 text-xs text-slate-600 leading-relaxed animate-in fade-in">
                     {faq.a}
                   </p>
                 )}
@@ -714,13 +702,13 @@ export function LandingPage() {
       </section>
 
       {/* 9. FOOTER */}
-      <footer className="border-t border-slate-200/80 dark:border-slate-800/80 py-8 bg-slate-50/80 dark:bg-[#0E131F] text-slate-500 text-xs">
+      <footer className="border-t border-slate-200/80 py-8 bg-slate-50 text-slate-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-tr from-[#7B68EE] to-[#EC4899] text-white font-black text-[10px]">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-tr from-[#2563EB] to-[#7B68EE] text-white font-black text-[10px]">
               RQ
             </div>
-            <span className="font-extrabold text-slate-900 dark:text-white">ReviewQR</span>
+            <span className="font-extrabold text-slate-900">ReviewQR</span>
             <span>• Built for Indian Local Businesses</span>
           </div>
           <div>100% Cloudflare Free Tier • DPDP Act & Google Policy Compliant</div>

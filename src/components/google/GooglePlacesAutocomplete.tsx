@@ -11,6 +11,8 @@ export interface GooglePlaceDetails {
   userRatingCount?: number;
   googleMapsUri?: string;
   googleReviewUrl: string;
+  category?: string;
+  summary?: string;
 }
 
 interface GooglePlacesAutocompleteProps {

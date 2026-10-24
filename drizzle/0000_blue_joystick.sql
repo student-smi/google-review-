@@ -51,6 +51,7 @@ CREATE TABLE `businesses` (
 	`brand_color` text DEFAULT '#4338CA' NOT NULL,
 	`brand_color_secondary` text DEFAULT '#D97706' NOT NULL,
 	`contact_resolution_line` text,
+	`chips_json` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
@@ -177,3 +178,23 @@ CREATE TABLE `verifications` (
 	`created_at` integer,
 	`updated_at` integer
 );
+--> statement-breakpoint
+CREATE TABLE `customer_reviews` (
+	`id` text PRIMARY KEY NOT NULL,
+	`business_id` text NOT NULL,
+	`customer_name` text DEFAULT 'Verified Customer' NOT NULL,
+	`rating` integer DEFAULT 5 NOT NULL,
+	`review_text` text NOT NULL,
+	`chips_json` text,
+	`language` text DEFAULT 'en' NOT NULL,
+	`reply_text` text,
+	`reply_style` text,
+	`replied_at` integer,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`business_id`) REFERENCES `businesses`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `idx_customer_reviews_business` ON `customer_reviews` (`business_id`);
+--> statement-breakpoint
+CREATE INDEX `idx_customer_reviews_created` ON `customer_reviews` (`created_at`);
+

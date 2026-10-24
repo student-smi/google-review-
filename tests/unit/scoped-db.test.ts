@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createTestD1Database } from '../helpers/mock-d1';
 import { getDb } from '../../server/db/client';
 import { createScopedDb, ScopedAuthorizationError } from '../../server/db/scoped';
-import { users } from '../../server/db/schema';
+import { users, customerReviews } from '../../server/db/schema';
 
 describe('Scoped Database Access Layer (Tenant Isolation)', () => {
   let db: ReturnType<typeof getDb>;
@@ -177,4 +177,74 @@ describe('Scoped Database Access Layer (Tenant Isolation)', () => {
     await expect(scopedA.toggleSeoItem('biz_b', 'add_photos', true)).rejects.toThrow(ScopedAuthorizationError);
     await expect(scopedA.saveReplyDraft('biz_b', { replyText: 'Test', style: 'warm' })).rejects.toThrow(ScopedAuthorizationError);
   });
+
+  it('allows owner to fetch customer reviews and update AI replies with tenant isolation', async () => {
+    const scopedA = createScopedDb(db, ownerAId);
+    const scopedB = createScopedDb(db, ownerBId);
+
+    const bizA = await scopedA.createBusiness({
+      id: 'biz_a_rev',
+      name: 'Royal Sweets',
+      slug: 'royal-sweets',
+      googleReviewUrl: 'https://g.page/r/royal/review'
+    });
+
+    const bizB = await scopedB.createBusiness({
+      id: 'biz_b_rev',
+      name: 'Patel Beauty Studio',
+      slug: 'patel-beauty',
+      googleReviewUrl: 'https://g.page/r/patel/review'
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    await db.insert(customerReviews).values([
+      {
+        id: 'rev_1',
+        businessId: bizA.id,
+        customerName: 'Ananya S.',
+        rating: 5,
+        reviewText: 'Delicious fresh kaju katli and prompt counter service.',
+        chipsJson: JSON.stringify(['Delicious sweets', 'Fast service']),
+        language: 'en',
+        createdAt: now
+      },
+      {
+        id: 'rev_2',
+        businessId: bizB.id,
+        customerName: 'Kavita M.',
+        rating: 5,
+        reviewText: 'Excellent bridal makeup and polite staff.',
+        chipsJson: JSON.stringify(['Clean studio', 'Polite staff']),
+        language: 'en',
+        createdAt: now
+      }
+    ]);
+
+    // Owner A can fetch only their reviews
+    const reviewsA = await scopedA.getCustomerReviews(bizA.id);
+    expect(reviewsA).toHaveLength(1);
+    expect(reviewsA[0].id).toBe('rev_1');
+    expect(reviewsA[0].customerName).toBe('Ananya S.');
+
+    // Owner A cannot fetch Owner B reviews
+    await expect(scopedA.getCustomerReviews(bizB.id)).rejects.toThrow(ScopedAuthorizationError);
+
+    // Owner A can save AI reply to their review
+    const updated = await scopedA.updateCustomerReviewReply(bizA.id, 'rev_1', {
+      replyText: 'Dear Ananya, thank you so much for visiting Royal Sweets!',
+      replyStyle: 'warm'
+    });
+    expect(updated).toBeDefined();
+    expect(updated.replyText).toContain('Royal Sweets');
+    expect(updated.repliedAt).toBeGreaterThan(0);
+
+    // Owner A cannot reply to Owner B review
+    await expect(
+      scopedA.updateCustomerReviewReply(bizB.id, 'rev_2', {
+        replyText: 'Unauthorized reply',
+        replyStyle: 'warm'
+      })
+    ).rejects.toThrow(ScopedAuthorizationError);
+  });
 });
+

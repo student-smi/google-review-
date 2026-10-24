@@ -3,6 +3,15 @@ import { useOutletContext, NavLink } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
+} from 'recharts';
+import {
   TrendingUp,
   ArrowUpRight,
   ShieldAlert,
@@ -14,6 +23,13 @@ import {
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
+
+interface DailyStat {
+  day: string;
+  scanCount: number;
+  helpMeWriteCount: number;
+  googleClickCount: number;
+}
 
 interface RealQrItem {
   id: string;
@@ -29,11 +45,13 @@ export function AnalyticsPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
   const [placements, setPlacements] = useState<RealQrItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
 
   useEffect(() => {
     if (!activeBusiness?.id) return;
     setIsLoading(true);
 
+    // Fetch QR placements + scan stats
     apiFetch<{ qrCodes: any[] }>(`/api/qr/business/${activeBusiness.id}`)
       .then((data) => {
         if (data?.qrCodes) {
@@ -58,6 +76,17 @@ export function AnalyticsPage() {
       .finally(() => {
         setIsLoading(false);
       });
+
+    // Fetch 30-day sparkline data
+    apiFetch<{ stats: DailyStat[] }>(`/api/analytics/business/${activeBusiness.id}`)
+      .then((data) => {
+        if (data?.stats?.length) {
+          // Sort ascending by date for chart
+          const sorted = [...data.stats].sort((a, b) => a.day.localeCompare(b.day));
+          setDailyStats(sorted);
+        }
+      })
+      .catch(() => setDailyStats([]));
   }, [activeBusiness?.id]);
 
   // Real computed totals
@@ -180,6 +209,81 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 30-Day Trend Sparkline */}
+      <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-sm">
+        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-indigo-500" />
+                30-Day Scan Trend
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500 mt-0.5">
+                Daily QR scans, AI drafts & Google clicks over last 30 days
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-bold">
+              <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-indigo-500 inline-block" />Scans</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-purple-500 inline-block" />Drafts</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-3 rounded-sm bg-emerald-500 inline-block" />Clicks</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 pt-5">
+          {dailyStats.length === 0 ? (
+            <div className="h-40 flex items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-400">No scan data yet — standee scans will appear here in real-time.</p>
+            </div>
+          ) : (
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailyStats} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradScans" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradDrafts" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gradClicks" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 9, fill: '#94a3b8' }}
+                    tickFormatter={(v: string) => v.slice(5)}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      color: '#f1f5f9',
+                      padding: '8px 12px'
+                    }}
+                    labelFormatter={(l: string) => `Date: ${l}`}
+                    itemStyle={{ color: '#e2e8f0' }}
+                  />
+                  <Area type="monotone" dataKey="scanCount" name="Scans" stroke="#6366f1" strokeWidth={2} fill="url(#gradScans)" dot={false} />
+                  <Area type="monotone" dataKey="helpMeWriteCount" name="Drafts" stroke="#a855f7" strokeWidth={2} fill="url(#gradDrafts)" dot={false} />
+                  <Area type="monotone" dataKey="googleClickCount" name="Clicks" stroke="#10b981" strokeWidth={2} fill="url(#gradClicks)" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Funnel Visualization */}
       <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-sm">

@@ -13,6 +13,7 @@ import { MediaLibraryPage } from './pages/dashboard/MediaLibraryPage';
 import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
 import { AuthPage } from './pages/AuthPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 export function App() {
   return (
@@ -25,14 +26,28 @@ export function App() {
         <Route path="/login" element={<AuthPage />} />
         <Route path="/signup" element={<AuthPage />} />
 
-        {/* Living Style Guide */}
-        <Route path="/design" element={<DesignSystemPage />} />
+        {/* Redirect old design route */}
+        <Route path="/design" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Guided Owner Onboarding */}
-        <Route path="/onboarding" element={<OnboardingPage onComplete={() => {}} />} />
+        {/* Guided Owner Onboarding (Protected) */}
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage onComplete={() => {}} />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Owner Dashboard */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Owner Dashboard (Protected) */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<OverviewPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
           <Route path="qr" element={<QrStudioPage />} />

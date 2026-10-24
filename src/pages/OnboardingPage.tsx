@@ -68,6 +68,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       name: trimmedName,
       category,
       city: city.trim() || 'India',
+      address: verifiedPlace?.address || undefined,
       phone: phone.trim() || undefined,
       googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim() || 'https://maps.google.com',
@@ -197,6 +198,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     setGoogleReviewUrl(place.googleReviewUrl);
                     setVerifiedPlace(place);
                     setUrlTested(true);
+                    if (place.category) {
+                      setCategory(place.category);
+                    }
                     if (place.address) {
                       const parts = place.address.split(',').map((p) => p.trim());
                       if (parts.length >= 3) {
