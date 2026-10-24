@@ -15,7 +15,11 @@ import {
   Scissors,
   Stethoscope,
   Briefcase,
-  Star
+  Star,
+  Cake,
+  Plus,
+  X,
+  Loader2
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
@@ -31,7 +35,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
   // Form state - ZERO dummy data pre-filled
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('restaurant');
+  const [category, setCategory] = useState('services');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -40,6 +44,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [urlTested, setUrlTested] = useState(false);
+
+  // AI Generated Keywords from Google Places data
+  const [chips, setChips] = useState<string[]>([]);
+  const [isGeneratingChips, setIsGeneratingChips] = useState(false);
+  const [newChipInput, setNewChipInput] = useState('');
 
   // Step 3: Brand style
   const [brandColor, setBrandColor] = useState('#4338CA');
@@ -54,11 +63,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     googleReviewUrl.includes('search.google.com');
 
   const categories = [
-    { id: 'restaurant', label: 'Restaurant / Cafe', icon: UtensilsCrossed },
-    { id: 'retail', label: 'Retail / Shop', icon: Store },
-    { id: 'salon', label: 'Salon / Spa', icon: Scissors },
-    { id: 'healthcare', label: 'Clinic / Healthcare', icon: Stethoscope },
-    { id: 'services', label: 'Professional Services', icon: Briefcase }
+    { id: 'services', label: 'Agency & Services', icon: Briefcase },
+    { id: 'restaurant', label: 'Restaurant & Cafe', icon: UtensilsCrossed },
+    { id: 'sweets', label: 'Sweets & Bakery', icon: Cake },
+    { id: 'healthcare', label: 'Clinic & Healthcare', icon: Stethoscope },
+    { id: 'salon', label: 'Salon & Spa', icon: Scissors },
+    { id: 'retail', label: 'Retail & Jewellery', icon: Store }
   ];
 
   const handleFinish = async () => {
@@ -72,6 +82,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       phone: phone.trim() || undefined,
       googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim() || 'https://maps.google.com',
+      chipsJson: chips.length > 0 ? JSON.stringify(chips) : null,
       brandColor,
       brandColorSecondary
     };
@@ -95,11 +106,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         id: `biz_${Date.now()}`,
         name: payload.name,
         slug: payload.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 24) || 'my-business',
+        category: payload.category,
         city: payload.city,
         googleReviewUrl: payload.googleReviewUrl,
+        chipsJson: payload.chipsJson,
         brandColor,
         brandColorSecondary
       };
+    } else {
+      business.chipsJson = payload.chipsJson;
     }
 
     // Create default standee QR code
@@ -192,27 +207,120 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 </div>
                 <GooglePlacesAutocomplete
                   initialValue={name}
-                  onSelect={(place) => {
+                  onSelect={async (place) => {
                     setName(place.name);
                     setGooglePlaceId(place.placeId);
                     setGoogleReviewUrl(place.googleReviewUrl);
                     setVerifiedPlace(place);
                     setUrlTested(true);
-                    if (place.category) {
-                      setCategory(place.category);
+
+                    // 1. Intelligent Google Category Mapping
+                    let mappedCategory = 'services';
+                    const catStr = ((place.category || '') + ' ' + ((place as any).types || []).join(' ')).toLowerCase();
+                    if (catStr.includes('sweet') || catStr.includes('bakery') || catStr.includes('cake') || catStr.includes('mithai') || catStr.includes('dairy')) {
+                      mappedCategory = 'sweets';
+                    } else if (catStr.includes('restaurant') || catStr.includes('cafe') || catStr.includes('food') || catStr.includes('dining')) {
+                      mappedCategory = 'restaurant';
+                    } else if (catStr.includes('health') || catStr.includes('clinic') || catStr.includes('dental') || catStr.includes('doctor') || catStr.includes('hospital')) {
+                      mappedCategory = 'healthcare';
+                    } else if (catStr.includes('salon') || catStr.includes('spa') || catStr.includes('beauty') || catStr.includes('hair')) {
+                      mappedCategory = 'salon';
+                    } else if (catStr.includes('retail') || catStr.includes('jewel') || catStr.includes('store') || catStr.includes('shop') || catStr.includes('cloth')) {
+                      mappedCategory = 'retail';
+                    } else if (catStr.includes('agency') || catStr.includes('marketing') || catStr.includes('seo') || catStr.includes('software') || catStr.includes('service')) {
+                      mappedCategory = 'services';
                     }
+                    setCategory(mappedCategory);
+
+                    // 2. City extraction from verified address
+                    let extractedCity = city || 'India';
                     if (place.address) {
                       const parts = place.address.split(',').map((p) => p.trim());
                       if (parts.length >= 3) {
-                        setCity(parts[parts.length - 3] || parts[0]);
+                        extractedCity = parts[parts.length - 3] || parts[0];
+                        setCity(extractedCity);
                       }
+                    }
+
+                    // 3. Auto-generate AI Keywords directly from verified Google Places information
+                    setIsGeneratingChips(true);
+                    try {
+                      const res = await apiFetch<{ success: boolean; keywords: string[] }>('/api/ai/suggest-keywords', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          businessName: place.name,
+                          category: mappedCategory,
+                          city: extractedCity,
+                          address: place.address,
+                          summary: place.summary,
+                          types: (place as any).types
+                        })
+                      });
+                      if (res?.keywords && Array.isArray(res.keywords) && res.keywords.length > 0) {
+                        setChips(res.keywords.slice(0, 8));
+                      }
+                    } catch (err) {
+                      console.warn('AI keyword suggestion on place select:', err);
+                    } finally {
+                      setIsGeneratingChips(false);
                     }
                   }}
                   placeholder="Search your business on Google Maps..."
                 />
-                <p className="text-[11px] text-slate-400">
-                  Or enter your business name directly below.
-                </p>
+
+                {/* Google Verified Place Profile Card */}
+                {verifiedPlace && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-purple-50/40 border border-blue-200/80 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/20 dark:border-blue-800/60 space-y-2.5 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span className="text-xs font-bold text-blue-950 dark:text-blue-100">
+                          Google Verified Business Profile
+                        </span>
+                      </div>
+                      {verifiedPlace.rating && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 font-extrabold text-[11px] border border-amber-200/80">
+                          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                          <span>{verifiedPlace.rating} ({verifiedPlace.userRatingCount || 0} reviews)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      📍 {verifiedPlace.address}
+                    </p>
+
+                    {/* AI Generated Standee Chips */}
+                    <div className="pt-2 border-t border-blue-100 dark:border-blue-900/50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                          <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                          <span>AI Standee Highlights (Tailored to your Google profile):</span>
+                        </div>
+                        {isGeneratingChips && (
+                          <span className="text-[10px] text-indigo-500 flex items-center gap-1 font-medium">
+                            <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing Google data...
+                          </span>
+                        )}
+                      </div>
+
+                      {chips.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {chips.map((chip, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[10px] font-semibold bg-white dark:bg-slate-900 text-indigo-800 dark:text-indigo-200 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+                            >
+                              ✓ {chip}
+                            </span>
+                          ))}
+                        </div>
+                      ) : isGeneratingChips ? (
+                        <div className="text-[11px] text-slate-400 italic">Generating custom review highlight chips...</div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -441,6 +549,76 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   <div className="text-[11px] font-mono text-purple-600 dark:text-purple-400 mt-1">
                     /r/{(name || 'counter').toLowerCase().replace(/[^a-z0-9]/g, '-')}-standee
                   </div>
+                </div>
+              </div>
+
+              {/* Standee Highlights Chips on Standee Preview */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      Standee Review Highlight Chips
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    Customers will tap these to generate 5★ reviews
+                  </span>
+                </div>
+
+                {chips.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {chips.map((chip, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-xl border border-indigo-200/80 dark:border-indigo-800"
+                      >
+                        <span>{chip}</span>
+                        <button
+                          type="button"
+                          onClick={() => setChips(chips.filter((_, i) => i !== idx))}
+                          className="hover:text-red-500 cursor-pointer ml-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400 italic">No chips yet. Add custom highlight tags below.</div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    value={newChipInput}
+                    onChange={(e) => setNewChipInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newChipInput.trim() && !chips.includes(newChipInput.trim())) {
+                          setChips([...chips, newChipInput.trim()]);
+                          setNewChipInput('');
+                        }
+                      }
+                    }}
+                    placeholder="Add custom keyword (e.g. Quick Response)..."
+                    className="h-8 text-xs rounded-xl"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (newChipInput.trim() && !chips.includes(newChipInput.trim())) {
+                        setChips([...chips, newChipInput.trim()]);
+                        setNewChipInput('');
+                      }
+                    }}
+                    className="h-8 text-xs rounded-xl font-bold cursor-pointer shrink-0"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    <span>Add</span>
+                  </Button>
                 </div>
               </div>
             </CardContent>

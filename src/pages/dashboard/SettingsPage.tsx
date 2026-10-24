@@ -32,6 +32,7 @@ export function SettingsPage() {
   }>();
 
   const [name, setName] = useState(activeBusiness?.name || '');
+  const [category, setCategory] = useState(activeBusiness?.category || 'services');
   const [googleUrl, setGoogleUrl] = useState(activeBusiness?.googleReviewUrl || '');
   const [phone, setPhone] = useState(activeBusiness?.phone || '');
   const [city, setCity] = useState(activeBusiness?.city || '');
@@ -76,14 +77,14 @@ export function SettingsPage() {
         body: JSON.stringify({
           businessId: activeBusiness?.id,
           businessName: name || activeBusiness?.name,
-          category: activeBusiness?.category,
+          category: category || activeBusiness?.category || 'services',
           city: city || activeBusiness?.city,
           address: activeBusiness?.address
         })
       });
       if (data?.success && Array.isArray(data.keywords)) {
         setAiSuggestions(data.keywords);
-        setAiStatusMsg(`AI analyzed "${name || 'your store'}" and recommended ${data.keywords.length} review highlights!`);
+        setAiStatusMsg(`AI analyzed "${name || 'your business'}" (${category || 'business'}) and recommended ${data.keywords.length} review highlights!`);
       } else {
         setAiStatusMsg('Could not fetch AI suggestions.');
       }
@@ -106,6 +107,7 @@ export function SettingsPage() {
   useEffect(() => {
     if (activeBusiness) {
       setName(activeBusiness.name || '');
+      setCategory(activeBusiness.category || 'services');
       setGoogleUrl(activeBusiness.googleReviewUrl || '');
       setPhone(activeBusiness.phone || '');
       setCity(activeBusiness.city || '');
@@ -177,6 +179,7 @@ export function SettingsPage() {
 
     const payload = {
       name: name.trim(),
+      category: category.trim(),
       googleReviewUrl: googleUrl.trim(),
       city: city.trim(),
       phone: phone.trim(),
@@ -330,7 +333,7 @@ export function SettingsPage() {
                   <span>AI Keyword Suggestions for {name || 'Your Business'}</span>
                 </Label>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  AI analyzes your business name, category ({activeBusiness?.category || 'store'}), and city ({city || 'local area'}) to recommend authentic review highlights.
+                  AI analyzes your business name ({name || 'your store'}), industry ({category || 'services'}), and city ({city || 'local area'}) to recommend authentic review highlights.
                 </p>
               </div>
 
@@ -367,6 +370,39 @@ export function SettingsPage() {
                   )}
                 </Button>
               </div>
+            </div>
+
+            {/* Quick Industry Category Switcher */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Select Industry:</span>
+              {[
+                { id: 'services', label: '🚀 Digital Agency / IT' },
+                { id: 'restaurant', label: '☕ Cafe & Restaurant' },
+                { id: 'sweets', label: '🍰 Sweets & Bakery' },
+                { id: 'healthcare', label: '🩺 Clinic & Dental' },
+                { id: 'salon', label: '💇 Salon & Spa' },
+                { id: 'retail', label: '💎 Jewellery & Fashion' },
+                { id: 'fitness', label: '🏋️ Gym & Fitness' },
+                { id: 'automobile', label: '🚗 Auto Garage' },
+                { id: 'education', label: '📚 Coaching & Classes' },
+                { id: 'legal', label: '⚖️ CA & Legal' }
+              ].map((item) => {
+                const isSelected = (category || 'services').toLowerCase().includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setCategory(item.id)}
+                    className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
 
             {aiStatusMsg && (
@@ -526,7 +562,7 @@ export function SettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700">
                 Business / Store Name
@@ -534,9 +570,30 @@ export function SettingsPage() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. My Clinic / My Restaurant"
+                placeholder="e.g. Upmark / My Clinic"
                 className="text-xs rounded-xl"
               />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">
+                Industry / Business Type
+              </Label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              >
+                <option value="services">🚀 Digital Marketing & Agency</option>
+                <option value="restaurant">☕ Restaurant, Cafe & Food</option>
+                <option value="sweets">🍰 Sweets, Bakery & Dairy</option>
+                <option value="healthcare">🩺 Clinic & Dental</option>
+                <option value="salon">💇 Salon, Spa & Beauty</option>
+                <option value="retail">💎 Jewellery & Fashion</option>
+                <option value="fitness">🏋️ Gym & Fitness</option>
+                <option value="automobile">🚗 Auto Garage & Service</option>
+                <option value="education">📚 Coaching & Education</option>
+                <option value="legal">⚖️ CA, Tax & Legal</option>
+              </select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700">

@@ -454,6 +454,7 @@ publicRoutes.get('/places/details/:placeId', async (c) => {
       googleMapsUri,
       googleReviewUrl,
       category,
+      types: data.types || [],
       summary
     });
   } catch (err: any) {

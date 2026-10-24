@@ -227,7 +227,7 @@ aiRoutes.post('/suggest-reply', handleReplyDraft);
 // AI Keyword / Highlights Suggestion Endpoint for Businesses
 aiRoutes.post('/suggest-keywords', async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  let { businessId, businessName, category, city, address } = body;
+  let { businessId, businessName, category, city, address, summary, types } = body;
 
   const db = getDb(c.env.DB);
 
@@ -253,7 +253,9 @@ aiRoutes.post('/suggest-keywords', async (c) => {
     businessName: businessName || 'Local Business',
     category,
     city,
-    address
+    address,
+    summary,
+    types
   });
 
   return c.json({

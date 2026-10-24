@@ -248,20 +248,27 @@ export interface GenerateBusinessKeywordsParams {
   category?: string | null;
   city?: string | null;
   address?: string | null;
+  summary?: string | null;
+  types?: string[] | null;
 }
 
 export async function generateBusinessKeywords(
   aiBinding: any,
   params: GenerateBusinessKeywordsParams
 ): Promise<{ keywords: string[]; usedFallback: boolean }> {
-  const { businessName, category, city, address } = params;
+  const { businessName, category, city, address, summary, types } = params;
 
   if (aiBinding) {
+    const details: string[] = [];
+    if (category) details.push(`Category: "${category}"`);
+    if (types && types.length > 0) details.push(`Google Types: [${types.join(', ')}]`);
+    if (summary) details.push(`Google Place Summary: "${summary}"`);
+    if (city || address) details.push(`Location: "${city || ''} ${address || ''}"`);
+
     const systemPrompt = `You are an expert local SEO & Google Business Profile consultant in India.
 Your task is to analyze the user's specific business and generate 8 to 12 authentic, high-impact review highlight keywords/chips for customer Google Reviews.
 Business Name: "${businessName}"
-Category: "${category || 'Local Business'}"
-Location: "${city || ''} ${address || ''}"
+${details.join('\n')}
 
 RULES:
 1. Generate strictly 8 to 12 short review highlight phrases (2 to 4 words each).
@@ -271,7 +278,7 @@ RULES:
 {"keywords": ["Highlight 1", "Highlight 2", "Highlight 3", ...]}
 5. Do NOT include markdown blocks or any other explanation.`;
 
-    const userPrompt = `Generate 8-12 tailored Google review chips for ${businessName} (${category || 'Local Business'}, ${city || 'India'}).`;
+    const userPrompt = `Generate 8-12 tailored Google review chips for ${businessName} (${category || 'Local Business'}, ${city || 'India'})${summary ? `. Business summary: ${summary}` : ''}.`;
 
     try {
       const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
@@ -279,8 +286,8 @@ RULES:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 300,
-        temperature: 0.5
+        max_tokens: 600,
+        temperature: 0.3
       });
 
       if (response && typeof response === 'object' && Array.isArray((response as any)?.keywords)) {
@@ -300,40 +307,265 @@ RULES:
       }
       raw = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
 
+      // 1. Try JSON extraction
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (Array.isArray(parsed?.keywords) && parsed.keywords.length > 0) {
-          const cleanKeywords = parsed.keywords
-            .map((k: string) => String(k).replace(/^[-*•\d.]+\s*/, '').trim())
-            .filter((k: string) => k.length > 1 && k.length < 40)
-            .slice(0, 12);
-          if (cleanKeywords.length >= 4) {
-            return { keywords: cleanKeywords, usedFallback: false };
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed?.keywords) && parsed.keywords.length > 0) {
+            const cleanKeywords = parsed.keywords
+              .map((k: string) => String(k).replace(/^[-*•\d.]+\s*/, '').trim())
+              .filter((k: string) => k.length > 1 && k.length < 40)
+              .slice(0, 12);
+            if (cleanKeywords.length >= 4) {
+              return { keywords: cleanKeywords, usedFallback: false };
+            }
           }
-        }
+        } catch {}
+      }
+
+      // 2. Try line-by-line bullet points / numbered lists if JSON didn't parse
+      const lineMatches = raw
+        .split('\n')
+        .map((line) => line.replace(/^[-*•\d.)\]]+\s*/, '').trim())
+        .filter((line) => line.length > 2 && line.length < 40 && !line.startsWith('{') && !line.startsWith('}'));
+
+      if (lineMatches.length >= 4) {
+        return { keywords: lineMatches.slice(0, 10), usedFallback: false };
       }
     } catch (err) {
-      console.warn('AI keyword suggestion failed, falling back:', err);
+      console.warn('AI keyword suggestion failed, falling back to specialized industry profiles:', err);
     }
   }
 
-  // Dynamic fallback derived from actual business details (not static dummy data)
+  // Specialized industry & business information profile mapping (100% tailored to actual business)
   const dynamicKeywords: string[] = [];
-  const nameLower = (businessName + ' ' + (category || '')).toLowerCase();
+  const textContext = `${businessName} ${category || ''} ${(types || []).join(' ')} ${summary || ''} ${city || ''} ${address || ''}`.toLowerCase();
 
-  if (nameLower.includes('sweet') || nameLower.includes('bakery') || nameLower.includes('mithai') || nameLower.includes('dairy')) {
-    dynamicKeywords.push('Fresh & Authentic Taste', 'Pure Quality Preparation', 'Clean & Hygienic Counter', 'Neat Packaging', 'Polite & Quick Staff', 'Delicious Sweets');
-  } else if (nameLower.includes('dental') || nameLower.includes('clinic') || nameLower.includes('hospital') || nameLower.includes('doctor')) {
-    dynamicKeywords.push('Gentle & Caring Doctor', 'Clean & Sanitized Clinic', 'Minimal Wait Time', 'Accurate Diagnosis', 'Helpful Staff', 'Painless Treatment');
-  } else if (nameLower.includes('cafe') || nameLower.includes('restaurant') || nameLower.includes('food') || nameLower.includes('hotel') || nameLower.includes('kitchen')) {
-    dynamicKeywords.push('Delicious & Fresh Food', 'Cozy Ambiance', 'Fast & Attentive Service', 'Great Food Quality', 'Clean Seating', 'Friendly Staff');
-  } else if (nameLower.includes('salon') || nameLower.includes('spa') || nameLower.includes('beauty')) {
-    dynamicKeywords.push('Skilled & Polite Staff', 'Hygienic Equipment', 'Relaxing Experience', 'Great Hair & Skin Care', 'Punctual Service');
-  } else if (nameLower.includes('jewel') || nameLower.includes('saree') || nameLower.includes('cloth') || nameLower.includes('store') || nameLower.includes('retail')) {
-    dynamicKeywords.push('Wide Variety & Collection', 'Transparent Pricing', 'Helpful & Courteous Staff', 'Great Shopping Experience', 'Honest Dealing');
+  if (
+    textContext.includes('marketing') ||
+    textContext.includes('agency') ||
+    textContext.includes('seo') ||
+    textContext.includes('digital') ||
+    textContext.includes('advertising') ||
+    textContext.includes('media') ||
+    textContext.includes('upmark')
+  ) {
+    dynamicKeywords.push(
+      'Creative Marketing Strategy',
+      'Impressive SEO Growth',
+      'Prompt & Quick Response',
+      'Clear ROI & Results',
+      'Professional & Dedicated Team',
+      'Transparent Reporting',
+      'High Quality Campaigns',
+      'Great Value for Money'
+    );
+  } else if (
+    textContext.includes('software') ||
+    textContext.includes(' tech') ||
+    textContext.includes('web') ||
+    textContext.includes('developer') ||
+    textContext.includes('application') ||
+    category === 'it' ||
+    category === 'software'
+  ) {
+    dynamicKeywords.push(
+      'Expert Technical Support',
+      'Fast Bug Resolution',
+      'Custom Feature Development',
+      'Clean UI/UX Design',
+      'Smooth Implementation',
+      'Reliable & Secure System',
+      'Professional Guidance'
+    );
+  } else if (
+    textContext.includes('sweet') ||
+    textContext.includes('bakery') ||
+    textContext.includes('cake') ||
+    textContext.includes('mithai') ||
+    textContext.includes('dairy') ||
+    textContext.includes('farsan')
+  ) {
+    dynamicKeywords.push(
+      'Fresh & Authentic Taste',
+      'Pure Desi Ghee Preparation',
+      'Clean & Hygienic Counter',
+      'Neat Packaging',
+      'Polite & Quick Staff',
+      'Delicious Sweets',
+      'High Quality Ingredients'
+    );
+  } else if (
+    textContext.includes('dental') ||
+    textContext.includes('clinic') ||
+    textContext.includes('hospital') ||
+    textContext.includes('doctor') ||
+    textContext.includes('physio') ||
+    textContext.includes('health') ||
+    textContext.includes('pharma')
+  ) {
+    dynamicKeywords.push(
+      'Painless & Gentle Treatment',
+      'Experienced & Caring Doctor',
+      'Minimal Wait Time',
+      'Clean & Sanitized Clinic',
+      'Helpful & Polite Staff',
+      'Accurate Diagnosis',
+      'Clear Medical Advice'
+    );
+  } else if (
+    textContext.includes('cafe') ||
+    textContext.includes('restaurant') ||
+    textContext.includes('food') ||
+    textContext.includes('dining') ||
+    textContext.includes('kitchen') ||
+    textContext.includes('hotel') ||
+    textContext.includes('dhaba')
+  ) {
+    dynamicKeywords.push(
+      'Delicious & Fresh Food',
+      'Cozy & Pleasant Ambiance',
+      'Fast & Attentive Service',
+      'Clean & Hygienic Seating',
+      'Courteous & Polite Staff',
+      'Great Food Quality',
+      'Pocket-Friendly Prices'
+    );
+  } else if (
+    textContext.includes('salon') ||
+    textContext.includes('spa') ||
+    textContext.includes('beauty') ||
+    textContext.includes('parlour') ||
+    textContext.includes('hair') ||
+    textContext.includes('makeup')
+  ) {
+    dynamicKeywords.push(
+      'Skilled & Polite Stylist',
+      'Hygienic & Clean Tools',
+      'Relaxing Ambiance',
+      'Punctual Appointment',
+      'Trendy Hair Styling',
+      'Great Skin & Hair Care',
+      'Premium Quality Products'
+    );
+  } else if (
+    textContext.includes('jewel') ||
+    textContext.includes('gold') ||
+    textContext.includes('diamond') ||
+    textContext.includes('silver')
+  ) {
+    dynamicKeywords.push(
+      '100% Certified Hallmarked',
+      'Unique & Modern Designs',
+      'Transparent Making Charges',
+      'Helpful & Courteous Staff',
+      'Honest & Trustworthy Dealing',
+      'Exceptional Shopping Experience'
+    );
+  } else if (
+    textContext.includes('saree') ||
+    textContext.includes('cloth') ||
+    textContext.includes('boutique') ||
+    textContext.includes('fashion') ||
+    textContext.includes('tailor') ||
+    textContext.includes('garment')
+  ) {
+    dynamicKeywords.push(
+      'Wide Variety & Latest Collection',
+      'Perfect Fitting & Stitching',
+      'Premium Fabric Quality',
+      'Affordable & Fair Prices',
+      'Friendly & Patient Staff',
+      'Great Bridal & Party Wear'
+    );
+  } else if (
+    textContext.includes('gym') ||
+    textContext.includes('fitness') ||
+    textContext.includes('workout') ||
+    textContext.includes('trainer') ||
+    textContext.includes('yoga')
+  ) {
+    dynamicKeywords.push(
+      'Modern & Maintained Equipment',
+      'Supportive & Certified Trainers',
+      'Energetic & Positive Vibe',
+      'Clean & Hygienic Gym',
+      'Customized Workout Guidance',
+      'Friendly Community'
+    );
+  } else if (
+    textContext.includes('education') ||
+    textContext.includes('class') ||
+    textContext.includes('tuition') ||
+    textContext.includes('coaching') ||
+    textContext.includes('school') ||
+    textContext.includes('academy')
+  ) {
+    dynamicKeywords.push(
+      'Clear Concept Explanation',
+      'Personal Attention to Students',
+      'Exam-Oriented Preparation',
+      'Dedicated & Friendly Teachers',
+      'Quality Study Material',
+      'Regular Doubt Clearing'
+    );
+  } else if (
+    textContext.includes('car') ||
+    textContext.includes('auto') ||
+    textContext.includes('garage') ||
+    textContext.includes('mechanic') ||
+    textContext.includes('vehicle') ||
+    textContext.includes('motor')
+  ) {
+    dynamicKeywords.push(
+      'Quick & Professional Car Service',
+      'Genuine Spare Parts Used',
+      'Transparent Cost Estimate',
+      'Experienced Mechanics',
+      'Clean Car Delivery on Time',
+      'Reliable & Honest Advice'
+    );
+  } else if (
+    textContext.includes('ca') ||
+    textContext.includes('tax') ||
+    textContext.includes('accountant') ||
+    textContext.includes('legal') ||
+    textContext.includes('lawyer') ||
+    textContext.includes('advocate')
+  ) {
+    dynamicKeywords.push(
+      'Accurate & Timely Tax Filing',
+      'Clear Financial Guidance',
+      'Fast Documentation Handling',
+      'Trustworthy & Honest Advice',
+      'Prompt Query Resolution',
+      'Professional Compliance'
+    );
+  } else if (
+    textContext.includes('photo') ||
+    textContext.includes('studio') ||
+    textContext.includes('shoot') ||
+    textContext.includes('wedding') ||
+    textContext.includes('video')
+  ) {
+    dynamicKeywords.push(
+      'Stunning & Creative Photography',
+      'Natural Lighting & Poses',
+      'Punctual Photo & Video Delivery',
+      'Friendly & Patient Photographer',
+      'Cinematic Video Quality',
+      'High Resolution Album Prints'
+    );
   } else {
-    dynamicKeywords.push(`Excellent Service at ${businessName}`, 'Polite & Helpful Staff', 'Fair & Honest Dealing', 'Prompt Customer Support', 'Clean & Professional Setup', 'Highly Recommended');
+    dynamicKeywords.push(
+      `Excellent Service at ${businessName}`,
+      'Polite & Helpful Staff',
+      'Fair & Honest Dealing',
+      'Prompt Customer Support',
+      'Clean & Professional Setup',
+      'Highly Recommended'
+    );
   }
 
   return { keywords: dynamicKeywords, usedFallback: true };
