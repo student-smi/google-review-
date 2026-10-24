@@ -18,11 +18,15 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8787',
-        changeOrigin: true
+        target: process.env.VITE_API_URL || 'https://reviewqr.panchalsmit.workers.dev',
+        changeOrigin: true,
+        secure: false
       },
-      // Note: customer shortcode routes /r/:code can be handled by client router
-      // or proxied if direct server-side redirect is tested
+      '/r': {
+        target: process.env.VITE_API_URL || 'https://reviewqr.panchalsmit.workers.dev',
+        changeOrigin: true,
+        secure: false
+      }
     }
   },
   build: {

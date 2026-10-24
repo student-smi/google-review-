@@ -23,7 +23,10 @@ import {
   Briefcase,
   Zap,
   Filter,
-  Loader2
+  Loader2,
+  Globe,
+  Link2,
+  Unlink
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
@@ -48,6 +51,15 @@ interface AiReplyResult {
   concise: string;
 }
 
+export interface GmbStatus {
+  isConnected: boolean;
+  accountName?: string | null;
+  locationName?: string | null;
+  connectedEmail?: string | null;
+  lastSyncedAt?: number | null;
+  connectedAt?: number | null;
+}
+
 export function ReviewsRepliesPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
   const bizName = activeBusiness?.name || 'Our Business';
@@ -59,6 +71,13 @@ export function ReviewsRepliesPage() {
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [filterMode, setFilterMode] = useState<'all' | 'needs_reply' | 'replied'>('all');
+
+  // Google Business Profile (GMB) OAuth state
+  const [gmbStatus, setGmbStatus] = useState<GmbStatus>({ isConnected: false });
+  const [isConnectingGmb, setIsConnectingGmb] = useState(false);
+  const [isSyncingGmb, setIsSyncingGmb] = useState(false);
+  const [isPostingToGoogle, setIsPostingToGoogle] = useState<{ [reviewId: string]: boolean }>({});
+  const [googlePostSuccess, setGooglePostSuccess] = useState<{ [reviewId: string]: string }>({});
 
   // Active review reply drawer / state
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
@@ -94,8 +113,160 @@ export function ReviewsRepliesPage() {
     }
   };
 
+  const loadGmbStatus = async () => {
+    if (!activeBusiness?.id) return;
+    try {
+      const res = await apiFetch<GmbStatus>(`/api/gmb/status?businessId=${activeBusiness.id}`);
+      if (res) {
+        setGmbStatus(res);
+      }
+    } catch (err) {
+      console.warn('Could not load GMB status:', err);
+    }
+  };
+
+  const handleConnectGmb = () => {
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+      setIsConnectingGmb(true);
+      try {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: '331659571653-prle3s93ht54hdhp11gk3e5p69un2565.apps.googleusercontent.com',
+          scope: 'https://www.googleapis.com/auth/business.manage openid email profile',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              console.error('Google OAuth error:', tokenResponse);
+              setIsConnectingGmb(false);
+              return;
+            }
+            if (tokenResponse.access_token) {
+              try {
+                await apiFetch('/api/gmb/connect', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    accessToken: tokenResponse.access_token,
+                    businessId: activeBusiness?.id
+                  })
+                });
+                await loadGmbStatus();
+                await handleSyncGmb();
+              } catch (e) {
+                console.error('GMB connect failed:', e);
+              } finally {
+                setIsConnectingGmb(false);
+              }
+            }
+          }
+        });
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } catch (err) {
+        console.error('initTokenClient error:', err);
+        setIsConnectingGmb(false);
+      }
+    } else {
+      alert('Google Identity Services script is loading. Please retry in 2 seconds.');
+    }
+  };
+
+  const handleSyncGmb = async () => {
+    if (!activeBusiness?.id) return;
+    setIsSyncingGmb(true);
+    try {
+      const res = await apiFetch<{ reviews?: CustomerReview[]; syncedCount?: number }>(
+        '/api/gmb/sync-reviews',
+        {
+          method: 'POST',
+          body: JSON.stringify({ businessId: activeBusiness.id })
+        }
+      );
+      if (res?.reviews) {
+        setReviews(res.reviews);
+      }
+      await loadGmbStatus();
+    } catch (err) {
+      console.error('GMB sync error:', err);
+    } finally {
+      setIsSyncingGmb(false);
+    }
+  };
+
+  const handleDisconnectGmb = async () => {
+    if (!confirm('Are you sure you want to disconnect Google Business Profile?')) return;
+    try {
+      await apiFetch('/api/gmb/disconnect', {
+        method: 'POST',
+        body: JSON.stringify({ businessId: activeBusiness?.id })
+      });
+      setGmbStatus({ isConnected: false });
+    } catch (err) {
+      console.error('Failed to disconnect GMB:', err);
+    }
+  };
+
+  const handlePostDirectReplyToGoogle = async (review: CustomerReview) => {
+    const rId = review.id;
+    const textToSave = replyEditText[rId] || replyReplies[rId]?.[replySelectedStyle[rId] || 'warm'] || '';
+    if (!textToSave.trim()) return;
+
+    setIsPostingToGoogle((prev) => ({ ...prev, [rId]: true }));
+    try {
+      const res = await apiFetch<{ success: boolean; googlePostStatus: string; message: string; review: CustomerReview }>(
+        '/api/gmb/reply',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            businessId: activeBusiness?.id,
+            reviewId: rId,
+            replyText: textToSave,
+            replyStyle: replySelectedStyle[rId] || 'warm'
+          })
+        }
+      );
+
+      // Copy text immediately for owner convenience
+      handleCopyText(textToSave, rId);
+
+      // Update local review state
+      if (res?.review) {
+        setReviews((prev) =>
+          prev.map((r) => (r.id === rId ? { ...r, ...res.review } : r))
+        );
+      } else {
+        setReviews((prev) =>
+          prev.map((r) =>
+            r.id === rId
+              ? {
+                  ...r,
+                  replyText: textToSave,
+                  replyStyle: replySelectedStyle[rId] || 'warm',
+                  repliedAt: Math.floor(Date.now() / 1000)
+                }
+              : r
+          )
+        );
+      }
+
+      setGooglePostSuccess((prev) => ({
+        ...prev,
+        [rId]: res?.message || '🚀 Reply posted directly to Google Maps!'
+      }));
+      setTimeout(() => {
+        setGooglePostSuccess((prev) => {
+          const copy = { ...prev };
+          delete copy[rId];
+          return copy;
+        });
+      }, 5000);
+    } catch (err: any) {
+      console.error('Post to Google Maps failed:', err);
+      alert('Could not post directly to Google: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsPostingToGoogle((prev) => ({ ...prev, [rId]: false }));
+    }
+  };
+
   useEffect(() => {
     loadReviews();
+    loadGmbStatus();
   }, [activeBusiness?.id]);
 
   // Generate AI Reply for a specific Customer Review
@@ -309,6 +480,109 @@ export function ReviewsRepliesPage() {
         </div>
       </div>
 
+      {/* Tarika 2: Google Business Profile (GMB) 1-Click Auto-Reply Engine Card */}
+      <div className={`rounded-2xl border transition-all p-5 shadow-xs ${
+        gmbStatus.isConnected
+          ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-blue-50/40'
+          : 'border-blue-200/80 bg-gradient-to-br from-blue-50/60 via-white to-indigo-50/40'
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                <span>Google Business Profile (GMB) Auto-Reply Engine</span>
+                {gmbStatus.isConnected ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Connected & Active</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
+                    <span>Direct 1-Click Auto-Reply</span>
+                  </span>
+                )}
+              </h3>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {gmbStatus.isConnected ? (
+                <>
+                  Connected as <span className="font-bold text-slate-800">{gmbStatus.connectedEmail || gmbStatus.accountName}</span> for{' '}
+                  <span className="font-bold text-slate-800">{bizName}</span>. Your Google Maps customer reviews sync live, and AI replies are published directly to Google Maps in 1 click!
+                </>
+              ) : (
+                <>
+                  Connect your Google Business Profile to sync real customer reviews directly into this dashboard and publish AI-calibrated replies directly to Google Maps in 1 click — zero copy-pasting required.
+                </>
+              )}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-medium text-slate-500">
+              <span className="flex items-center gap-1 text-slate-700 bg-white/80 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Direct Google Maps Auto-Reply
+              </span>
+              <span className="flex items-center gap-1 text-slate-700 bg-white/80 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
+                <ShieldCheck className="w-3 h-3 text-blue-600" /> Official Google Cloud OAuth
+              </span>
+              <span className="flex items-center gap-1 text-slate-700 bg-white/80 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
+                <Zap className="w-3 h-3 text-amber-500" /> Instant 1-Click Publishing
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-center shrink-0">
+            {gmbStatus.isConnected ? (
+              <>
+                <Button
+                  onClick={handleSyncGmb}
+                  disabled={isSyncingGmb}
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGmb ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingGmb ? 'Syncing Reviews…' : 'Sync Google Reviews'}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectGmb}
+                  size="sm"
+                  className="border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-600 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  <Unlink className="w-3.5 h-3.5 mr-1" />
+                  <span>Disconnect</span>
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleConnectGmb}
+                disabled={isConnectingGmb}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl px-4 py-2.5 shadow-md flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02]"
+              >
+                {isConnectingGmb ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Connecting Google Account…</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe className="w-4 h-4" />
+                    <span>Connect Google Business Profile</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Metrics Summary Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
@@ -493,11 +767,17 @@ export function ReviewsRepliesPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-slate-900">{review.customerName}</h4>
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                <ShieldCheck className="h-3 w-3" />
-                                <span>Verified Customer</span>
-                              </span>
+                              {review.id.startsWith('gmb_') ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                                  <Globe className="h-3 w-3 text-blue-600" />
+                                  <span>Google Maps Review</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  <ShieldCheck className="h-3 w-3" />
+                                  <span>Verified Customer</span>
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               <div className="flex text-amber-400">
@@ -678,7 +958,7 @@ export function ReviewsRepliesPage() {
                               <span>100% Policy Safe & Personalized</span>
                             </div>
 
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -697,24 +977,47 @@ export function ReviewsRepliesPage() {
                                 {copiedReviewId === review.id ? (
                                   <><Check className="h-3.5 w-3.5 text-emerald-600" /><span>Copied!</span></>
                                 ) : (
-                                  <><Copy className="h-3.5 w-3.5" /><span>Copy to Clipboard</span></>
+                                  <><Copy className="h-3.5 w-3.5" /><span>Copy</span></>
                                 )}
                               </Button>
 
                               <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleSaveReply(review)}
                                 disabled={isSaving || !currentDraft.trim()}
-                                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5"
+                                className="text-xs font-bold rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 shadow-xs gap-1.5"
                               >
                                 {isSaving ? (
                                   <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Saving…</span></>
                                 ) : (
-                                  <><Check className="h-3.5 w-3.5" /><span>Save & Mark Replied</span></>
+                                  <><Check className="h-3.5 w-3.5" /><span>Save Note</span></>
+                                )}
+                              </Button>
+
+                              {/* 1-Click Post Direct Reply to Google Maps */}
+                              <Button
+                                size="sm"
+                                onClick={() => handlePostDirectReplyToGoogle(review)}
+                                disabled={isPostingToGoogle[review.id] || !currentDraft.trim()}
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                              >
+                                {isPostingToGoogle[review.id] ? (
+                                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Publishing…</span></>
+                                ) : (
+                                  <><Send className="h-3.5 w-3.5" /><span>Post to Google Maps (1-Click)</span></>
                                 )}
                               </Button>
                             </div>
                           </div>
+
+                          {/* Direct Google Post Success Message */}
+                          {googlePostSuccess[review.id] && (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                              <span>{googlePostSuccess[review.id]}</span>
+                            </div>
+                          )}
                         </div>
                       ) : !hasExistingReply && (
                         /* CTA Button when not yet replied */

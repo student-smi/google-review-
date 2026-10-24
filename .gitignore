@@ -9,6 +9,8 @@ dist/
 .env.local
 .env.*.local
 *.pem
+scripts/check-*.mjs
+scripts/test-*.mjs
 
 # IDE & OS
 .vscode/
