@@ -11,6 +11,9 @@ export interface Env {
   ASSETS?: any;
   ENVIRONMENT?: string;
   APP_URL?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_PLACES_API_KEY?: string;
 }
 
 export const publicRoutes = new Hono<{ Bindings: Env }>();
