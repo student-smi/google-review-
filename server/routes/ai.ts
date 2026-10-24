@@ -189,8 +189,8 @@ aiRoutes.post('/review-draft', async (c) => {
   });
 });
 
-// Owner AI Review Reply Assistant Endpoint
-aiRoutes.post('/reply-draft', async (c) => {
+// Owner AI Review Reply Assistant Endpoint (Supports both /reply-draft and /suggest-reply)
+const handleReplyDraft = async (c: any) => {
   const body = await c.req.json().catch(() => ({}));
   const {
     businessName = 'Our Business',
@@ -219,7 +219,10 @@ aiRoutes.post('/reply-draft', async (c) => {
   });
 
   return c.json({ success: true, replies });
-});
+};
+
+aiRoutes.post('/reply-draft', handleReplyDraft);
+aiRoutes.post('/suggest-reply', handleReplyDraft);
 
 // AI Keyword / Highlights Suggestion Endpoint for Businesses
 aiRoutes.post('/suggest-keywords', async (c) => {

@@ -125,14 +125,15 @@ Generate 3 distinct 5-star reviews naturally weaving in these customer highlight
       try {
         const parsed = JSON.parse(jsonMatch[0]);
         if (Array.isArray(parsed?.drafts) && parsed.drafts.length >= 2) {
-          const validatedDrafts = parsed.drafts.slice(0, 3).map((text: string, i: number) => {
+          const validatedDrafts = parsed.drafts.slice(0, 3).map((item: any, i: number) => {
+            const text = (typeof item === 'string' ? item : (item?.review || item?.text || item?.draft || '')).trim();
             const v = validateReviewDraft(text, chips, freeText);
             const title = i === 0 ? 'Short & Crisp' : i === 1 ? 'Warm & Detailed' : 'Balanced & Friendly';
             return {
               id: `opt_${i + 1}`,
               title,
-              text: v.isValid ? v.sanitizedDraft : (text.trim() || fallbacks[i]?.text || fallbacks[0].text),
-              wordCount: text.split(/\s+/).filter(Boolean).length
+              text: v.isValid ? v.sanitizedDraft : (text || fallbacks[i]?.text || fallbacks[0].text),
+              wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0
             };
           });
 
@@ -282,7 +283,23 @@ RULES:
         temperature: 0.5
       });
 
-      const raw = response?.response?.trim() || '';
+      if (response && typeof response === 'object' && Array.isArray((response as any)?.keywords)) {
+        return {
+          keywords: (response as any).keywords.slice(0, 12),
+          usedFallback: false
+        };
+      }
+
+      let raw = '';
+      if (typeof response === 'string') {
+        raw = response;
+      } else if (typeof response?.response === 'string') {
+        raw = response.response;
+      } else {
+        raw = JSON.stringify(response || {});
+      }
+      raw = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
