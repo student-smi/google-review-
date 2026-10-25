@@ -623,3 +623,85 @@ gmbRoutes.get('/places-stats/:businessId', async (c) => {
     }
   });
 });
+
+// ──────────────────────────────────────────────
+// 8. Import Reviews from Browser Extension / Bookmarklet / Direct Importer
+// ──────────────────────────────────────────────
+gmbRoutes.post('/import-browser-reviews', async (c) => {
+  const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
+  const body = await c.req.json().catch(() => ({}));
+  const { businessId, reviews } = body;
+
+  if (!businessId) {
+    return c.json({ error: 'businessId is required' }, 400);
+  }
+
+  if (!Array.isArray(reviews) || reviews.length === 0) {
+    return c.json({ error: 'No reviews provided to import' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  const business = await scoped.getBusiness(businessId);
+  if (!business) {
+    return c.json({ error: 'Business not found' }, 404);
+  }
+
+  let importedCount = 0;
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const r of reviews) {
+    const rawText = (r.reviewText || r.text || '').trim();
+    if (!rawText) continue;
+
+    const authorName = (r.authorName || r.name || r.customerName || 'Google Reviewer').trim();
+    const rating = typeof r.rating === 'number' && r.rating >= 1 && r.rating <= 5 ? Math.round(r.rating) : 5;
+
+    // Create unique deterministic ID from author and text to prevent duplicates
+    const cleanAuthor = authorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const textSnippet = rawText.substring(0, 30).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const reviewId = `gmb_${cleanAuthor}_${textSnippet}`;
+
+    const [existing] = await db
+      .select({ id: customerReviews.id, replyText: customerReviews.replyText })
+      .from(customerReviews)
+      .where(eq(customerReviews.id, reviewId))
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(customerReviews).values({
+        id: reviewId,
+        businessId: businessId,
+        customerName: authorName,
+        rating: rating,
+        reviewText: rawText,
+        language: r.language || 'en',
+        replyText: r.replyText || null,
+        replyStyle: r.replyText ? 'warm' : null,
+        repliedAt: r.replyText ? now : null,
+        createdAt: r.timestamp ? Math.floor(new Date(r.timestamp).getTime() / 1000) : now
+      });
+      importedCount++;
+    } else if (r.replyText && !existing.replyText) {
+      await db
+        .update(customerReviews)
+        .set({
+          replyText: r.replyText,
+          replyStyle: 'warm',
+          repliedAt: now
+        })
+        .where(eq(customerReviews.id, reviewId));
+    }
+  }
+
+  const freshReviews = await scoped.getCustomerReviews(businessId);
+
+  return c.json({
+    success: true,
+    message: `Successfully imported ${importedCount} Google reviews!`,
+    importedCount,
+    totalReviews: freshReviews.length,
+    reviews: freshReviews
+  });
+});

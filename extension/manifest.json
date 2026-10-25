@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "ReviewQR - Google Maps Reviews Sync & AI Reply",
+  "version": "1.0.0",
+  "description": "1-Click sync Google Maps reviews to ReviewQR dashboard and generate AI calibrated replies.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.google.com/maps/*",
+    "*://*.google.com/search*",
+    "*://*.google.co.in/maps/*",
+    "*://*.google.co.in/search*",
+    "https://reviewqr.panchalsmit.workers.dev/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ReviewQR Auto-Sync"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.google.com/maps/*",
+        "*://*.google.com/search*",
+        "*://*.google.co.in/maps/*",
+        "*://*.google.co.in/search*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ReviewQR</title>
+  <style>
+    body {
+      width: 280px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #FFFFFF;
+      color: #0F172A;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .badge {
+      background: #EEF2FF;
+      color: #4F46E5;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+    .btn:hover {
+      background: #4338CA;
+    }
+    .status {
+      font-size: 12px;
+      color: #64748B;
+      margin-top: 10px;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .link {
+      display: block;
+      margin-top: 12px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #4F46E5;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="font-weight: 900; font-size: 16px; color: #1E1B4B;">ReviewQR</div>
+    <span class="badge">Google Maps Sync</span>
+  </div>
+
+  <p style="font-size: 12px; color: #475569; margin: 0 0 14px 0;">
+    Open Google Maps on any business page, then tap the floating sync button to instantly sync reviews to your dashboard!
+  </p>
+
+  <a href="https://reviewqr.panchalsmit.workers.dev/dashboard/replies" target="_blank" class="btn" style="text-decoration:none;">
+    Open ReviewQR Dashboard ↗
+  </a>
+
+  <div class="status">
+    Auto-detects reviews on Google Maps & Google Search.
+  </div>
+</body>
+</html>

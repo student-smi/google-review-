@@ -64,8 +64,15 @@ export function ReviewsRepliesPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
   const bizName = activeBusiness?.name || 'Our Business';
 
-  // Navigation tab: 'feed' (real customer reviews) or 'tester' (manual sandbox)
-  const [activeTab, setActiveTab] = useState<'feed' | 'tester'>('feed');
+  // Navigation tab: 'feed' (real customer reviews), 'sync' (Google Maps Sync & Importer) or 'tester' (manual sandbox)
+  const [activeTab, setActiveTab] = useState<'feed' | 'sync' | 'tester'>('feed');
+
+  // Quick Target & Import Google Review state
+  const [quickAuthorName, setQuickAuthorName] = useState('');
+  const [quickRating, setQuickRating] = useState(5);
+  const [quickReviewText, setQuickReviewText] = useState('');
+  const [isQuickImporting, setIsQuickImporting] = useState(false);
+  const [bookmarkletCopied, setBookmarkletCopied] = useState(false);
 
   // Customer Reviews state
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
@@ -432,6 +439,66 @@ export function ReviewsRepliesPage() {
     }
   };
 
+  // 1-Click Copy AI Reply & Open Google Maps to Post
+  const handleCopyAndOpenGoogleMaps = async (review: CustomerReview) => {
+    const rId = review.id;
+    const textToCopy = replyEditText[rId] || replyReplies[rId]?.[replySelectedStyle[rId] || 'warm'] || '';
+    if (!textToCopy.trim()) return;
+
+    // 1. Copy reply to clipboard
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedReviewId(rId);
+
+    // 2. Mark as replied and save in database
+    await handleSaveReply(review);
+
+    // 3. Open Google Maps review page in new tab
+    const placeId = activeBusiness?.googlePlaceId || placesStats?.googlePlaceId || 'ChIJ7zSUNEmFXjkRiNXfEEOmZgQ';
+    const mapsReviewUrl = `https://search.google.com/local/reviews?placeid=${placeId}`;
+    window.open(mapsReviewUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Quick Target & Import specific Google Review
+  const handleQuickImportReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickReviewText.trim()) return;
+    setIsQuickImporting(true);
+    try {
+      const res = await apiFetch<{ success: boolean; reviews: CustomerReview[] }>('/api/gmb/import-browser-reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          businessId: activeBusiness?.id,
+          reviews: [
+            {
+              authorName: quickAuthorName.trim() || 'Google Reviewer',
+              rating: quickRating,
+              reviewText: quickReviewText.trim()
+            }
+          ]
+        })
+      });
+
+      if (res?.reviews) {
+        setReviews(res.reviews);
+        setQuickAuthorName('');
+        setQuickReviewText('');
+        setActiveTab('feed');
+        const newlyCreated = res.reviews[0];
+        if (newlyCreated) {
+          handleGenerateReplyForReview(newlyCreated);
+        }
+      }
+    } catch (err: any) {
+      alert('Failed to import review: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsQuickImporting(false);
+    }
+  };
+
+  // Self-contained Bookmarklet code that extracts reviews directly from Google Maps DOM
+  const bookmarkletCode = `javascript:(function(){const r=[];document.querySelectorAll('div.jftiEf,div[data-review-id],div.gws-localreviews__google-review').forEach(e=>{const n=e.querySelector('div.d4r55,button[data-href*="contrib"],div.TSUbDb')?.innerText?.trim();const s=e.querySelector('span.kvMYJc,span[role="img"]')?.getAttribute('aria-label')?.match(/\\d+/)?.[0];const t=e.querySelector('span.wiI7m,span.review-full-text')?.innerText?.trim();if(n&&t)r.push({authorName:n,rating:parseInt(s||'5',10),reviewText:t})});if(!r.length){alert('Please open the Google Maps Reviews tab and scroll down to load reviews first!');return;}const b='${activeBusiness?.id}';fetch('https://reviewqr.panchalsmit.workers.dev/api/gmb/import-browser-reviews',{method:'POST',headers:{'Content-Type':'application/json','X-Owner-Id':'owner-default'},body:JSON.stringify({businessId:b,reviews:r})}).then(res=>res.json()).then(d=>{alert('✨ Successfully synced '+r.length+' reviews to ReviewQR!');window.open('https://reviewqr.panchalsmit.workers.dev/dashboard/replies','_blank')}).catch(e=>alert('Error syncing: '+e.message));})();`;
+
+
   // Manual Tester Generate
   const handleGenerateManual = async () => {
     setIsManualGenerating(true);
@@ -653,11 +720,11 @@ export function ReviewsRepliesPage() {
       </div>
 
       {/* Primary Tab Switcher */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-2 gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('feed')}
-            className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'feed'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -673,15 +740,27 @@ export function ReviewsRepliesPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('sync')}
+            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'sync'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span>Sync Google Maps & Quick Target</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('tester')}
-            className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'tester'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Sparkles className="h-4 w-4" />
-            <span>Manual Google Review Tester</span>
+            <span>AI Sandbox</span>
           </button>
         </div>
 
@@ -1021,19 +1100,33 @@ export function ReviewsRepliesPage() {
                                 )}
                               </Button>
 
-                              {/* 1-Click Post Direct Reply to Google Maps */}
+                              {/* 1-Click Copy AI Reply & Open on Google Maps */}
                               <Button
                                 size="sm"
-                                onClick={() => handlePostDirectReplyToGoogle(review)}
-                                disabled={isPostingToGoogle[review.id] || !currentDraft.trim()}
-                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                                onClick={() => handleCopyAndOpenGoogleMaps(review)}
+                                disabled={!currentDraft.trim()}
+                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
                               >
-                                {isPostingToGoogle[review.id] ? (
-                                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Publishing…</span></>
-                                ) : (
-                                  <><Send className="h-3.5 w-3.5" /><span>Post to Google Maps (1-Click)</span></>
-                                )}
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span>📋 Copy Reply & Open Google Maps ↗</span>
                               </Button>
+
+                              {/* Direct Google Maps GMB API (if OAuth connected) */}
+                              {gmbStatus.isConnected && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePostDirectReplyToGoogle(review)}
+                                  disabled={isPostingToGoogle[review.id] || !currentDraft.trim()}
+                                  className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                                >
+                                  {isPostingToGoogle[review.id] ? (
+                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Publishing…</span></>
+                                  ) : (
+                                    <><Send className="h-3.5 w-3.5" /><span>Direct GMB API</span></>
+                                  )}
+                                </Button>
+                              )}
                             </div>
                           </div>
 
@@ -1068,6 +1161,212 @@ export function ReviewsRepliesPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: SYNC GOOGLE MAPS & QUICK TARGET */}
+      {activeTab === 'sync' && (
+        <div className="space-y-6">
+          {/* Top Banner */}
+          <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/70 p-5 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Zap className="h-5 w-5 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  Google Maps Live Reviews Sync & Target Engine
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Directly pull live Google Maps customer reviews into ReviewQR or target any specific review (e.g. someone said "Too good") to generate AI replies and post them back to Google Maps in 1 click.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left: Quick Target Specific Review */}
+            <div className="lg:col-span-6 space-y-4">
+              <Card className="rounded-2xl border-slate-200/80 bg-white shadow-xs">
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-md bg-purple-100 text-purple-700 font-black text-xs font-mono">1</span>
+                    <CardTitle className="text-sm font-extrabold text-slate-900">
+                      ⚡ Target Specific Google Reviewer
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500">
+                    Did someone review <span className="font-bold text-slate-700">"{bizName}"</span> on Google Maps? Enter their review below to generate tailored AI replies!
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="p-4 space-y-4">
+                  <form onSubmit={handleQuickImportReview} className="space-y-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-700">
+                        Reviewer Name (from Google Maps)
+                      </Label>
+                      <Input
+                        value={quickAuthorName}
+                        onChange={(e) => setQuickAuthorName(e.target.value)}
+                        placeholder="e.g. Rahul Sharma, Tejas G., or Priya"
+                        className="rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-700">
+                        Star Rating Received
+                      </Label>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setQuickRating(star)}
+                            className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                          >
+                            <Star
+                              className={`h-5 w-5 ${
+                                star <= quickRating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                        <span className="text-xs font-bold text-slate-500 ml-2 font-mono">
+                          {quickRating} of 5 Stars
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs font-bold text-slate-700">
+                        Customer Review Text
+                      </Label>
+                      <Textarea
+                        rows={4}
+                        value={quickReviewText}
+                        onChange={(e) => setQuickReviewText(e.target.value)}
+                        placeholder="e.g. Too good! Best experience, super friendly staff and delicious quality. Highly recommend!"
+                        className="rounded-xl text-xs font-normal leading-relaxed"
+                        required
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isQuickImporting || !quickReviewText.trim()}
+                      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs py-2.5 gap-2 cursor-pointer"
+                    >
+                      {isQuickImporting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Importing & Launching AI Reply…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          <span>Import Review & Generate AI Reply →</span>
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right: 1-Click Bookmarklet & Chrome Extension */}
+            <div className="lg:col-span-6 space-y-4">
+              {/* Bookmarklet Card */}
+              <Card className="rounded-2xl border-slate-200/80 bg-white shadow-xs">
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-md bg-indigo-100 text-indigo-700 font-black text-xs font-mono">2</span>
+                    <CardTitle className="text-sm font-extrabold text-slate-900">
+                      📥 1-Click Google Maps Bookmarklet (Zero Install)
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500">
+                    Sync all reviews on your screen in 1 click directly from Google Maps into ReviewQR.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="p-4 space-y-4">
+                  <div className="text-center py-3 bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-3">
+                    <p className="text-xs text-slate-600 font-medium">
+                      Drag this purple button to your browser's <span className="font-bold text-slate-800">Bookmarks bar</span>:
+                    </p>
+                    <div>
+                      <a
+                        href={bookmarkletCode}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigator.clipboard.writeText(bookmarkletCode);
+                          setBookmarkletCopied(true);
+                          setTimeout(() => setBookmarkletCopied(false), 2500);
+                        }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-extrabold text-xs shadow-md cursor-grab active:cursor-grabbing select-none hover:scale-[1.02] transition-transform"
+                        title="Drag me to your Bookmarks Bar!"
+                      >
+                        <Zap className="h-4 w-4 text-amber-300" />
+                        <span>📥 Sync to ReviewQR</span>
+                      </a>
+                    </div>
+                    <div className="pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(bookmarkletCode);
+                          setBookmarkletCopied(true);
+                          setTimeout(() => setBookmarkletCopied(false), 2500);
+                        }}
+                        className="text-xs font-bold rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 gap-1.5"
+                      >
+                        {bookmarkletCopied ? (
+                          <><Check className="h-3.5 w-3.5 text-emerald-600" /><span>Bookmarklet Copied!</span></>
+                        ) : (
+                          <><Copy className="h-3.5 w-3.5" /><span>Copy Bookmarklet Code</span></>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 3 Step Visual Guide */}
+                  <div className="space-y-2 text-xs text-slate-600">
+                    <div className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0 text-[11px]">1</span>
+                      <p>Open <span className="font-bold text-slate-800">Google Maps</span> on your business listing and scroll down the Reviews tab.</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0 text-[11px]">2</span>
+                      <p>Click the <span className="font-bold text-indigo-700">"Sync to ReviewQR"</span> bookmark in your browser bar.</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0 text-[11px]">3</span>
+                      <p>All visible reviews will sync immediately into your dashboard ready for AI reply!</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Chrome Extension Box */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-extrabold text-slate-900">Chrome Extension Package</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    Manifest V3 Ready
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  The ReviewQR Chrome extension is built and saved in <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">extension/</code>. Load unpacked in <span className="font-bold text-slate-700">chrome://extensions</span> to get a permanent floating sync button on Google Maps!
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
