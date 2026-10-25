@@ -820,6 +820,7 @@ export function CustomerFlowPage() {
                     {/* Direct Quick Copy Buttons on Each Card */}
                     <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2">
                       <Button
+                        id={`copy-btn-${idx}`}
                         type="button"
                         size="sm"
                         variant="outline"
@@ -847,6 +848,7 @@ export function CustomerFlowPage() {
                       </Button>
 
                       <Button
+                        id={`copy-and-go-btn-${idx}`}
                         type="button"
                         size="sm"
                         variant={isSelected ? 'saffron' : 'outline'}
