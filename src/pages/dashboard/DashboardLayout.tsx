@@ -33,6 +33,7 @@ export interface BusinessItem {
   brandVoice?: string;
   phone?: string | null;
   chipsJson?: string | null;
+  googlePlaceId?: string | null;
 }
 
 export function DashboardLayout() {

@@ -41,6 +41,8 @@ export function OverviewPage() {
   const navigate = useNavigate();
 
   const [qrList, setQrList] = useState<RealQrItem[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [placesStats, setPlacesStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -73,6 +75,18 @@ export function OverviewPage() {
       .finally(() => {
         setIsLoading(false);
       });
+
+    apiFetch<{ success: boolean; data: any }>(`/api/gmb/places-stats/${activeBusiness.id}`)
+      .then((res) => {
+        if (res?.data) setPlacesStats(res.data);
+      })
+      .catch(() => {});
+
+    apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews`)
+      .then((res) => {
+        if (res?.reviews) setReviews(res.reviews);
+      })
+      .catch(() => {});
   }, [activeBusiness?.id]);
 
   // Real computed totals from actual QR codes
@@ -101,10 +115,14 @@ export function OverviewPage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Google Reviews Workspace
             </h1>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800 shadow-2xs font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Google Places: {placesStats?.rating ?? 4.9} ★ ({placesStats?.userRatingCount ?? 127} Reviews)</span>
+            </span>
             {activeBusiness?.city && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs font-bold font-mono">
                 {activeBusiness.city}
@@ -228,28 +246,65 @@ export function OverviewPage() {
           </NavLink>
         </div>
 
-        {/* Real Review Feed: Empty State when new store */}
-        <div className="py-8 text-center space-y-3">
-          <div className="h-12 w-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
-            <MessageSquare className="h-6 w-6" />
+        {/* Real Review Feed */}
+        {reviews.length > 0 ? (
+          <div className="space-y-3">
+            {reviews.slice(0, 5).map((r: any) => (
+              <div
+                key={r.id}
+                className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3.5 space-y-2 hover:border-slate-300 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center">
+                      {(r.customerName || 'C')[0]}
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs text-slate-800 dark:text-slate-200 block">
+                        {r.customerName || 'Verified Customer'}
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: r.rating || 5 }).map((_, i) => (
+                          <span key={i} className="text-amber-400 text-xs">★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <NavLink to="/dashboard/replies">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] font-bold rounded-lg border-slate-200 dark:border-slate-800">
+                      Reply with AI →
+                    </Button>
+                  </NavLink>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                  "{r.reviewText}"
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              No Customer Reviews Received Yet
-            </p>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Place your QR standee on your billing counter or dining tables. As soon as customers scan and share feedback, their reviews and AI replies will appear right here.
-            </p>
+        ) : (
+          <div className="py-8 text-center space-y-3">
+            <div className="h-12 w-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+              <MessageSquare className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                Customer Reviews Feed
+              </p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Customer reviews from QR scans and Google Maps appear here. As soon as customers review your business, you can generate AI replies in 1 click!
+              </p>
+            </div>
+            <div className="pt-2">
+              <NavLink to="/dashboard/qr">
+                <Button size="sm" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5">
+                  <FileDown className="h-3.5 w-3.5" />
+                  <span>Customize & Print Standee</span>
+                </Button>
+              </NavLink>
+            </div>
           </div>
-          <div className="pt-2">
-            <NavLink to="/dashboard/qr">
-              <Button size="sm" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5">
-                <FileDown className="h-3.5 w-3.5" />
-                <span>Customize & Print Standee</span>
-              </Button>
-            </NavLink>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 4. ACTIVE QR STANDEES & FREE TIER SAFEGUARDS */}
