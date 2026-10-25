@@ -23,30 +23,36 @@ export function formatDate(timestampOrDate: number | string | Date): string {
 export async function copyToClipboard(text: string): Promise<boolean> {
   if (!text) return false;
 
-  // 1. Try modern clipboard API
-  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+  // 1. Try modern navigator.clipboard API first
+  if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch (err) {
-      console.warn('navigator.clipboard.writeText failed, using fallback:', err);
+      console.warn('navigator.clipboard.writeText failed, trying DOM fallback:', err);
     }
   }
 
-  // 2. Mobile-safe fallback for Safari iOS, Android Chrome, and in-app webviews
+  // 2. Bulletproof Fallback for iOS Safari, Android Chrome, and in-app webviews
   try {
     const textArea = document.createElement('textarea');
     textArea.value = text;
-    textArea.setAttribute('readonly', '');
-    // Must be in viewport for iOS/Android to allow execCommand, but visually hidden
+    // CRITICAL for mobile WebKit & Android:
+    // DO NOT use pointer-events: none (blocks element focusing)
+    // DO NOT use readonly attribute (iOS Safari blocks execCommand('copy') on readonly elements)
     textArea.style.position = 'fixed';
-    textArea.style.top = '10px';
-    textArea.style.left = '10px';
-    textArea.style.width = '100px';
-    textArea.style.height = '40px';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.width = '2em';
+    textArea.style.height = '2em';
+    textArea.style.padding = '0';
+    textArea.style.border = 'none';
+    textArea.style.outline = 'none';
+    textArea.style.boxShadow = 'none';
+    textArea.style.background = 'transparent';
+    textArea.style.fontSize = '16px'; // Prevents mobile viewport zooming
     textArea.style.opacity = '0.01';
-    textArea.style.pointerEvents = 'none';
-    textArea.style.zIndex = '-999';
+    textArea.style.zIndex = '99999';
 
     document.body.appendChild(textArea);
     textArea.focus();
@@ -55,22 +61,27 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
-    return successful;
+    if (successful) return true;
   } catch (err) {
-    console.error('All clipboard copy attempts failed:', err);
-    return false;
+    console.error('execCommand copy fallback failed:', err);
   }
+
+  return false;
 }
 
 export async function copyImageToClipboard(imageUrlOrDataUrl: string): Promise<boolean> {
   try {
-    const res = await fetch(imageUrlOrDataUrl);
-    const blob = await res.blob();
-    let pngBlob = blob;
+    if (typeof navigator === 'undefined' || !(navigator.clipboard as any)?.write || typeof ClipboardItem === 'undefined') {
+      return false;
+    }
 
-    // ClipboardItem standard expects image/png
-    if (blob.type !== 'image/png') {
-      pngBlob = await new Promise<Blob>((resolve, reject) => {
+    // Modern browsers allow passing Promise<Blob> directly to ClipboardItem so user activation is NOT lost during async fetch
+    const blobPromise = (async () => {
+      const res = await fetch(imageUrlOrDataUrl);
+      const blob = await res.blob();
+      if (blob.type === 'image/png') return blob;
+
+      return new Promise<Blob>((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
@@ -85,18 +96,16 @@ export async function copyImageToClipboard(imageUrlOrDataUrl: string): Promise<b
         img.onerror = reject;
         img.src = imageUrlOrDataUrl;
       });
-    }
+    })();
 
-    if (typeof navigator !== 'undefined' && (navigator.clipboard as any)?.write) {
-      await (navigator.clipboard as any).write([
-        new ClipboardItem({ 'image/png': pngBlob })
-      ]);
-      return true;
-    }
+    await (navigator.clipboard as any).write([
+      new ClipboardItem({ 'image/png': blobPromise })
+    ]);
+    return true;
   } catch (err) {
-    console.warn('Image clipboard copy error:', err);
+    console.warn('Image clipboard copy failed (normal on restricted mobile browsers):', err);
+    return false;
   }
-  return false;
 }
 
 export function downloadImageFile(dataUrlOrUrl: string, filename: string): void {
@@ -104,13 +113,17 @@ export function downloadImageFile(dataUrlOrUrl: string, filename: string): void 
     const a = document.createElement('a');
     a.href = dataUrlOrUrl;
     a.download = filename;
-    a.style.display = 'none';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
-      document.body.removeChild(a);
-    }, 100);
+      try {
+        document.body.removeChild(a);
+      } catch {}
+    }, 200);
   } catch (err) {
     console.warn('Image download failed:', err);
   }
 }
+

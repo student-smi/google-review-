@@ -24,6 +24,7 @@ import {
   Download,
   Upload,
   Trash2,
+  Info,
   Image as ImageIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -330,25 +331,26 @@ export function CustomerFlowPage() {
   };
 
   const handleCopyReviewOnly = async (text: string, id: string) => {
-    const success = await copyToClipboard(text);
-    if (success) {
-      setCopiedReviewId(id);
-      setActiveReviewText(text);
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'રિવ્યૂ કૉપી થઈ ગયો! (Clipboard Copied ✓)'
-          : draftLanguage === 'hi'
-          ? 'रिव्यू कॉपी हो गया! (Clipboard Copied ✓)'
-          : 'Review text copied to clipboard! ✓',
-        icon: 'check'
-      });
-      setTimeout(() => setCopiedReviewId(null), 3000);
-      setTimeout(() => setCopiedToast(null), 4000);
-    }
+    setActiveReviewText(text);
+    setCopiedReviewId(id);
+
+    // Bulletproof clipboard copy
+    await copyToClipboard(text);
+
+    setCopiedToast({
+      text: draftLanguage === 'gu'
+        ? 'રિવ્યૂ કૉપી થઈ ગયો! (Review Copied ✓)'
+        : draftLanguage === 'hi'
+        ? 'रिव्यू कॉपी हो गया! (Review Copied ✓)'
+        : 'Review text copied to clipboard! ✓',
+      icon: 'check'
+    });
+    setTimeout(() => setCopiedReviewId(null), 3500);
+    setTimeout(() => setCopiedToast(null), 4000);
   };
 
   const handleCopyPhotoOnly = async (photoUrl: string) => {
-    // 1. Download to phone
+    // 1. Download to phone (so it's available for Google Maps "+ Add photos")
     downloadImageFile(
       photoUrl,
       `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
@@ -359,10 +361,10 @@ export function CustomerFlowPage() {
 
     setCopiedToast({
       text: draftLanguage === 'gu'
-        ? 'ફોટો સેવ થઈ ગયો! ગૂગલમાં "+ Add photos" દબાવી પસંદ કરો'
+        ? 'ફોટો સેવ થઈ ગયો! ગૂગલમાં "+ Add photos" દબાવી પસંદ કરો 📸'
         : draftLanguage === 'hi'
-        ? 'फोटो फोन में सेव हो गया! गूगल में "+ Add photos" दबाकर सेलेक्ट करें'
-        : 'Photo saved to phone! On Google Maps, tap "+ Add photos"',
+        ? 'फोटो फोन में सेव हो गया! गूगल में "+ Add photos" दबाकर सेलेक्ट करें 📸'
+        : 'Photo saved! On Google Maps, tap "+ Add photos" 📸',
       icon: 'photo'
     });
     setTimeout(() => setCopiedToast(null), 4000);
@@ -898,14 +900,7 @@ export function CustomerFlowPage() {
               </div>
 
               {customerPhotos.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-tight">
-                    {draftLanguage === 'gu'
-                      ? 'આ ફોટો તમારા ફોનમાં સેવ થશે. ગૂગલ પર "+ Add photos" દબાવી આ ફોટો સિલેક્ટ કરી દો.'
-                      : draftLanguage === 'hi'
-                      ? 'यह फोटो आपके फोन में सेव होगा। गूगल रिव्यू पर "+ Add photos" दबाकर इसे सेलेक्ट कर लें।'
-                      : 'This photo will save to your phone. Tap "+ Add photos" on Google Maps to attach it!'}
-                  </p>
+                <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-2">
                     {customerPhotos.map((photo) => (
                       <div
@@ -939,6 +934,35 @@ export function CustomerFlowPage() {
                       <Plus className="h-4 w-4" />
                       <span>{draftLanguage === 'gu' ? 'બીજો ફોટો' : 'Add More'}</span>
                     </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે (ગૂગલમાં જોડાશે)' : draftLanguage === 'hi' ? 'फोटो तैयार है (गूगल में जुड़ेगा)' : 'Photo ready for Google'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPhotoOnly(customerPhotos[0].url)}
+                      className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>{draftLanguage === 'gu' ? 'ફોનમાં સેવ કરો' : draftLanguage === 'hi' ? 'फोन में सेव करें' : 'Save Photo to Phone'}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="leading-snug">
+                      <strong className="font-semibold block mb-0.5">
+                        {draftLanguage === 'gu' ? 'ગૂગલ મેપ્સમાં ફોટો કેવી રીતે ઉમેરવો?' : draftLanguage === 'hi' ? 'गूगल मैप्स में फोटो कैसे लगाएं?' : 'How to attach photo on Google Maps:'}
+                      </strong>
+                      {draftLanguage === 'gu'
+                        ? 'ગૂગલમાં લખાણ Paste થશે, અને ફોટો નીચે આપેલ "+ Add photos" બટન દબાવી ગેલેરીમાંથી પસંદ કરવાનો રહેશે.'
+                        : draftLanguage === 'hi'
+                        ? 'गूगल रिव्यू बॉक्स में टेक्स्ट Paste होगा, और फोटो नीचे "+ Add photos" बटन दबाकर गैलरी से सेलेक्ट करें।'
+                        : 'Review text will be pasted in the text box. To attach photo, tap "+ Add photos" on Google Maps.'}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1068,9 +1092,34 @@ export function CustomerFlowPage() {
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left text-xs space-y-1.5">
-              <span className="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Copied Review:</span>
-              <p className="text-slate-800 dark:text-slate-200 font-medium italic">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left text-xs space-y-2 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-500 text-[10px] uppercase tracking-wider">
+                  {draftLanguage === 'gu' ? 'કૉપી થયેલ રિવ્યૂ:' : draftLanguage === 'hi' ? 'कॉपी किया गया रिव्यू:' : 'Copied Review:'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyReviewOnly(activeReviewText, 'step3')}
+                  className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                    copiedReviewId === 'step3'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-200'
+                  }`}
+                >
+                  {copiedReviewId === 'step3' ? (
+                    <>
+                      <Check className="h-3 w-3 stroke-[3]" />
+                      <span>{draftLanguage === 'gu' ? 'કૉપી થયું ✓' : draftLanguage === 'hi' ? 'कॉपी हुआ ✓' : 'Copied! ✓'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      <span>{draftLanguage === 'gu' ? 'ફરી કૉપી કરો' : draftLanguage === 'hi' ? 'फिर कॉपी करें' : 'Copy Again'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-slate-800 dark:text-slate-200 font-medium italic leading-relaxed">
                 "{activeReviewText}"
               </p>
             </div>
@@ -1148,6 +1197,26 @@ export function CustomerFlowPage() {
                         </div>
                       </div>
                     ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-slate-500">
+                    {draftLanguage === 'gu' ? 'તમારા ફોનમાં સેવ થયેલ છે' : draftLanguage === 'hi' ? 'फोन में सेव हो गया है' : 'Saved to your phone'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customerPhotos.length > 0) handleCopyPhotoOnly(customerPhotos[0].url);
+                      else if (mediaPhotos.length > 0 && selectedPhotoIds.length > 0) {
+                        const p = mediaPhotos.find((m) => selectedPhotoIds.includes(m.id));
+                        if (p) handleCopyPhotoOnly(p.url);
+                      }
+                    }}
+                    className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+                  >
+                    <Download className="h-3 w-3" />
+                    <span>{draftLanguage === 'gu' ? 'ફરી સેવ કરો' : draftLanguage === 'hi' ? 'फिर सेव करें' : 'Download Photo Again'}</span>
+                  </button>
                 </div>
               </div>
             )}
