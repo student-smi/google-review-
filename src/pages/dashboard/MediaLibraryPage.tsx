@@ -33,23 +33,7 @@ export interface MediaAsset {
   createdAt: number;
 }
 
-const PRESET_PHOTOS = [
-  {
-    title: 'Storefront & Entrance',
-    category: 'exterior',
-    url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    title: 'Clean Counter & Reception',
-    category: 'interior',
-    url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    title: 'Top Product Display / Ambience',
-    category: 'products',
-    url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80'
-  }
-];
+
 
 export function MediaLibraryPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
@@ -161,42 +145,7 @@ export function MediaLibraryPage() {
     }
   };
 
-  // Add starter presets
-  const handleAddPresets = async () => {
-    if (!activeBusiness?.id) return;
-    setIsUploading(true);
-    try {
-      for (const preset of PRESET_PHOTOS) {
-        await apiFetch(`/api/media/business/${activeBusiness.id}`, {
-          method: 'POST',
-          body: JSON.stringify({
-            title: preset.title,
-            url: preset.url,
-            category: preset.category,
-            mimeType: 'image/jpeg',
-            isRecommended: 1
-          })
-        });
-      }
-      fetchMedia();
-    } catch {
-      // Local fallback
-      const localPresets: MediaAsset[] = PRESET_PHOTOS.map((p, i) => ({
-        id: `media_preset_${Date.now()}_${i}`,
-        businessId: activeBusiness.id,
-        title: p.title,
-        url: p.url,
-        category: p.category,
-        mimeType: 'image/jpeg',
-        isRecommended: 1,
-        createdAt: Math.floor(Date.now() / 1000)
-      }));
-      setMediaList(localPresets);
-      localStorage.setItem(`reviewqr_media_${activeBusiness.id}`, JSON.stringify(localPresets));
-    } finally {
-      setIsUploading(false);
-    }
-  };
+
 
   // Delete media
   const handleDelete = async (id: string) => {
@@ -400,18 +349,10 @@ export function MediaLibraryPage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs gap-2 cursor-pointer h-10"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs gap-2 cursor-pointer h-10 px-5"
             >
               <Upload className="h-4 w-4" />
-              <span>Upload My Photo</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleAddPresets}
-              className="text-xs font-semibold rounded-xl h-10 gap-1.5 cursor-pointer"
-            >
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <span>Load 3 Sample Store Photos</span>
+              <span>Upload Photo</span>
             </Button>
           </div>
         </Card>

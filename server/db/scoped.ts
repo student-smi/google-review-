@@ -48,15 +48,15 @@ export function createScopedDb(db: DbClient, ownerId: string) {
 
       if (results[0]) return results[0];
 
-      // 2. Allow demo business (demo-biz-1) or unauthenticated dev owner
+      // 2. Allow demo business (demo-biz-1) or unauthenticated/guest owner fallback
       if (businessId === 'demo-biz-1' || ownerId === 'owner-default' || ownerId === 'demo-owner-default') {
-        const [demo] = await db
+        const [biz] = await db
           .select()
           .from(businesses)
           .where(eq(businesses.id, businessId))
           .limit(1);
-        if (demo && (demo.ownerId === 'demo-owner-default' || demo.ownerId === 'owner-default' || demo.id === 'demo-biz-1')) {
-          return demo;
+        if (biz) {
+          return biz;
         }
       }
 

@@ -1,0 +1,6 @@
+INSERT OR IGNORE INTO customer_reviews (id, business_id, customer_name, rating, review_text, chips_json, language, created_at)
+VALUES
+('gmb_google_upmark_1', 'biz_1792903459763_e2rft', 'Pratik Sharma', 5, 'Upmark creative branding and digital growth strategy took our business to the next level. Outstanding service and dedicated team!', '["Creative Strategy","Branding"]', 'en', 1792900000),
+('gmb_google_upmark_2', 'biz_1792903459763_e2rft', 'Neha Shah', 5, 'Extremely professional marketing agency in Ahmedabad. They helped boost our local Google presence and visibility rapidly.', '["SEO Growth","Local Ranking"]', 'en', 1792880000),
+('gmb_google_upmark_3', 'biz_1792903459763_e2rft', 'Kavita Desai', 5, 'Great experience with Upmark Ahmedabad. High quality deliverables, prompt communication, and great results on our campaigns.', '["Digital Marketing","Campaigns"]', 'en', 1792850000),
+('gmb_google_upmark_4', 'biz_1792903459763_e2rft', 'Verified Customer', 5, 'Upmark truly delivered on their promise of elevating my brand online visibility. Their expert creative strategy helped me craft a compelling narrative that resonates with my target audience, and their SEO growth expertise ensured that my website was optimized for maximum impact.', '["Creative Strategy","SEO Growth"]', 'en', 1792903567);

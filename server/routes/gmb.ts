@@ -45,7 +45,7 @@ async function getGmbConnection(c: any, businessId: string, ownerId: string) {
     const [acc] = await db
       .select()
       .from(accounts)
-      .where(and(eq(accounts.userId, ownerId), eq(accounts.providerId, `google-gmb:${businessId}`)))
+      .where(eq(accounts.providerId, `google-gmb:${businessId}`))
       .limit(1);
 
     if (acc) {
