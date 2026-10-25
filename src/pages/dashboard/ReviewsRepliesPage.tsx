@@ -789,7 +789,10 @@ export function ReviewsRepliesPage() {
                             {review.customerName.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900">
+                                {review.customerName}
+                              </span>
                               {review.id.startsWith('gmb_') ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                                   <Globe className="h-3 w-3 text-blue-600" />

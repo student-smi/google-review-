@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Textarea, Label } from '@/components/ui/input';
+import { Input, Textarea, Label } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Sparkles,
@@ -81,6 +81,7 @@ export function CustomerFlowPage() {
 
   // Selected chips & free text
   const [selectedChips, setSelectedChips] = useState<string[]>(['Prompt service', 'Clean & hygienic']);
+  const [customerName, setCustomerName] = useState('');
   const [freeText, setFreeText] = useState('');
   const [isListening, setIsListening] = useState(false);
 
@@ -502,6 +503,7 @@ export function CustomerFlowPage() {
         body: JSON.stringify({
           event: 'google_click',
           reviewText: text,
+          customerName: customerName.trim() || undefined,
           chips: selectedChips,
           language: draftLanguage,
           rating: 5
@@ -765,6 +767,30 @@ export function CustomerFlowPage() {
                     : 'e.g. Loved the fresh kaju katli, quick billing, clean seating...'
                 }
                 className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 leading-relaxed"
+              />
+            </div>
+
+            {/* Optional Customer Name Input */}
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-slate-600 dark:text-slate-400 text-xs">
+                {draftLanguage === 'gu'
+                  ? 'તમારું નામ (વૈકલ્પિક)'
+                  : draftLanguage === 'hi'
+                  ? 'आपका नाम (वैकल्पिक)'
+                  : 'Your Name (Optional)'}
+              </Label>
+              <Input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder={
+                  draftLanguage === 'gu'
+                    ? 'દા.ત. સ્મિત પંચાલ'
+                    : draftLanguage === 'hi'
+                    ? 'उदा. राहुल शर्मा'
+                    : 'e.g. Smit Panchal'
+                }
+                className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9"
               />
             </div>
 
