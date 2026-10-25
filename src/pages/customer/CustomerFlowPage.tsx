@@ -27,7 +27,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyToClipboard } from '@/lib/utils';
+import { copyToClipboard, copyImageToClipboard, downloadImageFile } from '@/lib/utils';
 import { getFallbackTemplates } from '@server/ai/guardrails';
 
 export interface ReviewOption {
@@ -93,6 +93,8 @@ export function CustomerFlowPage() {
   const [selectedOptionIndex, setSelectedOptionIndex] = useState(0);
   const [activeReviewText, setActiveReviewText] = useState('');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
+  const [copiedReviewId, setCopiedReviewId] = useState<string | null>(null);
+  const [copiedToast, setCopiedToast] = useState<{ text: string; icon: 'check' | 'photo' } | null>(null);
 
   // Photo Booster: Real customer camera/gallery captured photos (0% dummy data)
   const [customerPhotos, setCustomerPhotos] = useState<CustomerCapturedPhoto[]>([]);
@@ -327,6 +329,45 @@ export function CustomerFlowPage() {
     setCustomerPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const handleCopyReviewOnly = async (text: string, id: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopiedReviewId(id);
+      setActiveReviewText(text);
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'રિવ્યૂ કૉપી થઈ ગયો! (Clipboard Copied ✓)'
+          : draftLanguage === 'hi'
+          ? 'रिव्यू कॉपी हो गया! (Clipboard Copied ✓)'
+          : 'Review text copied to clipboard! ✓',
+        icon: 'check'
+      });
+      setTimeout(() => setCopiedReviewId(null), 3000);
+      setTimeout(() => setCopiedToast(null), 4000);
+    }
+  };
+
+  const handleCopyPhotoOnly = async (photoUrl: string) => {
+    // 1. Download to phone
+    downloadImageFile(
+      photoUrl,
+      `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
+    );
+
+    // 2. Also try OS clipboard copy for devices that support it
+    await copyImageToClipboard(photoUrl);
+
+    setCopiedToast({
+      text: draftLanguage === 'gu'
+        ? 'ફોટો સેવ થઈ ગયો! ગૂગલમાં "+ Add photos" દબાવી પસંદ કરો'
+        : draftLanguage === 'hi'
+        ? 'फोटो फोन में सेव हो गया! गूगल में "+ Add photos" दबाकर सेलेक्ट करें'
+        : 'Photo saved to phone! On Google Maps, tap "+ Add photos"',
+      icon: 'photo'
+    });
+    setTimeout(() => setCopiedToast(null), 4000);
+  };
+
   // Copy specific review & open Google Maps without popup blocker
   const handleCopyReviewAndOpenGoogle = async (textToCopy?: string) => {
     const text = textToCopy || activeReviewText || reviewOptions[selectedOptionIndex]?.text;
@@ -334,7 +375,10 @@ export function CustomerFlowPage() {
 
     const targetUrl = formatReviewUrl(bizData.googleReviewUrl);
 
-    // Track click & save customer review for owner dashboard
+    // 1. Copy review text to clipboard (guaranteed fallback)
+    await copyToClipboard(text);
+
+    // 2. Track click & save customer review for owner dashboard
     if (code) {
       fetch(`/api/public/r/${code}/event`, {
         method: 'POST',
@@ -349,40 +393,24 @@ export function CustomerFlowPage() {
       }).catch(() => {});
     }
 
-    try {
-      await copyToClipboard(text);
-    } catch {}
-
-    // 1. Download Customer Captured Photos into Phone Storage/Downloads
+    // 3. Download Customer Captured Photos into Phone Storage/Downloads
     if (customerPhotos.length > 0) {
       customerPhotos.forEach((photo, idx) => {
-        try {
-          const a = document.createElement('a');
-          a.href = photo.url;
-          a.download = `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${idx + 1}.jpg`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        } catch (err) {
-          console.warn('Customer photo download error:', err);
-        }
+        downloadImageFile(
+          photo.url,
+          `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${idx + 1}.jpg`
+        );
       });
     }
 
-    // 2. Download Selected Shopkeeper Media Photos (if any selected)
+    // 4. Download Selected Shopkeeper Media Photos (if any selected)
     if (selectedPhotoIds.length > 0 && mediaPhotos.length > 0) {
       const selectedPhotos = mediaPhotos.filter((p) => selectedPhotoIds.includes(p.id));
       selectedPhotos.forEach((photo, idx) => {
-        try {
-          const a = document.createElement('a');
-          a.href = photo.url;
-          a.download = `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Store_Photo_${idx + 1}.jpg`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        } catch (err) {
-          console.warn('Store photo save error:', err);
-        }
+        downloadImageFile(
+          photo.url,
+          `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Store_Photo_${idx + 1}.jpg`
+        );
       });
     }
 
@@ -390,23 +418,47 @@ export function CustomerFlowPage() {
     setCopiedSuccess(true);
     setStep(3);
 
-    // Immediate unblocked redirection
-    // Directly assigning window.location.href triggers native Google Maps app or browser review page
-    try {
-      window.location.href = targetUrl;
-    } catch {
-      window.open(targetUrl, '_blank');
-    }
+    // Give visual feedback and open Google Maps
+    setCopiedToast({
+      text: draftLanguage === 'gu'
+        ? 'રિવ્યૂ કૉપી થઈ ગયો! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
+        : draftLanguage === 'hi'
+        ? 'रिव्यू कॉपी हो गया! गूगल मैप्स पेज खुल रहा है...'
+        : 'Review copied! Opening Google Maps...',
+      icon: 'check'
+    });
+
+    // Short 500ms delay so clipboard operation finishes before redirection
+    setTimeout(() => {
+      try {
+        const win = window.open(targetUrl, '_blank');
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+          window.location.href = targetUrl;
+        }
+      } catch {
+        window.location.href = targetUrl;
+      }
+    }, 500);
   };
 
   return (
     <div
-      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between max-w-md mx-auto relative shadow-2xl overflow-hidden font-sans"
+      className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between max-w-md mx-auto relative shadow-2xl font-sans"
       style={{
         ['--brand-primary' as any]: bizData.brandColor,
         ['--brand-accent' as any]: bizData.brandColorSecondary
       }}
     >
+      {/* Floating Copy Feedback Banner */}
+      {copiedToast && (
+        <div className="fixed top-3 left-4 right-4 max-w-sm mx-auto z-50 animate-in slide-in-from-top-3 duration-300 pointer-events-none">
+          <div className="bg-slate-900/95 dark:bg-emerald-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold backdrop-blur-md border border-white/20">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span className="flex-1 leading-snug">{copiedToast.text}</span>
+          </div>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center justify-between">
@@ -464,7 +516,7 @@ export function CustomerFlowPage() {
       </div>
 
       {/* Main Content Body */}
-      <div className="flex-1 p-4 sm:p-5 space-y-5 overflow-y-auto pb-28">
+      <div className="flex-1 p-4 sm:p-5 space-y-5 pb-52">
         {/* STEP 1: Experience Chips & Guided Prompts */}
         {step === 1 && (
           <div className="space-y-5 animate-in fade-in duration-200">
@@ -669,6 +721,14 @@ export function CustomerFlowPage() {
                         <img src={photo.url} alt="Attached" className="h-full w-full object-cover" />
                         <button
                           type="button"
+                          onClick={() => handleCopyPhotoOnly(photo.url)}
+                          className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs hover:bg-indigo-700 cursor-pointer"
+                          title="Save/Copy Photo"
+                        >
+                          <Download className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => removeCustomerPhoto(photo.id)}
                           className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 cursor-pointer"
                           title="Remove photo"
@@ -755,21 +815,46 @@ export function CustomerFlowPage() {
                       "{opt.text}"
                     </p>
 
-                    {/* Direct Quick Copy Button on Each Card */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-400">
-                        {isSelected ? '✓ પસંદ કરેલ (Selected)' : 'ક્લિક કરીને પસંદ કરો'}
-                      </span>
+                    {/* Direct Quick Copy Buttons on Each Card */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2">
                       <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyReviewOnly(opt.text, opt.id || `${idx}`);
+                        }}
+                        className={`h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold transition-all ${
+                          copiedReviewId === (opt.id || `${idx}`)
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                        }`}
+                      >
+                        {copiedReviewId === (opt.id || `${idx}`) ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                            <span>{draftLanguage === 'gu' ? 'કૉપી થયું ✓' : draftLanguage === 'hi' ? 'कॉपी हुआ ✓' : 'Copied! ✓'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>{draftLanguage === 'gu' ? 'કૉપી કરો' : draftLanguage === 'hi' ? 'कॉपी करें' : 'Copy'}</span>
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        type="button"
                         size="sm"
                         variant={isSelected ? 'saffron' : 'outline'}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCopyReviewAndOpenGoogle(opt.text);
                         }}
-                        className="h-8 px-3 text-xs gap-1.5"
+                        className="h-8 px-3 text-xs gap-1.5 font-bold cursor-pointer"
                       >
-                        <Copy className="h-3 w-3" />
+                        <ExternalLink className="h-3 w-3" />
                         <span>Copy & Go to Google ↗</span>
                       </Button>
                     </div>
@@ -828,6 +913,14 @@ export function CustomerFlowPage() {
                         className="relative rounded-xl overflow-hidden aspect-square border-2 border-emerald-500 shadow-xs group"
                       >
                         <img src={photo.url} alt="Attached" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPhotoOnly(photo.url)}
+                          className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs hover:bg-indigo-700 cursor-pointer"
+                          title="Save/Copy Photo"
+                        >
+                          <Download className="h-3 w-3" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => removeCustomerPhoto(photo.id)}
