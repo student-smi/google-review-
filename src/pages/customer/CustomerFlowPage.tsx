@@ -28,7 +28,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyToClipboard, copyImageToClipboard, downloadImageFile } from '@/lib/utils';
+import { copyToClipboard, copyImageToClipboard, downloadImageFile, compressImageFile } from '@/lib/utils';
 import { getFallbackTemplates } from '@server/ai/guardrails';
 
 export interface ReviewOption {
@@ -306,24 +306,60 @@ export function CustomerFlowPage() {
     return 'https://maps.google.com';
   }
 
-  // Handle Customer Photo Files (Camera Snap or Gallery Selection)
-  const handlePhotoFiles = (files: FileList | null) => {
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+
+  // Trigger Native Mobile Camera or Gallery Pickers
+  const openCamera = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    }
+  };
+
+  const openGallery = () => {
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
+  };
+
+  // Handle Customer Photo Files (Camera Snap or Gallery Selection) with fast client-side compression
+  const handlePhotoFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const newPhoto: CustomerCapturedPhoto = {
-          id: `cust_ph_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          url: dataUrl,
-          name: file.name || `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${customerPhotos.length + 1}.jpg`,
-          size: file.size
-        };
-        setCustomerPhotos((prev) => [newPhoto, ...prev.slice(0, 3)]); // Keep up to 4 real photos
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsProcessingPhoto(true);
+
+    try {
+      const fileList = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      if (fileList.length === 0) {
+        setIsProcessingPhoto(false);
+        return;
+      }
+
+      for (const file of fileList) {
+        try {
+          const compressedDataUrl = await compressImageFile(file);
+          const newPhoto: CustomerCapturedPhoto = {
+            id: `cust_ph_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            url: compressedDataUrl,
+            name: file.name || `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${Date.now()}.jpg`,
+            size: file.size
+          };
+          setCustomerPhotos((prev) => [newPhoto, ...prev.slice(0, 3)]); // Keep up to 4 real photos
+        } catch (err) {
+          console.warn('Image processing error:', err);
+        }
+      }
+
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'ફોટો સફળતાપૂર્વક જોડાયો! 📸'
+          : draftLanguage === 'hi'
+          ? 'फोटो सफलतापूर्वक जुड़ गया! 📸'
+          : 'Photo attached successfully! 📸',
+        icon: 'photo'
+      });
+      setTimeout(() => setCopiedToast(null), 3000);
+    } finally {
+      setIsProcessingPhoto(false);
+    }
   };
 
   const removeCustomerPhoto = (id: string) => {
@@ -349,6 +385,54 @@ export function CustomerFlowPage() {
     setTimeout(() => setCopiedToast(null), 4000);
   };
 
+  // Direct clipboard copy of image data (for Gboard / keyboard clipboard / desktop)
+  const handleCopyPhotoToClipboard = async (photoUrl: string) => {
+    const success = await copyImageToClipboard(photoUrl);
+    if (success) {
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'ફોટો ક્લિપબોર્ડમાં કૉપી થઈ ગયો! 📋'
+          : draftLanguage === 'hi'
+          ? 'फोटो क्लिपबोर्ड में कॉपी हो गया! 📋'
+          : 'Photo copied to clipboard! 📋',
+        icon: 'photo'
+      });
+    } else {
+      // If OS restricts direct image copy, save to phone gallery/downloads
+      downloadImageFile(
+        photoUrl,
+        `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
+      );
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'ફોટો તમારા ફોનમાં સેવ થઈ ગયો! 📸'
+          : draftLanguage === 'hi'
+          ? 'फोटो आपके फोन में सेव हो गया! 📸'
+          : 'Photo saved to phone! 📸',
+        icon: 'photo'
+      });
+    }
+    setTimeout(() => setCopiedToast(null), 3500);
+  };
+
+  // Direct save/download of photo to phone gallery/downloads
+  const handleSavePhotoToPhone = (photoUrl: string) => {
+    downloadImageFile(
+      photoUrl,
+      `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
+    );
+    setCopiedToast({
+      text: draftLanguage === 'gu'
+        ? 'ફોટો ફોનમાં ડાઉનલોડ થઈ ગયો! (Saved to Phone ✓)'
+        : draftLanguage === 'hi'
+        ? 'फोटो फोन में डाउनलोड हो गया! (Saved to Phone ✓)'
+        : 'Photo saved to phone downloads! ✓',
+      icon: 'photo'
+    });
+    setTimeout(() => setCopiedToast(null), 3500);
+  };
+
+  // Dual action: Save to phone + attempt clipboard copy
   const handleCopyPhotoOnly = async (photoUrl: string) => {
     // 1. Download to phone (so it's available for Google Maps "+ Add photos")
     downloadImageFile(
@@ -460,6 +544,48 @@ export function CustomerFlowPage() {
           </div>
         </div>
       )}
+
+      {/* Permanently Mounted Native File Inputs for Camera & Gallery (Works across all Steps & Devices) */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{
+          position: 'fixed',
+          top: '-1000px',
+          left: '-1000px',
+          opacity: 0,
+          width: '1px',
+          height: '1px',
+          pointerEvents: 'none',
+          zIndex: -1
+        }}
+        onChange={(e) => {
+          handlePhotoFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{
+          position: 'fixed',
+          top: '-1000px',
+          left: '-1000px',
+          opacity: 0,
+          width: '1px',
+          height: '1px',
+          pointerEvents: 'none',
+          zIndex: -1
+        }}
+        onChange={(e) => {
+          handlePhotoFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
 
       {/* Top Header */}
       <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20">
@@ -606,30 +732,6 @@ export function CustomerFlowPage() {
               />
             </div>
 
-            {/* Hidden Native File Inputs for Mobile Camera & Gallery */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                handlePhotoFiles(e.target.files);
-                e.target.value = '';
-              }}
-            />
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                handlePhotoFiles(e.target.files);
-                e.target.value = '';
-              }}
-            />
-
             {/* 📸 Feature 6: Photo Review Prompter (Google Maps Photos Booster) */}
             <div className="rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-slate-900 dark:to-purple-950/20 p-4 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
@@ -666,7 +768,7 @@ export function CustomerFlowPage() {
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={openCamera}
                   className="min-h-[46px] rounded-xl border-2 border-indigo-600/30 hover:border-indigo-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-indigo-600 p-2.5 flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-bold"
                 >
                   <Camera className="h-4 w-4 text-indigo-600 shrink-0" />
@@ -681,7 +783,7 @@ export function CustomerFlowPage() {
 
                 <button
                   type="button"
-                  onClick={() => galleryInputRef.current?.click()}
+                  onClick={openGallery}
                   className="min-h-[46px] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 p-2.5 flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-medium"
                 >
                   <Upload className="h-4 w-4 text-purple-600 shrink-0" />
@@ -739,6 +841,31 @@ export function CustomerFlowPage() {
                         </button>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 gap-2">
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે' : draftLanguage === 'hi' ? 'फोटो तैयार है' : 'Photo ready'}</span>
+                    </span>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSavePhotoToPhone(customerPhotos[0].url)}
+                        className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>{draftLanguage === 'gu' ? 'સેવ કરો' : draftLanguage === 'hi' ? 'सेव करें' : 'Save'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPhotoToClipboard(customerPhotos[0].url)}
+                        className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-800 shadow-2xs"
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -930,7 +1057,7 @@ export function CustomerFlowPage() {
                     ))}
                     <button
                       type="button"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={openCamera}
                       className="rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 bg-white dark:bg-slate-900 flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-indigo-600 aspect-square text-[10px] font-semibold cursor-pointer transition-colors"
                     >
                       <Plus className="h-4 w-4" />
@@ -938,19 +1065,29 @@ export function CustomerFlowPage() {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between pt-1 gap-2">
                     <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે (ગૂગલમાં જોડાશે)' : draftLanguage === 'hi' ? 'फोटो तैयार है (गूगल में जुड़ेगा)' : 'Photo ready for Google'}</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyPhotoOnly(customerPhotos[0].url)}
-                      className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span>{draftLanguage === 'gu' ? 'ફોનમાં સેવ કરો' : draftLanguage === 'hi' ? 'फोन में सेव करें' : 'Save Photo to Phone'}</span>
-                    </button>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSavePhotoToPhone(customerPhotos[0].url)}
+                        className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>{draftLanguage === 'gu' ? 'ફોનમાં સેવ' : draftLanguage === 'hi' ? 'फोन में सेव' : 'Save Photo'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPhotoToClipboard(customerPhotos[0].url)}
+                        className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-purple-50 dark:bg-purple-950/60 px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-800"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy Photo'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
@@ -979,7 +1116,7 @@ export function CustomerFlowPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={openCamera}
                       className="min-h-[42px] rounded-xl border border-indigo-600/30 hover:border-indigo-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-indigo-600 p-2 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-bold"
                     >
                       <Camera className="h-4 w-4 text-indigo-600 shrink-0" />
@@ -993,7 +1130,7 @@ export function CustomerFlowPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => galleryInputRef.current?.click()}
+                      onClick={openGallery}
                       className="min-h-[42px] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 p-2 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-medium"
                     >
                       <Upload className="h-4 w-4 text-purple-600 shrink-0" />
@@ -1201,24 +1338,34 @@ export function CustomerFlowPage() {
                     ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-1 gap-2">
                   <span className="text-[10px] text-slate-500">
                     {draftLanguage === 'gu' ? 'તમારા ફોનમાં સેવ થયેલ છે' : draftLanguage === 'hi' ? 'फोन में सेव हो गया है' : 'Saved to your phone'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customerPhotos.length > 0) handleCopyPhotoOnly(customerPhotos[0].url);
-                      else if (mediaPhotos.length > 0 && selectedPhotoIds.length > 0) {
-                        const p = mediaPhotos.find((m) => selectedPhotoIds.includes(m.id));
-                        if (p) handleCopyPhotoOnly(p.url);
-                      }
-                    }}
-                    className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
-                  >
-                    <Download className="h-3 w-3" />
-                    <span>{draftLanguage === 'gu' ? 'ફરી સેવ કરો' : draftLanguage === 'hi' ? 'फिर सेव करें' : 'Download Photo Again'}</span>
-                  </button>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetUrl = customerPhotos[0]?.url || mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
+                        if (targetUrl) handleSavePhotoToPhone(targetUrl);
+                      }}
+                      className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+                    >
+                      <Download className="h-3 w-3" />
+                      <span>{draftLanguage === 'gu' ? 'ફરી સેવ કરો' : draftLanguage === 'hi' ? 'फिर सेव करें' : 'Download Photo'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetUrl = customerPhotos[0]?.url || mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
+                        if (targetUrl) handleCopyPhotoToClipboard(targetUrl);
+                      }}
+                      className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-800 shadow-2xs"
+                    >
+                      <Copy className="h-3 w-3" />
+                      <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy Photo'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
