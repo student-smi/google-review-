@@ -69,34 +69,35 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   return false;
 }
 
+export async function imageToPngBlob(imageUrlOrDataUrl: string): Promise<Blob> {
+  const res = await fetch(imageUrlOrDataUrl);
+  const blob = await res.blob();
+  if (blob.type === 'image/png') return blob;
+
+  return new Promise<Blob>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(blob);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((b) => (b ? resolve(b) : resolve(blob)), 'image/png');
+    };
+    img.onerror = () => resolve(blob);
+    img.src = imageUrlOrDataUrl;
+  });
+}
+
 export async function copyImageToClipboard(imageUrlOrDataUrl: string): Promise<boolean> {
   try {
     if (typeof navigator === 'undefined' || !(navigator.clipboard as any)?.write || typeof ClipboardItem === 'undefined') {
       return false;
     }
 
-    // Modern browsers allow passing Promise<Blob> directly to ClipboardItem so user activation is NOT lost during async fetch
-    const blobPromise = (async () => {
-      const res = await fetch(imageUrlOrDataUrl);
-      const blob = await res.blob();
-      if (blob.type === 'image/png') return blob;
-
-      return new Promise<Blob>((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || img.width;
-          canvas.height = img.naturalHeight || img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return reject(new Error('Canvas context failed'));
-          ctx.drawImage(img, 0, 0);
-          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
-        };
-        img.onerror = reject;
-        img.src = imageUrlOrDataUrl;
-      });
-    })();
+    const blobPromise = imageToPngBlob(imageUrlOrDataUrl);
 
     await (navigator.clipboard as any).write([
       new ClipboardItem({ 'image/png': blobPromise })
@@ -106,6 +107,47 @@ export async function copyImageToClipboard(imageUrlOrDataUrl: string): Promise<b
     console.warn('Image clipboard copy failed (normal on restricted mobile browsers):', err);
     return false;
   }
+}
+
+export async function copyTextAndImageToClipboard(
+  text: string,
+  imageUrlOrDataUrl?: string
+): Promise<{ textCopied: boolean; imageCopied: boolean }> {
+  let textCopied = false;
+  let imageCopied = false;
+
+  // 1. Try unified multi-mime ClipboardItem if image is present and browser supports it
+  if (
+    imageUrlOrDataUrl &&
+    typeof navigator !== 'undefined' &&
+    (navigator.clipboard as any)?.write &&
+    typeof ClipboardItem !== 'undefined'
+  ) {
+    try {
+      const textBlob = new Blob([text], { type: 'text/plain' });
+      const pngBlobPromise = imageToPngBlob(imageUrlOrDataUrl);
+
+      const item = new ClipboardItem({
+        'text/plain': textBlob,
+        'image/png': pngBlobPromise,
+      });
+
+      await (navigator.clipboard as any).write([item]);
+      return { textCopied: true, imageCopied: true };
+    } catch (multiErr) {
+      console.warn('Combined multi-mime ClipboardItem failed, falling back:', multiErr);
+    }
+  }
+
+  // 2. Guaranteed fallback: Ensure text is always copied
+  textCopied = await copyToClipboard(text);
+
+  // 3. Attempt image copy if provided
+  if (imageUrlOrDataUrl) {
+    imageCopied = await copyImageToClipboard(imageUrlOrDataUrl);
+  }
+
+  return { textCopied, imageCopied };
 }
 
 export function downloadImageFile(dataUrlOrUrl: string, filename: string): void {

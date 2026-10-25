@@ -28,7 +28,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyToClipboard, copyImageToClipboard, downloadImageFile, compressImageFile } from '@/lib/utils';
+import { copyToClipboard, copyImageToClipboard, copyTextAndImageToClipboard, downloadImageFile, compressImageFile } from '@/lib/utils';
 import { getFallbackTemplates } from '@server/ai/guardrails';
 
 export interface ReviewOption {
@@ -370,17 +370,40 @@ export function CustomerFlowPage() {
     setActiveReviewText(text);
     setCopiedReviewId(id);
 
-    // Bulletproof clipboard copy
-    await copyToClipboard(text);
+    const targetPhotoUrl =
+      customerPhotos[0]?.url ||
+      mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
 
-    setCopiedToast({
-      text: draftLanguage === 'gu'
-        ? 'રિવ્યૂ કૉપી થઈ ગયો! (Review Copied ✓)'
-        : draftLanguage === 'hi'
-        ? 'रिव्यू कॉपी हो गया! (Review Copied ✓)'
-        : 'Review text copied to clipboard! ✓',
-      icon: 'check'
-    });
+    if (targetPhotoUrl) {
+      // 1. Copy both review text and photo together into OS clipboard
+      await copyTextAndImageToClipboard(text, targetPhotoUrl);
+
+      // 2. Also ensure photo is downloaded/saved to phone gallery for Google Maps "+ Add photos"
+      downloadImageFile(
+        targetPhotoUrl,
+        `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
+      );
+
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'રિવ્યૂ અને ફોટો બંને સાથે કૉપી થઈ ગયા! ✓'
+          : draftLanguage === 'hi'
+          ? 'रिव्यू और फोटो दोनों साथ में कॉपी हो गए! ✓'
+          : 'Review & Photo both copied together! ✓',
+        icon: 'check'
+      });
+    } else {
+      await copyToClipboard(text);
+      setCopiedToast({
+        text: draftLanguage === 'gu'
+          ? 'રિવ્યૂ કૉપી થઈ ગયો! (Review Copied ✓)'
+          : draftLanguage === 'hi'
+          ? 'रिव्यू कॉपी हो गया! (Review Copied ✓)'
+          : 'Review text copied to clipboard! ✓',
+        icon: 'check'
+      });
+    }
+
     setTimeout(() => setCopiedReviewId(null), 3500);
     setTimeout(() => setCopiedToast(null), 4000);
   };
@@ -454,15 +477,22 @@ export function CustomerFlowPage() {
     setTimeout(() => setCopiedToast(null), 4000);
   };
 
-  // Copy specific review & open Google Maps without popup blocker
+  // Copy specific review & photo together in 1 clipboard item & open Google Maps without popup blocker
   const handleCopyReviewAndOpenGoogle = async (textToCopy?: string) => {
     const text = textToCopy || activeReviewText || reviewOptions[selectedOptionIndex]?.text;
     if (!text) return;
 
     const targetUrl = formatReviewUrl(bizData.googleReviewUrl);
+    const targetPhotoUrl =
+      customerPhotos[0]?.url ||
+      mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
 
-    // 1. Copy review text to clipboard (guaranteed fallback)
-    await copyToClipboard(text);
+    // 1. Copy review text AND photo simultaneously into OS clipboard
+    if (targetPhotoUrl) {
+      await copyTextAndImageToClipboard(text, targetPhotoUrl);
+    } else {
+      await copyToClipboard(text);
+    }
 
     // 2. Track click & save customer review for owner dashboard
     if (code) {
@@ -506,11 +536,17 @@ export function CustomerFlowPage() {
 
     // Give visual feedback and open Google Maps
     setCopiedToast({
-      text: draftLanguage === 'gu'
-        ? 'રિવ્યૂ કૉપી થઈ ગયો! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
-        : draftLanguage === 'hi'
-        ? 'रिव्यू कॉपी हो गया! गूगल मैप्स पेज खुल रहा है...'
-        : 'Review copied! Opening Google Maps...',
+      text: targetPhotoUrl
+        ? (draftLanguage === 'gu'
+            ? 'રિવ્યૂ અને ફોટો બંને સાથે કૉપી થઈ ગયા! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
+            : draftLanguage === 'hi'
+            ? 'रिव्यू और फोटो दोनों साथ में कॉपी हो गए! गूगल मैप्स पेज खुल रहा है...'
+            : 'Review & Photo copied together! Opening Google Maps...')
+        : (draftLanguage === 'gu'
+            ? 'રિવ્યૂ કૉપી થઈ ગયો! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
+            : draftLanguage === 'hi'
+            ? 'रिव्यू कॉपी हो गया! गूगल मैप्स पेज खुल रहा है...'
+            : 'Review copied! Opening Google Maps...'),
       icon: 'check'
     });
 
@@ -1067,40 +1103,30 @@ export function CustomerFlowPage() {
 
                   <div className="flex items-center justify-between pt-1 gap-2">
                     <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે (ગૂગલમાં જોડાશે)' : draftLanguage === 'hi' ? 'फोटो तैयार है (गूगल में जुड़ेगा)' : 'Photo ready for Google'}</span>
                     </span>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleSavePhotoToPhone(customerPhotos[0].url)}
-                        className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        <span>{draftLanguage === 'gu' ? 'ફોનમાં સેવ' : draftLanguage === 'hi' ? 'फोन में सेव' : 'Save Photo'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPhotoToClipboard(customerPhotos[0].url)}
-                        className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-purple-50 dark:bg-purple-950/60 px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-800"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy Photo'}</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyReviewOnly(activeReviewText || reviewOptions[selectedOptionIndex]?.text, 'photo-together')}
+                      className="text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-3 py-1.5 rounded-lg border border-transparent shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+                    >
+                      <Copy className="h-3.5 w-3.5 text-indigo-100" />
+                      <span>{draftLanguage === 'gu' ? 'બંને સાથે કૉપી કરો' : draftLanguage === 'hi' ? 'दोनों साथ में कॉपी करें' : 'Copy Both Together'}</span>
+                    </button>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
                     <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                     <div className="leading-snug">
                       <strong className="font-semibold block mb-0.5">
-                        {draftLanguage === 'gu' ? 'ગૂગલ મેપ્સમાં ફોટો કેવી રીતે ઉમેરવો?' : draftLanguage === 'hi' ? 'गूगल मैप्स में फोटो कैसे लगाएं?' : 'How to attach photo on Google Maps:'}
+                        {draftLanguage === 'gu' ? 'ગૂગલ મેપ્સમાં ફોટો અને લખાણ:' : draftLanguage === 'hi' ? 'गूगल मैप्स में फोटो और मैसेज:' : 'Google Maps Review Guide:'}
                       </strong>
                       {draftLanguage === 'gu'
-                        ? 'ગૂગલમાં લખાણ Paste થશે, અને ફોટો નીચે આપેલ "+ Add photos" બટન દબાવી ગેલેરીમાંથી પસંદ કરવાનો રહેશે.'
+                        ? 'લખાણ પેસ્ટ કરવા Review બોક્સમાં ટૅપ કરી Paste કરો. ફોટો ઉમેરવા નીચે "+ Add photos" દબાવો (ફોન ગેલેરીમાં ફોટો સૌથી ઉપર તૈયાર છે).'
                         : draftLanguage === 'hi'
-                        ? 'गूगल रिव्यू बॉक्स में टेक्स्ट Paste होगा, और फोटो नीचे "+ Add photos" बटन दबाकर गैलरी से सेलेक्ट करें।'
-                        : 'Review text will be pasted in the text box. To attach photo, tap "+ Add photos" on Google Maps.'}
+                        ? 'मैसेज के लिए Review बॉक्स में Paste करें। फोटो के लिए नीचे "+ Add photos" दबाएं (फोन गैलरी में फोटो सबसे ऊपर तैयार है)।'
+                        : 'Tap Paste in the review box for text. Tap "+ Add photos" to attach the photo from your gallery.'}
                     </div>
                   </div>
                 </div>
@@ -1349,21 +1375,18 @@ export function CustomerFlowPage() {
                         const targetUrl = customerPhotos[0]?.url || mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
                         if (targetUrl) handleSavePhotoToPhone(targetUrl);
                       }}
-                      className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
+                      className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                     >
                       <Download className="h-3 w-3" />
-                      <span>{draftLanguage === 'gu' ? 'ફરી સેવ કરો' : draftLanguage === 'hi' ? 'फिर सेव करें' : 'Download Photo'}</span>
+                      <span>{draftLanguage === 'gu' ? 'સેવ ફોટો' : draftLanguage === 'hi' ? 'सेव फोटो' : 'Save Photo'}</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const targetUrl = customerPhotos[0]?.url || mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
-                        if (targetUrl) handleCopyPhotoToClipboard(targetUrl);
-                      }}
-                      className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-800 shadow-2xs"
+                      onClick={() => handleCopyReviewOnly(activeReviewText, 'step3-both')}
+                      className="text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-2.5 py-1 rounded-lg border border-transparent shadow-2xs flex items-center gap-1 cursor-pointer"
                     >
-                      <Copy className="h-3 w-3" />
-                      <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy Photo'}</span>
+                      <Copy className="h-3 w-3 text-indigo-100" />
+                      <span>{draftLanguage === 'gu' ? 'ફરી બંને કૉપી કરો' : draftLanguage === 'hi' ? 'फिर दोनों कॉपी करें' : 'Copy Both Again'}</span>
                     </button>
                   </div>
                 </div>
@@ -1430,9 +1453,17 @@ export function CustomerFlowPage() {
             >
               <Copy className="h-5 w-5 text-indigo-200 shrink-0" />
               <span className="tracking-wide">
-                {draftLanguage === 'gu'
-                  ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
-                  : 'Copy Selected Review & Open Google ↗'}
+                {customerPhotos.length > 0 || selectedPhotoIds.length > 0
+                  ? (draftLanguage === 'gu'
+                      ? 'રિવ્યૂ અને ફોટો સાથે કૉપી કરી ગૂગલ ખોલો ↗'
+                      : draftLanguage === 'hi'
+                      ? 'रिव्यू और फोटो साथ में कॉपी करके गूगल खोलें ↗'
+                      : 'Copy Review & Photo Together & Open Google ↗')
+                  : (draftLanguage === 'gu'
+                      ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
+                      : draftLanguage === 'hi'
+                      ? 'रिव्यू कॉपी करके गूगल खोलें ↗'
+                      : 'Copy Selected Review & Open Google ↗')}
               </span>
             </Button>
 
