@@ -9,7 +9,6 @@ import { ReviewsRepliesPage } from './pages/dashboard/ReviewsRepliesPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
 import { LocalSeoPage } from './pages/dashboard/LocalSeoPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
-import { MediaLibraryPage } from './pages/dashboard/MediaLibraryPage';
 import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
 import { AuthPage } from './pages/AuthPage';
@@ -51,7 +50,7 @@ export function App() {
           <Route index element={<OverviewPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
           <Route path="qr" element={<QrStudioPage />} />
-          <Route path="media" element={<MediaLibraryPage />} />
+          <Route path="media" element={<Navigate to="/dashboard" replace />} />
           <Route path="replies" element={<ReviewsRepliesPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="local-seo" element={<LocalSeoPage />} />

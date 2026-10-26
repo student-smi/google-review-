@@ -36,7 +36,6 @@ const pageTitles: Record<string, string> = {
   '/dashboard': 'Live Overview',
   '/dashboard/businesses': 'Business Profiles',
   '/dashboard/qr': 'QR Studio & Campaigns',
-  '/dashboard/media': 'Media & Photo Assets',
   '/dashboard/replies': 'Reviews & AI Replies',
   '/dashboard/analytics': 'Conversion Analytics',
   '/dashboard/local-seo': 'Local SEO Checklist',

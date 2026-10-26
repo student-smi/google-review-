@@ -19,16 +19,11 @@ import {
   ThumbsUp,
   Heart,
   MessageCircle,
-  Camera,
   Plus,
-  Download,
-  Upload,
-  Trash2,
-  Info,
-  Image as ImageIcon
+  Info
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { copyToClipboard, copyImageToClipboard, copyTextAndImageToClipboard, downloadImageFile, compressImageFile } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/utils';
 import { getFallbackTemplates } from '@server/ai/guardrails';
 
 export interface ReviewOption {
@@ -36,20 +31,6 @@ export interface ReviewOption {
   title: string;
   text: string;
   wordCount: number;
-}
-
-export interface CustomerMediaPhoto {
-  id: string;
-  title: string;
-  url: string;
-  category?: string;
-}
-
-export interface CustomerCapturedPhoto {
-  id: string;
-  url: string;
-  name: string;
-  size?: number;
 }
 
 export function CustomerFlowPage() {
@@ -96,16 +77,7 @@ export function CustomerFlowPage() {
   const [activeReviewText, setActiveReviewText] = useState('');
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [copiedReviewId, setCopiedReviewId] = useState<string | null>(null);
-  const [copiedToast, setCopiedToast] = useState<{ text: string; icon: 'check' | 'photo' } | null>(null);
-
-  // Photo Booster: Real customer camera/gallery captured photos (0% dummy data)
-  const [customerPhotos, setCustomerPhotos] = useState<CustomerCapturedPhoto[]>([]);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-
-  // Official Shopkeeper Media Photos (if uploaded by owner)
-  const [mediaPhotos, setMediaPhotos] = useState<CustomerMediaPhoto[]>([]);
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [copiedToast, setCopiedToast] = useState<{ text: string } | null>(null);
 
   useEffect(() => {
     if (code) {
@@ -129,13 +101,6 @@ export function CustomerFlowPage() {
             if (Array.isArray(payload.data.chips) && payload.data.chips.length > 0) {
               setCustomChips(payload.data.chips);
               setSelectedChips([payload.data.chips[0], payload.data.chips[1] || payload.data.chips[0]]);
-            }
-
-            // Real business photos only if uploaded by owner; otherwise empty (NO dummy data)
-            if (Array.isArray(payload.data.media) && payload.data.media.length > 0) {
-              setMediaPhotos(payload.data.media);
-            } else {
-              setMediaPhotos([]);
             }
           } else {
             // Check local stored businesses
@@ -307,193 +272,30 @@ export function CustomerFlowPage() {
     return 'https://maps.google.com';
   }
 
-  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
-
-  // Trigger Native Mobile Camera or Gallery Pickers
-  const openCamera = () => {
-    if (cameraInputRef.current) {
-      cameraInputRef.current.click();
-    }
-  };
-
-  const openGallery = () => {
-    if (galleryInputRef.current) {
-      galleryInputRef.current.click();
-    }
-  };
-
-  // Handle Customer Photo Files (Camera Snap or Gallery Selection) with fast client-side compression
-  const handlePhotoFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setIsProcessingPhoto(true);
-
-    try {
-      const fileList = Array.from(files).filter((f) => f.type.startsWith('image/'));
-      if (fileList.length === 0) {
-        setIsProcessingPhoto(false);
-        return;
-      }
-
-      for (const file of fileList) {
-        try {
-          const compressedDataUrl = await compressImageFile(file);
-          const newPhoto: CustomerCapturedPhoto = {
-            id: `cust_ph_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-            url: compressedDataUrl,
-            name: file.name || `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${Date.now()}.jpg`,
-            size: file.size
-          };
-          setCustomerPhotos((prev) => [newPhoto, ...prev.slice(0, 3)]); // Keep up to 4 real photos
-        } catch (err) {
-          console.warn('Image processing error:', err);
-        }
-      }
-
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'ફોટો સફળતાપૂર્વક જોડાયો! 📸'
-          : draftLanguage === 'hi'
-          ? 'फोटो सफलतापूर्वक जुड़ गया! 📸'
-          : 'Photo attached successfully! 📸',
-        icon: 'photo'
-      });
-      setTimeout(() => setCopiedToast(null), 3000);
-    } finally {
-      setIsProcessingPhoto(false);
-    }
-  };
-
-  const removeCustomerPhoto = (id: string) => {
-    setCustomerPhotos((prev) => prev.filter((p) => p.id !== id));
-  };
-
   const handleCopyReviewOnly = async (text: string, id: string) => {
     setActiveReviewText(text);
     setCopiedReviewId(id);
-
-    const targetPhotoUrl =
-      customerPhotos[0]?.url ||
-      mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
-
-    if (targetPhotoUrl) {
-      // 1. Copy both review text and photo together into OS clipboard
-      await copyTextAndImageToClipboard(text, targetPhotoUrl);
-
-      // 2. Also ensure photo is downloaded/saved to phone gallery for Google Maps "+ Add photos"
-      downloadImageFile(
-        targetPhotoUrl,
-        `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
-      );
-
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'રિવ્યૂ અને ફોટો બંને સાથે કૉપી થઈ ગયા! ✓'
-          : draftLanguage === 'hi'
-          ? 'रिव्यू और फोटो दोनों साथ में कॉपी हो गए! ✓'
-          : 'Review & Photo both copied together! ✓',
-        icon: 'check'
-      });
-    } else {
-      await copyToClipboard(text);
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'રિવ્યૂ કૉપી થઈ ગયો! (Review Copied ✓)'
-          : draftLanguage === 'hi'
-          ? 'रिव्यू कॉपी हो गया! (Review Copied ✓)'
-          : 'Review text copied to clipboard! ✓',
-        icon: 'check'
-      });
-    }
-
+    await copyToClipboard(text);
+    setCopiedToast({
+      text: draftLanguage === 'gu'
+        ? 'રિવ્યૂ કૉપી થઈ ગયો! (Review Copied ✓)'
+        : draftLanguage === 'hi'
+        ? 'रिव्यू कॉपी हो गया! (Review Copied ✓)'
+        : 'Review text copied to clipboard! ✓'
+    });
     setTimeout(() => setCopiedReviewId(null), 3500);
     setTimeout(() => setCopiedToast(null), 4000);
   };
 
-  // Direct clipboard copy of image data (for Gboard / keyboard clipboard / desktop)
-  const handleCopyPhotoToClipboard = async (photoUrl: string) => {
-    const success = await copyImageToClipboard(photoUrl);
-    if (success) {
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'ફોટો ક્લિપબોર્ડમાં કૉપી થઈ ગયો! 📋'
-          : draftLanguage === 'hi'
-          ? 'फोटो क्लिपबोर्ड में कॉपी हो गया! 📋'
-          : 'Photo copied to clipboard! 📋',
-        icon: 'photo'
-      });
-    } else {
-      // If OS restricts direct image copy, save to phone gallery/downloads
-      downloadImageFile(
-        photoUrl,
-        `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
-      );
-      setCopiedToast({
-        text: draftLanguage === 'gu'
-          ? 'ફોટો તમારા ફોનમાં સેવ થઈ ગયો! 📸'
-          : draftLanguage === 'hi'
-          ? 'फोटो आपके फोन में सेव हो गया! 📸'
-          : 'Photo saved to phone! 📸',
-        icon: 'photo'
-      });
-    }
-    setTimeout(() => setCopiedToast(null), 3500);
-  };
-
-  // Direct save/download of photo to phone gallery/downloads
-  const handleSavePhotoToPhone = (photoUrl: string) => {
-    downloadImageFile(
-      photoUrl,
-      `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
-    );
-    setCopiedToast({
-      text: draftLanguage === 'gu'
-        ? 'ફોટો ફોનમાં ડાઉનલોડ થઈ ગયો! (Saved to Phone ✓)'
-        : draftLanguage === 'hi'
-        ? 'फोटो फोन में डाउनलोड हो गया! (Saved to Phone ✓)'
-        : 'Photo saved to phone downloads! ✓',
-      icon: 'photo'
-    });
-    setTimeout(() => setCopiedToast(null), 3500);
-  };
-
-  // Dual action: Save to phone + attempt clipboard copy
-  const handleCopyPhotoOnly = async (photoUrl: string) => {
-    // 1. Download to phone (so it's available for Google Maps "+ Add photos")
-    downloadImageFile(
-      photoUrl,
-      `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo.jpg`
-    );
-
-    // 2. Also try OS clipboard copy for devices that support it
-    await copyImageToClipboard(photoUrl);
-
-    setCopiedToast({
-      text: draftLanguage === 'gu'
-        ? 'ફોટો સેવ થઈ ગયો! ગૂગલમાં "+ Add photos" દબાવી પસંદ કરો 📸'
-        : draftLanguage === 'hi'
-        ? 'फोटो फोन में सेव हो गया! गूगल में "+ Add photos" दबाकर सेलेक्ट करें 📸'
-        : 'Photo saved! On Google Maps, tap "+ Add photos" 📸',
-      icon: 'photo'
-    });
-    setTimeout(() => setCopiedToast(null), 4000);
-  };
-
-  // Copy specific review & photo together in 1 clipboard item & open Google Maps without popup blocker
+  // Copy review text to clipboard & open Google Maps without popup blocker
   const handleCopyReviewAndOpenGoogle = async (textToCopy?: string) => {
     const text = textToCopy || activeReviewText || reviewOptions[selectedOptionIndex]?.text;
     if (!text) return;
 
     const targetUrl = formatReviewUrl(bizData.googleReviewUrl);
-    const targetPhotoUrl =
-      customerPhotos[0]?.url ||
-      mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
 
-    // 1. Copy review text AND photo simultaneously into OS clipboard
-    if (targetPhotoUrl) {
-      await copyTextAndImageToClipboard(text, targetPhotoUrl);
-    } else {
-      await copyToClipboard(text);
-    }
+    // 1. Copy review text into OS clipboard
+    await copyToClipboard(text);
 
     // 2. Track click & save customer review for owner dashboard
     if (code) {
@@ -511,45 +313,17 @@ export function CustomerFlowPage() {
       }).catch(() => {});
     }
 
-    // 3. Download Customer Captured Photos into Phone Storage/Downloads
-    if (customerPhotos.length > 0) {
-      customerPhotos.forEach((photo, idx) => {
-        downloadImageFile(
-          photo.url,
-          `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Photo_${idx + 1}.jpg`
-        );
-      });
-    }
-
-    // 4. Download Selected Shopkeeper Media Photos (if any selected)
-    if (selectedPhotoIds.length > 0 && mediaPhotos.length > 0) {
-      const selectedPhotos = mediaPhotos.filter((p) => selectedPhotoIds.includes(p.id));
-      selectedPhotos.forEach((photo, idx) => {
-        downloadImageFile(
-          photo.url,
-          `${(bizData.businessName || 'Review').replace(/[^a-z0-9]/gi, '_')}_Store_Photo_${idx + 1}.jpg`
-        );
-      });
-    }
-
     setActiveReviewText(text);
     setCopiedSuccess(true);
     setStep(3);
 
     // Give visual feedback and open Google Maps
     setCopiedToast({
-      text: targetPhotoUrl
-        ? (draftLanguage === 'gu'
-            ? 'રિવ્યૂ અને ફોટો બંને સાથે કૉપી થઈ ગયા! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
-            : draftLanguage === 'hi'
-            ? 'रिव्यू और फोटो दोनों साथ में कॉपी हो गए! गूगल मैप्स पेज खुल रहा है...'
-            : 'Review & Photo copied together! Opening Google Maps...')
-        : (draftLanguage === 'gu'
-            ? 'રિવ્યૂ કૉપી થઈ ગયો! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
-            : draftLanguage === 'hi'
-            ? 'रिव्यू कॉपी हो गया! गूगल मैप्स पेज खुल रहा है...'
-            : 'Review copied! Opening Google Maps...'),
-      icon: 'check'
+      text: draftLanguage === 'gu'
+        ? 'રિવ્યૂ કૉપી થઈ ગયો! ગૂગલ મેપ્સ પેજ ખુલી રહ્યું છે...'
+        : draftLanguage === 'hi'
+        ? 'रिव्यू कॉपी हो गया! गूगल मैप्स पेज खुल रहा है...'
+        : 'Review copied! Opening Google Maps...'
     });
 
     // Short 500ms delay so clipboard operation finishes before redirection
@@ -582,48 +356,6 @@ export function CustomerFlowPage() {
           </div>
         </div>
       )}
-
-      {/* Permanently Mounted Native File Inputs for Camera & Gallery (Works across all Steps & Devices) */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{
-          position: 'fixed',
-          top: '-1000px',
-          left: '-1000px',
-          opacity: 0,
-          width: '1px',
-          height: '1px',
-          pointerEvents: 'none',
-          zIndex: -1
-        }}
-        onChange={(e) => {
-          handlePhotoFiles(e.target.files);
-          e.target.value = '';
-        }}
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        style={{
-          position: 'fixed',
-          top: '-1000px',
-          left: '-1000px',
-          opacity: 0,
-          width: '1px',
-          height: '1px',
-          pointerEvents: 'none',
-          zIndex: -1
-        }}
-        onChange={(e) => {
-          handlePhotoFiles(e.target.files);
-          e.target.value = '';
-        }}
-      />
 
       {/* Top Header */}
       <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20">
@@ -770,9 +502,9 @@ export function CustomerFlowPage() {
               />
             </div>
 
-            {/* Optional Customer Name Input */}
-            <div className="space-y-1.5 pt-1">
-              <Label className="text-slate-600 dark:text-slate-400 text-xs">
+            {/* Optional Customer Name */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-500">
                 {draftLanguage === 'gu'
                   ? 'તમારું નામ (વૈકલ્પિક)'
                   : draftLanguage === 'hi'
@@ -783,154 +515,9 @@ export function CustomerFlowPage() {
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder={
-                  draftLanguage === 'gu'
-                    ? 'દા.ત. સ્મિત પંચાલ'
-                    : draftLanguage === 'hi'
-                    ? 'उदा. राहुल शर्मा'
-                    : 'e.g. Smit Panchal'
-                }
-                className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 h-9"
+                placeholder={draftLanguage === 'gu' ? 'જેમ કે: રાહુલ શાહ' : 'e.g. Rahul Shah'}
+                className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
               />
-            </div>
-
-            {/* 📸 Feature 6: Photo Review Prompter (Google Maps Photos Booster) */}
-            <div className="rounded-2xl border border-indigo-200/80 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-slate-900 dark:to-purple-950/20 p-4 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                    <Camera className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
-                      <span>
-                        {draftLanguage === 'gu'
-                          ? '📸 ફોટો ઉમેરો (Google 3x Booster)'
-                          : draftLanguage === 'hi'
-                          ? '📸 फोटो जोड़ें (Google 3x Booster)'
-                          : '📸 Add Photo (Google 3x Booster)'}
-                      </span>
-                      <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
-                        <Sparkles className="h-3 w-3 text-amber-600 shrink-0" />
-                        <span>3x Higher Ranking</span>
-                      </span>
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
-                      {draftLanguage === 'gu'
-                        ? 'ગૂગલ ફોટાવાળા રિવ્યૂને સર્ચ અને મેપ્સમાં ૩ ગણું વધારે ટોચ પર મૂકે છે!'
-                        : draftLanguage === 'hi'
-                        ? 'गूगल असली फोटो वाले रिव्यू को सर्च व मैप्स में ३ गुना ज्यादा टॉप पर दिखाता है!'
-                        : 'Google rewards reviews with real photos by ranking them 3x higher on Maps!'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons: Camera Snap & Gallery Pick */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={openCamera}
-                  className="min-h-[46px] rounded-xl border-2 border-indigo-600/30 hover:border-indigo-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-indigo-600 p-2.5 flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-bold"
-                >
-                  <Camera className="h-4 w-4 text-indigo-600 shrink-0" />
-                  <span>
-                    {draftLanguage === 'gu'
-                      ? 'કેમેરાથી પાડો'
-                      : draftLanguage === 'hi'
-                      ? 'कैमरे से खींचें'
-                      : 'Take Photo'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openGallery}
-                  className="min-h-[46px] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 p-2.5 flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-medium"
-                >
-                  <Upload className="h-4 w-4 text-purple-600 shrink-0" />
-                  <span>
-                    {draftLanguage === 'gu'
-                      ? 'ગેલેરીમાંથી'
-                      : draftLanguage === 'hi'
-                      ? 'गैलरी से चुनें'
-                      : 'From Gallery'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Live Preview of Customer Captured Photos */}
-              {customerPhotos.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>
-                        {draftLanguage === 'gu'
-                          ? `${customerPhotos.length} ફોટો જોડાયેલ છે (ગૂગલમાં જોડાશે)`
-                          : draftLanguage === 'hi'
-                          ? `${customerPhotos.length} फोटो जुड़ा हुआ है (गूगल में जुड़ेगा)`
-                          : `${customerPhotos.length} Photo${customerPhotos.length > 1 ? 's' : ''} ready for Google Maps`}
-                      </span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-normal">
-                      {draftLanguage === 'gu' ? 'દૂર કરવા 🗑️ ક્લિક કરો' : 'Tap 🗑️ to remove'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    {customerPhotos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="relative rounded-xl overflow-hidden aspect-square border-2 border-emerald-500 shadow-xs group"
-                      >
-                        <img src={photo.url} alt="Attached" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => handleCopyPhotoOnly(photo.url)}
-                          className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs hover:bg-indigo-700 cursor-pointer"
-                          title="Save/Copy Photo"
-                        >
-                          <Download className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeCustomerPhoto(photo.id)}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 cursor-pointer"
-                          title="Remove photo"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 gap-2">
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે' : draftLanguage === 'hi' ? 'फोटो तैयार है' : 'Photo ready'}</span>
-                    </span>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleSavePhotoToPhone(customerPhotos[0].url)}
-                        className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-2xs"
-                      >
-                        <Download className="h-3 w-3" />
-                        <span>{draftLanguage === 'gu' ? 'સેવ કરો' : draftLanguage === 'hi' ? 'सेव करें' : 'Save'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPhotoToClipboard(customerPhotos[0].url)}
-                        className="text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-purple-200 dark:border-purple-800 shadow-2xs"
-                      >
-                        <Copy className="h-3 w-3" />
-                        <span>{draftLanguage === 'gu' ? 'કૉપી ફોટો' : draftLanguage === 'hi' ? 'कॉपी फोटो' : 'Copy'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -1069,194 +656,6 @@ export function CustomerFlowPage() {
               />
             </div>
 
-            {/* 📸 Feature 6: Step 2 Photo Booster & Preview Section */}
-            <div className="rounded-2xl border border-indigo-200/80 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/40 dark:from-indigo-950/20 dark:via-slate-900 dark:to-purple-950/20 p-3.5 space-y-3 mt-2 shadow-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-6 w-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                    <Camera className="h-3.5 w-3.5" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    {draftLanguage === 'gu'
-                      ? 'સાથે ફોટો જોડો (3x રેન્કિંગ બૂસ્ટ) 📸'
-                      : draftLanguage === 'hi'
-                      ? 'साथ में फोटो जोड़ें (3x रैंकिंग बूस्ट) 📸'
-                      : 'Attach a Photo (3x Google Maps Boost) 📸'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-amber-800 dark:text-amber-300 font-bold bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
-                  <Sparkles className="h-3 w-3 text-amber-600 shrink-0" />
-                  <span>3x Visibility</span>
-                </span>
-              </div>
-
-              {customerPhotos.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-4 gap-2">
-                    {customerPhotos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="relative rounded-xl overflow-hidden aspect-square border-2 border-emerald-500 shadow-xs group"
-                      >
-                        <img src={photo.url} alt="Attached" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => handleCopyPhotoOnly(photo.url)}
-                          className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs hover:bg-indigo-700 cursor-pointer"
-                          title="Save/Copy Photo"
-                        >
-                          <Download className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeCustomerPhoto(photo.id)}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 cursor-pointer"
-                          title="Remove photo"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={openCamera}
-                      className="rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 bg-white dark:bg-slate-900 flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-indigo-600 aspect-square text-[10px] font-semibold cursor-pointer transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>{draftLanguage === 'gu' ? 'બીજો ફોટો' : 'Add More'}</span>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 gap-2">
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                      <span>{draftLanguage === 'gu' ? 'ફોટો તૈયાર છે (ગૂગલમાં જોડાશે)' : draftLanguage === 'hi' ? 'फोटो तैयार है (गूगल में जुड़ेगा)' : 'Photo ready for Google'}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyReviewOnly(activeReviewText || reviewOptions[selectedOptionIndex]?.text, 'photo-together')}
-                      className="text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-3 py-1.5 rounded-lg border border-transparent shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
-                    >
-                      <Copy className="h-3.5 w-3.5 text-indigo-100" />
-                      <span>{draftLanguage === 'gu' ? 'બંને સાથે કૉપી કરો' : draftLanguage === 'hi' ? 'दोनों साथ में कॉपी करें' : 'Copy Both Together'}</span>
-                    </button>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
-                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div className="leading-snug">
-                      <strong className="font-semibold block mb-0.5">
-                        {draftLanguage === 'gu' ? 'ગૂગલ મેપ્સમાં ફોટો અને લખાણ:' : draftLanguage === 'hi' ? 'गूगल मैप्स में फोटो और मैसेज:' : 'Google Maps Review Guide:'}
-                      </strong>
-                      {draftLanguage === 'gu'
-                        ? 'લખાણ પેસ્ટ કરવા Review બોક્સમાં ટૅપ કરી Paste કરો. ફોટો ઉમેરવા નીચે "+ Add photos" દબાવો (ફોન ગેલેરીમાં ફોટો સૌથી ઉપર તૈયાર છે).'
-                        : draftLanguage === 'hi'
-                        ? 'मैसेज के लिए Review बॉक्स में Paste करें। फोटो के लिए नीचे "+ Add photos" दबाएं (फोन गैलरी में फोटो सबसे ऊपर तैयार है)।'
-                        : 'Tap Paste in the review box for text. Tap "+ Add photos" to attach the photo from your gallery.'}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    {draftLanguage === 'gu'
-                      ? 'તમારા ભોજન કે અનુભવનો ૧ ફોટો ઉમેરવાથી તમારા રિવ્યૂને ગૂગલમાં ૩ ગણું વધારે મહત્વ મળે છે!'
-                      : draftLanguage === 'hi'
-                      ? 'खाने या अनुभव का १ फोटो जोड़ने से आपके रिव्यू को गूगल पर ३ गुना ज्यादा व्यूज मिलते हैं!'
-                      : 'Adding 1 photo of your food or experience gives your review 3x more visibility on Google!'}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={openCamera}
-                      className="min-h-[42px] rounded-xl border border-indigo-600/30 hover:border-indigo-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 hover:text-indigo-600 p-2 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-bold"
-                    >
-                      <Camera className="h-4 w-4 text-indigo-600 shrink-0" />
-                      <span>
-                        {draftLanguage === 'gu'
-                          ? 'કેમેરાથી પાડો'
-                          : draftLanguage === 'hi'
-                          ? 'कैमरे से खींचें'
-                          : 'Take Photo'}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={openGallery}
-                      className="min-h-[42px] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 p-2 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95 text-xs font-medium"
-                    >
-                      <Upload className="h-4 w-4 text-purple-600 shrink-0" />
-                      <span>
-                        {draftLanguage === 'gu'
-                          ? 'ગેલેરીમાંથી'
-                          : draftLanguage === 'hi'
-                          ? 'गैलरी से चुनें'
-                          : 'From Gallery'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Official Store Photos (if owner uploaded in dashboard) */}
-              {mediaPhotos.length > 0 && (
-                <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 space-y-1.5">
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    {draftLanguage === 'gu'
-                      ? 'દુકાનના ફોટામાંથી પસંદ કરો:'
-                      : draftLanguage === 'hi'
-                      ? 'स्टोर के फोटो में से चुनें:'
-                      : 'Or pick official store photos:'}
-                  </span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {mediaPhotos.slice(0, 6).map((photo) => {
-                      const isSelected = selectedPhotoIds.includes(photo.id);
-                      return (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedPhotoIds((prev) =>
-                              prev.includes(photo.id)
-                                ? prev.filter((id) => id !== photo.id)
-                                : prev.length >= 2
-                                ? [prev[1], photo.id]
-                                : [...prev, photo.id]
-                            );
-                          }}
-                          className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all cursor-pointer group text-left ${
-                            isSelected
-                              ? 'border-purple-600 ring-2 ring-purple-500/40 shadow-xs'
-                              : 'border-slate-200 dark:border-slate-800 opacity-75 hover:opacity-100'
-                          }`}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={photo.title}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                          <div
-                            className={`absolute top-1.5 right-1.5 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-xs transition-colors ${
-                              isSelected
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-black/50 text-white'
-                            }`}
-                          >
-                            {isSelected ? <Check className="h-3 w-3 stroke-[3]" /> : <Plus className="h-3 w-3" />}
-                          </div>
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5">
-                            <span className="text-[10px] font-semibold text-white truncate block">
-                              {photo.title}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Authenticity verification guarantee */}
             <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -1299,12 +698,12 @@ export function CustomerFlowPage() {
                 >
                   {copiedReviewId === 'step3' ? (
                     <>
-                      <Check className="h-3 w-3 stroke-[3]" />
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
                       <span>{draftLanguage === 'gu' ? 'કૉપી થયું ✓' : draftLanguage === 'hi' ? 'कॉपी हुआ ✓' : 'Copied! ✓'}</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3.5 w-3.5" />
                       <span>{draftLanguage === 'gu' ? 'ફરી કૉપી કરો' : draftLanguage === 'hi' ? 'फिर कॉपी करें' : 'Copy Again'}</span>
                     </>
                   )}
@@ -1315,109 +714,42 @@ export function CustomerFlowPage() {
               </p>
             </div>
 
-            {/* 📸 Feature 6: Step 3 Photo Saved Confirmation & Google Maps Visual Instructions */}
-            {(customerPhotos.length > 0 || selectedPhotoIds.length > 0) && (
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/60 dark:from-indigo-950/30 dark:via-slate-900 dark:to-purple-950/20 border-2 border-indigo-200 dark:border-indigo-800 text-left space-y-3 animate-in fade-in shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-xs">
-                    <Camera className="h-4 w-4 shrink-0 text-indigo-600" />
-                    <span>
-                      {draftLanguage === 'gu'
-                        ? 'ફોટો તમારા ફોનમાં ડાઉનલોડ થઈ ગયો છે! 📸'
-                        : draftLanguage === 'hi'
-                        ? 'फोटो आपके फोन में डाउनलोड हो गया है! 📸'
-                        : 'Photo downloaded to your phone! 📸'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
-                    <Sparkles className="h-3 w-3 text-amber-600 shrink-0" />
-                    <span>3x Boost</span>
+            {/* Step 3: Simple Google Maps Instructions */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/60 dark:from-indigo-950/30 dark:via-slate-900 dark:to-purple-950/20 border-2 border-indigo-200 dark:border-indigo-800 text-left space-y-3 animate-in fade-in shadow-xs">
+              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-xs">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-indigo-600" />
+                <span>
+                  {draftLanguage === 'gu'
+                    ? 'ગૂગલ રિવ્યૂ બોક્સમાં લખાણ પેસ્ટ કરવાની રીત:'
+                    : draftLanguage === 'hi'
+                    ? 'गूगल रिव्यू बॉक्स में टेक्स्ट पेस्ट करने का तरीका:'
+                    : 'How to post in Google Reviews:'}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                <div className="flex items-start gap-2 font-medium">
+                  <span className="h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">1</span>
+                  <span>
+                    {draftLanguage === 'gu'
+                      ? 'ગૂગલ રિવ્યૂ બોક્સમાં ટૅપ કરીને Paste કરો'
+                      : draftLanguage === 'hi'
+                      ? 'गूगल रिव्यू बॉक्स में दबाकर Paste करें'
+                      : 'Tap inside the review box and tap Paste'}
                   </span>
                 </div>
-
-                <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-                  <div className="flex items-start gap-1.5 font-medium">
-                    <span className="h-4 w-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold">1</span>
-                    <span>
-                      {draftLanguage === 'gu'
-                        ? 'ગૂગલ રિવ્યૂ બોક્સમાં લખાણ Paste કરો'
-                        : draftLanguage === 'hi'
-                        ? 'गूगल रिव्यू बॉक्स में टेक्स्ट Paste करें'
-                        : 'Paste your review text in the Google review box'}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-1.5 font-medium">
-                    <span className="h-4 w-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold">2</span>
-                    <span>
-                      {draftLanguage === 'gu'
-                        ? 'નીચે "+ Add photos" પર ક્લિક કરીને આ સેવ થયેલો ફોટો પસંદ કરો'
-                        : draftLanguage === 'hi'
-                        ? 'नीचे "+ Add photos" पर टैप करके अभी सेव हुआ फोटो सेलेक्ट करें'
-                        : 'Tap "+ Add photos" and select the photo you just took'}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-1.5 font-medium">
-                    <span className="h-4 w-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] shrink-0 font-bold">3</span>
-                    <span>
-                      {draftLanguage === 'gu'
-                        ? '૫-સ્ટાર રેટિંગ આપી Post પર ક્લિક કરો!'
-                        : draftLanguage === 'hi'
-                        ? '५-स्टार रेटिंग देकर Post पर क्लिक करें!'
-                        : 'Select 5 stars and tap Post!'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Thumbnails of customer & store photos */}
-                <div className="flex gap-2 pt-1 overflow-x-auto">
-                  {customerPhotos.map((photo) => (
-                    <div key={photo.id} className="h-16 w-16 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-xs relative">
-                      <img src={photo.url} alt="Customer Photo" className="h-full w-full object-cover" />
-                      <div className="absolute top-0 right-0 bg-emerald-600 text-white rounded-bl-lg p-0.5">
-                        <Check className="h-2.5 w-2.5 stroke-[3]" />
-                      </div>
-                    </div>
-                  ))}
-                  {mediaPhotos
-                    .filter((p) => selectedPhotoIds.includes(p.id))
-                    .map((photo) => (
-                      <div key={photo.id} className="h-16 w-16 rounded-xl overflow-hidden border border-purple-300 dark:border-purple-700 shrink-0 shadow-xs relative">
-                        <img src={photo.url} alt={photo.title} className="h-full w-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white text-center py-0.5 truncate font-medium">
-                          {photo.title}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-
-                <div className="flex items-center justify-between pt-1 gap-2">
-                  <span className="text-[10px] text-slate-500">
-                    {draftLanguage === 'gu' ? 'તમારા ફોનમાં સેવ થયેલ છે' : draftLanguage === 'hi' ? 'फोन में सेव हो गया है' : 'Saved to your phone'}
+                <div className="flex items-start gap-2 font-medium">
+                  <span className="h-5 w-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">2</span>
+                  <span>
+                    {draftLanguage === 'gu'
+                      ? '૫-સ્ટાર રેટિંગ આપી Post પર ક્લિક કરો!'
+                      : draftLanguage === 'hi'
+                      ? '५-स्टार रेटिंग देकर Post पर क्लिक करें!'
+                      : 'Select 5 stars and tap Post!'}
                   </span>
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetUrl = customerPhotos[0]?.url || mediaPhotos.find((m) => selectedPhotoIds.includes(m.id))?.url;
-                        if (targetUrl) handleSavePhotoToPhone(targetUrl);
-                      }}
-                      className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:underline flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
-                    >
-                      <Download className="h-3 w-3" />
-                      <span>{draftLanguage === 'gu' ? 'સેવ ફોટો' : draftLanguage === 'hi' ? 'सेव फोटो' : 'Save Photo'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyReviewOnly(activeReviewText, 'step3-both')}
-                      className="text-[11px] font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-2.5 py-1 rounded-lg border border-transparent shadow-2xs flex items-center gap-1 cursor-pointer"
-                    >
-                      <Copy className="h-3 w-3 text-indigo-100" />
-                      <span>{draftLanguage === 'gu' ? 'ફરી બંને કૉપી કરો' : draftLanguage === 'hi' ? 'फिर दोनों कॉपी करें' : 'Copy Both Again'}</span>
-                    </button>
-                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="pt-2">
               <a
@@ -1479,17 +811,11 @@ export function CustomerFlowPage() {
             >
               <Copy className="h-5 w-5 text-indigo-200 shrink-0" />
               <span className="tracking-wide">
-                {customerPhotos.length > 0 || selectedPhotoIds.length > 0
-                  ? (draftLanguage === 'gu'
-                      ? 'રિવ્યૂ અને ફોટો સાથે કૉપી કરી ગૂગલ ખોલો ↗'
-                      : draftLanguage === 'hi'
-                      ? 'रिव्यू और फोटो साथ में कॉपी करके गूगल खोलें ↗'
-                      : 'Copy Review & Photo Together & Open Google ↗')
-                  : (draftLanguage === 'gu'
-                      ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
-                      : draftLanguage === 'hi'
-                      ? 'रिव्यू कॉपी करके गूगल खोलें ↗'
-                      : 'Copy Selected Review & Open Google ↗')}
+                {draftLanguage === 'gu'
+                  ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
+                  : draftLanguage === 'hi'
+                  ? 'रिव्यू कॉपी करके गूगल खोलें ↗'
+                  : 'Copy Selected Review & Open Google ↗'}
               </span>
             </Button>
 
