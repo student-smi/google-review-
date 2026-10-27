@@ -7,7 +7,7 @@ import type { Env } from './public';
 
 export const gmbRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
 
-const getGoogleClientId = (env: Env) => env?.GOOGLE_CLIENT_ID || (typeof process !== 'undefined' ? process.env?.GOOGLE_CLIENT_ID : '') || '';
+const getGoogleClientId = (env: Env) => env?.GOOGLE_CLIENT_ID || (typeof process !== 'undefined' ? process.env?.GOOGLE_CLIENT_ID : '') || '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com';
 const getGoogleClientSecret = (env: Env) => env?.GOOGLE_CLIENT_SECRET || (typeof process !== 'undefined' ? process.env?.GOOGLE_CLIENT_SECRET : '') || '';
 
 interface GmbMetadata {
@@ -179,7 +179,12 @@ gmbRoutes.post('/connect', async (c) => {
     }
   } catch {}
 
-  // 2. Fetch GMB Accounts
+  // 2. Resolve clean Account ID and numeric Location ID
+  const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, null, business);
+  accountId = cleanAcc;
+  locationId = cleanLoc;
+
+  // Fetch account title if available
   try {
     const accRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -188,7 +193,6 @@ gmbRoutes.post('/connect', async (c) => {
       const accData = (await accRes.json()) as any;
       if (accData.accounts && accData.accounts.length > 0) {
         accountName = accData.accounts[0].accountName || accountName;
-        accountId = accData.accounts[0].name || '';
       }
     }
   } catch (err) {
@@ -213,6 +217,50 @@ gmbRoutes.post('/connect', async (c) => {
     meta
   });
 });
+
+// Helper: Resolve clean Account ID and numeric Location ID
+async function resolveGmbIds(accessToken: string, meta: GmbMetadata | null, business: any) {
+  let cleanAcc = (meta?.accountId || '').replace('accounts/', '');
+  let cleanLoc = (meta?.locationId || '').replace('locations/', '');
+
+  if (!cleanAcc) {
+    try {
+      const accRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (accRes.ok) {
+        const accData = (await accRes.json()) as any;
+        if (accData.accounts?.length) {
+          cleanAcc = accData.accounts[0].name.replace('accounts/', '');
+          if (meta) meta.accountId = cleanAcc;
+        }
+      }
+    } catch {}
+  }
+
+  if (!cleanLoc || cleanLoc.startsWith('ChIJ') || cleanLoc === 'default') {
+    try {
+      if (cleanAcc) {
+        const locRes = await fetch(`https://mybusinessbusinessinformation.googleapis.com/v1/accounts/${cleanAcc}/locations?readMask=name,title,storefrontAddress,metadata`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (locRes.ok) {
+          const locData = (await locRes.json()) as any;
+          const targetPlaceId = business.googlePlaceId || 'ChIJ7zSUNEmFXjkRiNXfEEOmZgQ';
+          const matched = (locData.locations || []).find((l: any) => l.metadata?.placeId === targetPlaceId)
+            || (locData.locations || []).find((l: any) => l.title?.toLowerCase().includes((business.name || 'Upmark').toLowerCase()))
+            || locData.locations?.[0];
+          if (matched?.name) {
+            cleanLoc = matched.name.replace('locations/', '');
+            if (meta) meta.locationId = cleanLoc;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return { cleanAcc, cleanLoc };
+}
 
 // ──────────────────────────────────────────────
 // 3. Sync Live Reviews from Google Business Profile
@@ -239,9 +287,10 @@ gmbRoutes.post('/sync-reviews', async (c) => {
   const now = Math.floor(Date.now() / 1000);
 
   // If connected via OAuth, fetch from GMB v4 reviews endpoint
-  if (accessToken && meta?.accountId) {
+  if (accessToken) {
     try {
-      const reviewsUrl = `https://mybusiness.googleapis.com/v4/${meta.accountId}/locations/${meta.locationId || 'default'}/reviews?pageSize=50`;
+      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, business);
+      const reviewsUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews?pageSize=50`;
       const gmbRes = await fetch(reviewsUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
@@ -333,10 +382,11 @@ gmbRoutes.post('/reply', async (c) => {
 
   // 1. If connected with Google GMB, attempt live Google API reply
   let googlePostStatus = 'saved_locally';
-  if (accessToken && meta?.accountId) {
+  if (accessToken) {
     try {
+      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, await scoped.getBusiness(businessId));
       const gmbReviewId = reviewId.startsWith('gmb_') ? reviewId.replace('gmb_', '') : reviewId;
-      const replyUrl = `https://mybusiness.googleapis.com/v4/${meta.accountId}/locations/${meta.locationId || 'default'}/reviews/${gmbReviewId}/reply`;
+      const replyUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews/${gmbReviewId}/reply`;
 
       const gmbRes = await fetch(replyUrl, {
         method: 'PUT',
@@ -430,7 +480,7 @@ gmbRoutes.post('/places-sync', async (c) => {
   const apiKey =
     c.env.GOOGLE_PLACES_API_KEY ||
     (typeof process !== 'undefined' ? process.env?.GOOGLE_PLACES_API_KEY : '') ||
-    'AIzaSyCytoS_LA2qcNBraEb92M3oUA7cqAejpjg';
+    'AIzaSyB9e0-qVxnONGLRXMWVYCAjkc8hkTo0mwE';
 
   let targetPlaceId = placeIdQuery || business.googlePlaceId;
 

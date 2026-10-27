@@ -18,7 +18,7 @@ interface GoogleAuthButtonProps {
   compact?: boolean;
 }
 
-export const GOOGLE_CLIENT_ID = '331659571653-prle3s93ht54hdhp11gk3e5p69un2565.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com';
 
 export function GoogleAuthButton({ onSuccess, className = '', compact = false }: GoogleAuthButtonProps) {
   const navigate = useNavigate();

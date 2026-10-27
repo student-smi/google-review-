@@ -27,4 +27,4 @@ crons = ["0 0 * * *"]
 [vars]
 ENVIRONMENT = "production"
 APP_URL = "https://reviewqr.panchalsmit673.workers.dev"
-GOOGLE_PLACES_API_KEY = "AIzaSyCytoS_LA2qcNBraEb92M3oUA7cqAejpjg"
+GOOGLE_PLACES_API_KEY = "AIzaSyB9e0-qVxnONGLRXMWVYCAjkc8hkTo0mwE"

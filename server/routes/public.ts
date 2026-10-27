@@ -378,7 +378,7 @@ publicRoutes.get('/places/search', async (c) => {
     return c.json({ suggestions: [] });
   }
 
-  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyBDrPbnv1gHf0gaQVshWh4EywXpgHYQ_W8';
+  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyB9e0-qVxnONGLRXMWVYCAjkc8hkTo0mwE';
 
   try {
     const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
@@ -423,7 +423,7 @@ publicRoutes.get('/places/details/:placeId', async (c) => {
     return c.json({ error: 'Place ID is required' }, 400);
   }
 
-  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyBDrPbnv1gHf0gaQVshWh4EywXpgHYQ_W8';
+  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyB9e0-qVxnONGLRXMWVYCAjkc8hkTo0mwE';
 
   try {
     const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?fields=id,displayName,formattedAddress,googleMapsUri,rating,userRatingCount,primaryTypeDisplayName,types,editorialSummary`, {

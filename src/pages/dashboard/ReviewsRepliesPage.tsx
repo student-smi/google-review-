@@ -158,27 +158,32 @@ export function ReviewsRepliesPage() {
       setIsConnectingGmb(true);
       try {
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: '331659571653-prle3s93ht54hdhp11gk3e5p69un2565.apps.googleusercontent.com',
+          client_id: '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com',
           scope: 'https://www.googleapis.com/auth/business.manage openid email profile',
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
               console.error('Google OAuth error:', tokenResponse);
+              alert('Google Sign-in Error: ' + (tokenResponse.error_description || tokenResponse.error));
               setIsConnectingGmb(false);
               return;
             }
             if (tokenResponse.access_token) {
               try {
-                await apiFetch('/api/gmb/connect', {
+                const targetBizId = activeBusiness?.id || 'biz_1792819607646_j5o7t';
+                const connectRes = await apiFetch<any>('/api/gmb/connect', {
                   method: 'POST',
                   body: JSON.stringify({
                     accessToken: tokenResponse.access_token,
-                    businessId: activeBusiness?.id
+                    businessId: targetBizId
                   })
                 });
+                console.log('GMB connect response:', connectRes);
+                alert('🎉 Google Business Profile Connected Successfully!');
                 await loadGmbStatus();
                 await handleSyncGmb();
-              } catch (e) {
+              } catch (e: any) {
                 console.error('GMB connect failed:', e);
+                alert('GMB Connect backend notice: ' + (e?.message || 'Server error'));
               } finally {
                 setIsConnectingGmb(false);
               }
@@ -186,8 +191,9 @@ export function ReviewsRepliesPage() {
           }
         });
         tokenClient.requestAccessToken({ prompt: 'consent' });
-      } catch (err) {
+      } catch (err: any) {
         console.error('initTokenClient error:', err);
+        alert('Init token error: ' + (err?.message || 'Unknown error'));
         setIsConnectingGmb(false);
       }
     } else {
