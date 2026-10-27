@@ -15,7 +15,8 @@ import {
   Sparkles,
   Store,
   Star,
-  LogOut
+  LogOut,
+  Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logoutApi } from '@/lib/auth';
@@ -40,6 +41,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { label: 'Businesses', to: '/dashboard/businesses', icon: Building2, badge: null },
     { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
     { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote, badge: 'AI Copilot' },
+    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'Chips' },
     { label: 'Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Local SEO', to: '/dashboard/local-seo', icon: MapPin, badge: null },
     { label: 'Settings', to: '/dashboard/settings', icon: Settings, badge: null }
