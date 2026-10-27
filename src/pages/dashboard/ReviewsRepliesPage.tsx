@@ -26,7 +26,9 @@ import {
   Loader2,
   Globe,
   Link2,
-  Unlink
+  Unlink,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
@@ -78,6 +80,8 @@ export function ReviewsRepliesPage() {
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [filterMode, setFilterMode] = useState<'all' | 'needs_reply' | 'replied'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Google Business Profile (GMB) OAuth state
   const [gmbStatus, setGmbStatus] = useState<GmbStatus>({ isConnected: false });
@@ -550,6 +554,41 @@ export function ReviewsRepliesPage() {
   const awaitingCount = reviews.filter((r) => !r.replyText).length;
   const repliedCount = reviews.filter((r) => !!r.replyText).length;
 
+  // Pagination calculations
+  const totalReviews = filteredReviews.length;
+  const totalPages = Math.max(1, Math.ceil(totalReviews / pageSize));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (validCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalReviews);
+  const paginatedReviews = filteredReviews.slice(startIndex, endIndex);
+
+  // Reset to page 1 whenever filter or business changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterMode, activeBusiness?.id, pageSize]);
+
+  const handlePageChange = (newPage: number) => {
+    const targetPage = Math.max(1, Math.min(newPage, totalPages));
+    setCurrentPage(targetPage);
+    const feedEl = document.getElementById('reviews-feed-container');
+    if (feedEl) {
+      feedEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (validCurrentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (validCurrentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', validCurrentPage - 1, validCurrentPage, validCurrentPage + 1, '...', totalPages];
+  };
+
   const formatTimeAgo = (timestampSeconds: number) => {
     const diff = Math.floor(Date.now() / 1000) - timestampSeconds;
     if (diff < 60) return 'Just now';
@@ -772,7 +811,7 @@ export function ReviewsRepliesPage() {
 
         {/* Filter Pills for Feed */}
         {activeTab === 'feed' && reviews.length > 0 && (
-          <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-slate-100/70 p-1 text-xs">
+          <div className="flex items-center flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100/70 p-1 text-xs">
             <button
               onClick={() => setFilterMode('all')}
               className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
@@ -803,7 +842,7 @@ export function ReviewsRepliesPage() {
 
       {/* TAB 1: CUSTOMER REVIEWS FEED */}
       {activeTab === 'feed' && (
-        <div className="space-y-4">
+        <div id="reviews-feed-container" className="space-y-4">
           {isLoadingReviews ? (
             <div className="py-16 text-center space-y-3 bg-white rounded-2xl border border-slate-200">
               <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
@@ -840,7 +879,21 @@ export function ReviewsRepliesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredReviews.map((review) => {
+              {/* Feed Header info bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span>Showing <strong className="font-bold text-slate-800">{totalReviews === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of <strong className="font-bold text-slate-800">{totalReviews}</strong> customer reviews</span>
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
+                      Page {validCurrentPage} of {totalPages}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {paginatedReviews.map((review) => {
                 let chips: string[] = [];
                 if (review.chipsJson) {
                   try {
@@ -1165,6 +1218,100 @@ export function ReviewsRepliesPage() {
                   </Card>
                 );
               })}
+
+              {/* Pagination Controls Bar */}
+              {totalReviews > 0 && (
+                <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs mt-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Left: Range and Per-Page selector */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                      <div>
+                        Showing <span className="font-bold text-slate-900">{totalReviews === 0 ? 0 : startIndex + 1}–{endIndex}</span> of <span className="font-bold text-slate-900">{totalReviews}</span> reviews
+                      </div>
+                      <span className="text-slate-300 hidden sm:inline">•</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-500">Per page:</span>
+                        <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                          {[5, 10, 20, 50].map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                setPageSize(size);
+                                setCurrentPage(1);
+                              }}
+                              className={`px-2.5 py-1 rounded-md font-bold text-xs transition-colors cursor-pointer ${
+                                pageSize === size
+                                  ? 'bg-purple-600 text-white shadow-xs'
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Page Buttons */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-1.5 self-center md:self-auto">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={validCurrentPage <= 1}
+                          onClick={() => handlePageChange(validCurrentPage - 1)}
+                          className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                          title="Previous Page"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          <span className="hidden sm:inline">Prev</span>
+                        </Button>
+
+                        <div className="flex items-center gap-1">
+                          {getPageNumbers().map((item, idx) => {
+                            if (item === '...') {
+                              return (
+                                <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs font-bold select-none">
+                                  …
+                                </span>
+                              );
+                            }
+                            const pageNum = item as number;
+                            const isActive = pageNum === validCurrentPage;
+                            return (
+                              <button
+                                key={pageNum}
+                                type="button"
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`h-8 min-w-[32px] px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                                  isActive
+                                    ? 'bg-purple-600 text-white shadow-xs'
+                                    : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={validCurrentPage >= totalPages}
+                          onClick={() => handlePageChange(validCurrentPage + 1)}
+                          className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                          title="Next Page"
+                        >
+                          <span className="hidden sm:inline">Next</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
