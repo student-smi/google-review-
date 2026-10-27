@@ -20,13 +20,20 @@ import {
   ExternalLink,
   Sliders,
   Palette,
-  Eye
+  Eye,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
 
 export function QrStudioPage() {
-  const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
+  const { activeBusiness, refreshBusinesses } = useOutletContext<{
+    activeBusiness: BusinessItem | null;
+    refreshBusinesses?: () => Promise<void>;
+  }>();
 
   // QR Customization State - Dynamic based on active business
   const defaultShortCode = activeBusiness?.slug
@@ -45,18 +52,39 @@ export function QrStudioPage() {
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Owner Logo state
+  const [logoUrl, setLogoUrl] = useState<string | null>(activeBusiness?.logoUrl || null);
+  const [showStandeeLogo, setShowStandeeLogo] = useState<boolean>(true);
+  const [showQrCenterLogo, setShowQrCenterLogo] = useState<boolean>(true);
+  const [logoSize, setLogoSize] = useState<number>(0.35);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (activeBusiness?.id) {
       if (activeBusiness.brandColor) {
         setDotColor(activeBusiness.brandColor);
       }
+      if (activeBusiness.logoUrl) {
+        setLogoUrl(activeBusiness.logoUrl);
+      }
       // Check existing QR codes for this business
-      apiFetch<{ qrCodes: Array<{ code: string; label: string }> }>(
+      apiFetch<{ qrCodes: Array<{ code: string; label: string; styleJson?: any }> }>(
         `/api/qr/business/${activeBusiness.id}`
       )
         .then((res) => {
           if (res?.qrCodes && res.qrCodes.length > 0) {
             setShortCode(res.qrCodes[0].code);
+            const style = res.qrCodes[0].styleJson;
+            if (style) {
+              try {
+                const parsed = typeof style === 'string' ? JSON.parse(style) : style;
+                if (parsed.logoUrl) setLogoUrl(parsed.logoUrl);
+                if (typeof parsed.showStandeeLogo === 'boolean') setShowStandeeLogo(parsed.showStandeeLogo);
+                if (typeof parsed.showQrCenterLogo === 'boolean') setShowQrCenterLogo(parsed.showQrCenterLogo);
+                if (parsed.logoSize) setLogoSize(parsed.logoSize);
+              } catch {}
+            }
           } else if (activeBusiness.slug) {
             setShortCode(`${activeBusiness.slug}-counter`);
           }
@@ -78,6 +106,8 @@ export function QrStudioPage() {
     ? `${window.location.origin}/r/${shortCode}`
     : `https://reviewqr.panchalsmit.workers.dev/r/${shortCode}`;
 
+  const currentLogo = showQrCenterLogo && logoUrl ? logoUrl : undefined;
+
   useEffect(() => {
     if (!qrInstanceRef.current) {
       qrInstanceRef.current = new QRCodeStyling({
@@ -85,6 +115,7 @@ export function QrStudioPage() {
         height: 220,
         type: 'svg',
         data: targetUrl,
+        image: currentLogo,
         dotsOptions: {
           color: dotColor,
           type: dotType as any
@@ -102,7 +133,9 @@ export function QrStudioPage() {
         },
         imageOptions: {
           crossOrigin: 'anonymous',
-          margin: 6
+          margin: 4,
+          imageSize: logoSize,
+          hideBackgroundDots: true
         }
       });
 
@@ -113,6 +146,13 @@ export function QrStudioPage() {
     } else {
       qrInstanceRef.current.update({
         data: targetUrl,
+        image: currentLogo || '',
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: 4,
+          imageSize: logoSize,
+          hideBackgroundDots: true
+        },
         dotsOptions: {
           color: dotColor,
           type: dotType as any
@@ -122,8 +162,67 @@ export function QrStudioPage() {
           type: cornerSquareType as any
         }
       });
+      if (qrRef.current && qrRef.current.children.length === 0) {
+        qrInstanceRef.current.append(qrRef.current);
+      }
     }
-  }, [targetUrl, dotColor, dotType, cornerSquareType]);
+  }, [targetUrl, dotColor, dotType, cornerSquareType, currentLogo, logoSize]);
+
+  // Handle Logo Upload from device
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please choose an image under 5MB');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        setLogoUrl(base64Data);
+
+        // Auto-save logo to business profile
+        if (activeBusiness?.id) {
+          try {
+            await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ logoUrl: base64Data })
+            });
+            refreshBusinesses?.();
+          } catch (err) {
+            console.warn('Failed to save logo to business:', err);
+          }
+        }
+        setIsUploadingLogo(false);
+      };
+      reader.onerror = () => {
+        setIsUploadingLogo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    setLogoUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (activeBusiness?.id) {
+      try {
+        await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ logoUrl: null })
+        });
+        refreshBusinesses?.();
+      } catch (err) {
+        console.warn('Failed to remove logo from business:', err);
+      }
+    }
+  };
 
   const handleDownloadQr = (extension: 'png' | 'svg') => {
     if (qrInstanceRef.current) {
@@ -148,11 +247,17 @@ export function QrStudioPage() {
       height: 800,
       type: 'canvas',
       data: targetUrl,
+      image: showQrCenterLogo && logoUrl ? logoUrl : undefined,
       dotsOptions: { color: dotColor, type: dotType as any },
       cornersSquareOptions: { color: dotColor, type: cornerSquareType as any },
       cornersDotOptions: { color: dotColor, type: 'dot' },
       backgroundOptions: { color: '#ffffff' },
-      imageOptions: { crossOrigin: 'anonymous', margin: 10 }
+      imageOptions: {
+        crossOrigin: 'anonymous',
+        margin: 8,
+        imageSize: logoSize,
+        hideBackgroundDots: true
+      }
     });
     tempQr.append(tempDiv);
 
@@ -175,42 +280,55 @@ export function QrStudioPage() {
     doc.setFillColor(...hexToRgb(dotColor));
     doc.rect(0, 0, W, 12, 'F');
 
+    let textStartY = 38;
+
+    // Optional: Draw Top Owner Logo on A4 Poster
+    if (showStandeeLogo && logoUrl) {
+      try {
+        const logoSizeMm = 20;
+        doc.addImage(logoUrl, 'PNG', (W - logoSizeMm) / 2, 16, logoSizeMm, logoSizeMm);
+        textStartY = 45;
+      } catch (e) {
+        console.warn('Could not add logo to PDF:', e);
+      }
+    }
+
     // Business name
     doc.setTextColor(20, 20, 30);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text(activeBusiness?.name || 'My Business', W / 2, 38, { align: 'center' });
+    doc.text(activeBusiness?.name || 'My Business', W / 2, textStartY, { align: 'center' });
 
     // Headline
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(70, 70, 90);
-    doc.text(headline || 'Share Your Experience on Google', W / 2, 52, { align: 'center', maxWidth: 160 });
+    doc.text(headline || 'Share Your Experience on Google', W / 2, textStartY + 12, { align: 'center', maxWidth: 160 });
 
     // QR Code image
     if (qrDataUrl) {
       const qrSize = 110;
       const qrX = (W - qrSize) / 2;
-      doc.addImage(qrDataUrl, 'PNG', qrX, 62, qrSize, qrSize);
+      doc.addImage(qrDataUrl, 'PNG', qrX, textStartY + 20, qrSize, qrSize);
     }
 
     // Google badge text
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(66, 133, 244);
-    doc.text('★ Google Reviews', W / 2, 182, { align: 'center' });
+    doc.text('★ Google Reviews', W / 2, textStartY + 138, { align: 'center' });
 
     // Subheadline
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(120, 120, 140);
-    doc.text(subheadline || 'Scan with your phone camera or Google Lens', W / 2, 192, { align: 'center', maxWidth: 140 });
+    doc.text(subheadline || 'Scan with your phone camera or Google Lens', W / 2, textStartY + 147, { align: 'center', maxWidth: 140 });
 
     // Short URL
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...hexToRgb(dotColor));
-    doc.text(`reviewqr.in/r/${shortCode}`, W / 2, 204, { align: 'center' });
+    doc.text(`reviewqr.in/r/${shortCode}`, W / 2, textStartY + 158, { align: 'center' });
 
     // Bottom accent bar
     doc.setFillColor(...hexToRgb(dotColor));
@@ -387,12 +505,184 @@ export function QrStudioPage() {
             </CardContent>
           </Card>
 
+          {/* Owner Logo & Branding */}
+          <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-3.5 w-3.5 text-purple-600" />
+                  <span>3. Owner Logo & Branding</span>
+                </div>
+                {logoUrl && (
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                    Active
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {/* Logo Upload Box / Preview */}
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg, image/svg+xml, image/webp"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+
+                {logoUrl ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-1 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                        <img src={logoUrl} alt="Owner Logo" className="h-full w-full object-contain rounded-lg" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>Owner Logo</span>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        </div>
+                        <p className="text-[11px] text-slate-500">Ready for Standee & Vector QR</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingLogo}
+                        className="h-8 px-2.5 rounded-lg text-xs font-bold border-slate-200 dark:border-slate-700 cursor-pointer"
+                        title="Change Logo"
+                      >
+                        Change
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveLogo}
+                        className="h-8 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 rounded-lg text-xs font-bold cursor-pointer"
+                        title="Remove Logo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    className="w-full border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-600 rounded-2xl p-4 text-center transition-colors cursor-pointer bg-slate-50/50 dark:bg-slate-900/30 group"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 mx-auto flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-2xs">
+                      {isUploadingLogo ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                      ) : (
+                        <Upload className="h-5 w-5 text-purple-600" />
+                      )}
+                    </div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">
+                      {isUploadingLogo ? 'Uploading logo…' : 'Upload Business / Owner Logo'}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      PNG, JPG, SVG, WebP up to 5MB (Square works best)
+                    </p>
+                  </button>
+                )}
+              </div>
+
+              {/* Toggles when logo is present */}
+              {logoUrl && (
+                <div className="space-y-2.5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Standee Top Emblem
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Show logo at the top of the standee poster
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowStandeeLogo(!showStandeeLogo)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        showStandeeLogo ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          showStandeeLogo ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        QR Code Center Logo
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Embed logo inside the middle of the QR code
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowQrCenterLogo(!showQrCenterLogo)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        showQrCenterLogo ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          showQrCenterLogo ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {showQrCenterLogo && (
+                    <div className="pt-2 flex items-center justify-between">
+                      <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Center Logo Size
+                      </Label>
+                      <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-0.5">
+                        {[
+                          { size: 0.25, label: 'Small' },
+                          { size: 0.35, label: 'Standard' },
+                          { size: 0.45, label: 'Large' }
+                        ].map((s) => (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => setLogoSize(s.size)}
+                            className={`px-2 py-0.5 rounded-md font-bold text-[11px] transition-colors cursor-pointer ${
+                              logoSize === s.size
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Palette & QR Dot Style */}
           <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0B101B] shadow-xs">
             <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <Palette className="h-3.5 w-3.5 text-purple-600" />
-                <span>3. Vector QR Style & Colors</span>
+                <span>4. Vector QR Style & Colors</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
@@ -477,10 +767,21 @@ export function QrStudioPage() {
                             dots: dotType,
                             cornersSquare: cornerSquareType,
                             cornersDot: 'dot',
-                            color: dotColor
+                            color: dotColor,
+                            logoUrl,
+                            showStandeeLogo,
+                            showQrCenterLogo,
+                            logoSize
                           }
                         })
                       });
+                      if (logoUrl !== activeBusiness.logoUrl) {
+                        await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+                          method: 'PATCH',
+                          body: JSON.stringify({ logoUrl })
+                        });
+                        refreshBusinesses?.();
+                      }
                       setIsSaved(true);
                       setTimeout(() => setIsSaved(false), 2500);
                     } catch (err) {
@@ -542,12 +843,29 @@ export function QrStudioPage() {
                 posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-9' : ''
               }`}
             >
-              {/* Business Badge */}
-              <div className="space-y-1.5 mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-extrabold shadow-2xs">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
-                  <span>{activeBusiness?.name || 'My Business'}</span>
-                </div>
+              {/* Business Badge with optional Owner Logo */}
+              <div className="space-y-2 mb-4 flex flex-col items-center">
+                {showStandeeLogo && logoUrl ? (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="h-14 w-14 rounded-2xl border-2 border-slate-200 bg-white p-1 shadow-md overflow-hidden flex items-center justify-center">
+                      <img
+                        src={logoUrl}
+                        alt={activeBusiness?.name || 'Business Logo'}
+                        className="h-full w-full object-contain rounded-xl"
+                      />
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-extrabold shadow-2xs">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
+                      <span>{activeBusiness?.name || 'My Business'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-extrabold shadow-2xs">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dotColor }} />
+                    <span>{activeBusiness?.name || 'My Business'}</span>
+                  </div>
+                )}
+
                 <h3 className="text-lg font-black tracking-tight text-slate-900 leading-snug">
                   {headline}
                 </h3>
