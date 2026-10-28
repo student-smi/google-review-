@@ -53,6 +53,13 @@ export function KeywordManagementPage() {
   const [newChipInput, setNewChipInput] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState(activeBusiness?.category || 'services');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [detailedAiSuggestions, setDetailedAiSuggestions] = useState<Array<{
+    keyword: string;
+    type: 'local_seo' | 'product_service' | 'experience_topic';
+    reason: string;
+    source: string;
+    confidence: string;
+  }>>([]);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiStatusMsg, setAiStatusMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -100,18 +107,40 @@ export function KeywordManagementPage() {
     setIsGeneratingAi(true);
     setAiStatusMsg('');
     try {
-      const data = await apiFetch<{ success: boolean; keywords: string[] }>('/api/ai/suggest-keywords', {
+      const data = await apiFetch<{
+        success: boolean;
+        data?: {
+          businessName: string;
+          businessCategory: string;
+          location: string;
+          keywordSuggestions: Array<{
+            keyword: string;
+            type: 'local_seo' | 'product_service' | 'experience_topic';
+            reason: string;
+            source: string;
+            confidence: string;
+          }>;
+        };
+        keywords?: string[];
+      }>('/api/ai/local-seo-keywords', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessId: activeBusiness.id,
+          placeId: activeBusiness.googlePlaceId,
           businessName: activeBusiness.name,
           category: selectedIndustry || activeBusiness.category || 'services',
           city: activeBusiness.city,
           address: activeBusiness.address
         })
       });
-      if (data?.success && Array.isArray(data.keywords)) {
+
+      if (data?.success && data?.data?.keywordSuggestions) {
+        const items = data.data.keywordSuggestions;
+        setDetailedAiSuggestions(items);
+        setAiSuggestions(items.map((k) => k.keyword));
+        setAiStatusMsg(`AI Places Engine generated ${items.length} category & location-specific keywords for "${activeBusiness.name}"!`);
+      } else if (data?.success && Array.isArray(data.keywords)) {
         setAiSuggestions(data.keywords);
         setAiStatusMsg(`AI recommended ${data.keywords.length} authentic highlight keywords for "${activeBusiness.name}"!`);
       } else {
@@ -418,19 +447,40 @@ export function KeywordManagementPage() {
 
               {/* AI Generated Suggestion Pills */}
               {aiSuggestions.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Click any tag to add directly to your standee:
-                  </span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Click any tag to add directly to your standee:
+                    </span>
+                    <Link
+                      to="/dashboard/local-seo"
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1"
+                    >
+                      <span>Full Places SEO Report</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                   <div className="flex flex-wrap gap-2 p-3.5 rounded-2xl bg-indigo-50/40 border border-indigo-100">
                     {aiSuggestions.map((tag) => {
                       const alreadyAdded = chips.some((c) => c.toLowerCase() === tag.toLowerCase());
+                      const detail = detailedAiSuggestions.find((d) => d.keyword.toLowerCase() === tag.toLowerCase());
+
+                      let typeBadge = null;
+                      if (detail?.type === 'local_seo') {
+                        typeBadge = <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 font-bold">Local</span>;
+                      } else if (detail?.type === 'product_service') {
+                        typeBadge = <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 font-bold">Product</span>;
+                      } else if (detail?.type === 'experience_topic') {
+                        typeBadge = <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-bold">Review</span>;
+                      }
+
                       return (
                         <button
                           key={tag}
                           type="button"
                           onClick={() => handleAddChip(tag)}
                           disabled={alreadyAdded}
+                          title={detail?.reason || tag}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all select-none ${
                             alreadyAdded
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 opacity-60 cursor-not-allowed shadow-2xs'
@@ -443,6 +493,7 @@ export function KeywordManagementPage() {
                             <Plus className="h-3 w-3 text-indigo-600" />
                           )}
                           <span>{tag}</span>
+                          {typeBadge}
                           {alreadyAdded && <span className="text-[9px] text-emerald-600 font-bold uppercase ml-0.5">Added</span>}
                         </button>
                       );

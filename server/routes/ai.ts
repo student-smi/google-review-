@@ -2,7 +2,12 @@ import { Hono } from 'hono';
 import { eq, and, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { businesses, aiUsageDaily, aiDraftEvents, rateLimits } from '../db/schema';
-import { generateCustomerReviewDraft, generateOwnerReplies, generateBusinessKeywords } from '../ai/provider';
+import {
+  generateCustomerReviewDraft,
+  generateOwnerReplies,
+  generateBusinessKeywords,
+  generateLocalSeoKeywords
+} from '../ai/provider';
 import type { Env } from './public';
 
 export const aiRoutes = new Hono<{ Bindings: Env }>();
@@ -249,6 +254,22 @@ aiRoutes.post('/suggest-keywords', async (c) => {
     }
   }
 
+  if (body.detailed) {
+    const detailedResult = await generateLocalSeoKeywords(c.env.AI, {
+      businessName: businessName || 'Local Business',
+      category,
+      city,
+      address,
+      summary,
+      types
+    });
+    return c.json({
+      success: true,
+      data: detailedResult,
+      keywords: detailedResult.keywordSuggestions.map((k) => k.keyword)
+    });
+  }
+
   const result = await generateBusinessKeywords(c.env.AI, {
     businessName: businessName || 'Local Business',
     category,
@@ -264,4 +285,139 @@ aiRoutes.post('/suggest-keywords', async (c) => {
     usedFallback: result.usedFallback
   });
 });
+
+// Dedicated Google Places AI-Powered Local SEO Keyword Engine
+aiRoutes.post('/local-seo-keywords', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  let {
+    businessId,
+    placeId,
+    businessName,
+    category,
+    city,
+    address,
+    summary,
+    refresh
+  } = body;
+
+  const db = getDb(c.env.DB);
+  let targetPlaceId = placeId;
+
+  // 1. If businessId provided, look up in database
+  if (businessId) {
+    try {
+      const [biz] = await db
+        .select()
+        .from(businesses)
+        .where(eq(businesses.id, businessId))
+        .limit(1);
+      if (biz) {
+        businessName = businessName || biz.name;
+        category = category || biz.category;
+        city = city || biz.city;
+        address = address || biz.address;
+        targetPlaceId = targetPlaceId || biz.googlePlaceId;
+      }
+    } catch (err) {
+      console.warn('Could not query business for local SEO keywords:', err);
+    }
+  }
+
+  const cacheKey = `localseo:${targetPlaceId || businessId || (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+
+  // 2. Check KV cache if available and refresh not forced
+  if (!refresh && c.env.KV) {
+    try {
+      const cached = await c.env.KV.get(cacheKey, { type: 'json' });
+      if (cached && (cached as any).keywordSuggestions?.length > 0) {
+        return c.json({
+          success: true,
+          data: cached,
+          fromCache: true
+        });
+      }
+    } catch (kvErr) {
+      console.warn('KV cache read error:', kvErr);
+    }
+  }
+
+  // 3. Retrieve verified data from Google Places API (New) if placeId is present
+  const apiKey = (c.env as any).GOOGLE_PLACES_API_KEY || 'AIzaSyB9e0-qVxnONGLRXMWVYCAjkc8hkTo0mwE';
+  let types: string[] = [];
+  let websiteUri: string | null = null;
+  let rating: number | null = null;
+  let userRatingCount: number | null = null;
+  let reviews: Array<{ text: string; rating?: number }> = [];
+
+  if (targetPlaceId) {
+    try {
+      const placesUrl = `https://places.googleapis.com/v1/places/${targetPlaceId}`;
+      const placeRes = await fetch(placesUrl, {
+        method: 'GET',
+        headers: {
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'id,displayName,primaryType,primaryTypeDisplayName,types,formattedAddress,websiteUri,rating,userRatingCount,editorialSummary,reviews'
+        }
+      });
+
+      if (placeRes.ok) {
+        const placeData = (await placeRes.json()) as any;
+        businessName = placeData.displayName?.text || businessName;
+        category = placeData.primaryTypeDisplayName?.text || placeData.primaryType?.replace(/_/g, ' ') || category;
+        address = placeData.formattedAddress || address;
+        types = Array.isArray(placeData.types) ? placeData.types : [];
+        summary = placeData.editorialSummary?.text || summary;
+        websiteUri = placeData.websiteUri || null;
+        rating = placeData.rating || null;
+        userRatingCount = placeData.userRatingCount || null;
+
+        // Extract limited review text snippets according to policy
+        if (Array.isArray(placeData.reviews)) {
+          reviews = placeData.reviews
+            .filter((r: any) => r?.text?.text)
+            .slice(0, 5)
+            .map((r: any) => ({
+              text: r.text.text,
+              rating: r.rating
+            }));
+        }
+      } else {
+        const errText = await placeRes.text();
+        console.warn('Google Places API response status:', placeRes.status, errText);
+      }
+    } catch (placesErr) {
+      console.warn('Google Places API lookup failed, falling back to database parameters:', placesErr);
+    }
+  }
+
+  // 4. Run AI Keyword Analysis
+  const result = await generateLocalSeoKeywords(c.env.AI, {
+    businessName: businessName || 'Local Business',
+    category,
+    city,
+    address,
+    types,
+    summary,
+    websiteUri,
+    rating,
+    userRatingCount,
+    reviews
+  });
+
+  // 5. Store in KV Cache (24h TTL)
+  if (c.env.KV && result?.keywordSuggestions?.length > 0) {
+    try {
+      await c.env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 86400 });
+    } catch (kvPutErr) {
+      console.warn('KV cache write error:', kvPutErr);
+    }
+  }
+
+  return c.json({
+    success: true,
+    data: result,
+    fromCache: false
+  });
+});
+
 

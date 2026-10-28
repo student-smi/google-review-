@@ -570,3 +570,457 @@ RULES:
 
   return { keywords: dynamicKeywords, usedFallback: true };
 }
+
+// ====================================================================
+// AI-POWERED LOCAL SEO KEYWORD SUGGESTION ENGINE (Google Places New)
+// ====================================================================
+
+export interface LocalSeoKeywordSuggestion {
+  keyword: string;
+  type: 'local_seo' | 'product_service' | 'experience_topic';
+  reason: string;
+  source: 'place_data' | 'verified_business_data' | 'available_review_themes' | 'inference';
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface LocalSeoAnalysisOutput {
+  businessName: string;
+  businessCategory: string;
+  location: string;
+  keywordSuggestions: LocalSeoKeywordSuggestion[];
+  customerQuestions: string[];
+}
+
+export interface LocalSeoAnalysisInput {
+  businessName: string;
+  category?: string | null;
+  locality?: string | null;
+  city?: string | null;
+  address?: string | null;
+  types?: string[] | null;
+  summary?: string | null;
+  websiteUri?: string | null;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  reviews?: Array<{ text: string; rating?: number }> | null;
+}
+
+/**
+ * Extracts locality / neighborhood and city from Google Places formatted address
+ */
+export function extractLocalityAndCity(
+  address?: string | null,
+  fallbackCity?: string | null
+): { locality: string; city: string } {
+  if (!address || typeof address !== 'string') {
+    return { locality: '', city: fallbackCity || '' };
+  }
+
+  const parts = address
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  let city = fallbackCity || '';
+  let locality = '';
+
+  const stateRegex = /^(gujarat|maharashtra|rajasthan|delhi|karnataka|tamil nadu|uttar pradesh|madhya pradesh|punjab|haryana|kerala|west bengal|telangana|andhra pradesh|goa|bihar)$/i;
+
+  for (let i = parts.length - 1; i >= 0; i--) {
+    let part = parts[i];
+    if (/india/i.test(part)) continue;
+    if (/^\d{6}$/.test(part) || /\b\d{6}\b/.test(part)) {
+      part = part.replace(/\b\d{6}\b/g, '').trim();
+    }
+    if (!part || stateRegex.test(part)) continue;
+
+    if (!city) {
+      city = part;
+      continue;
+    }
+    if (!locality && part.toLowerCase() !== city.toLowerCase()) {
+      locality = part;
+      break;
+    }
+  }
+
+  return {
+    locality: locality || '',
+    city: city || fallbackCity || 'India'
+  };
+}
+
+/**
+ * Deduplicate keyword suggestions case-insensitively
+ */
+export function deduplicateKeywordSuggestions(
+  suggestions: LocalSeoKeywordSuggestion[]
+): LocalSeoKeywordSuggestion[] {
+  const seen = new Set<string>();
+  const result: LocalSeoKeywordSuggestion[] = [];
+
+  for (const s of suggestions) {
+    if (!s || !s.keyword || typeof s.keyword !== 'string') continue;
+    const norm = s.keyword.toLowerCase().trim();
+    if (!norm || seen.has(norm)) continue;
+    seen.add(norm);
+    result.push({
+      ...s,
+      keyword: s.keyword.trim()
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Deterministic local SEO keyword fallback generator tailored to verified business signals
+ */
+export function buildDeterministicLocalSeoFallback(
+  input: LocalSeoAnalysisInput
+): LocalSeoAnalysisOutput {
+  const { businessName, category, types, address, summary, reviews } = input;
+  const { locality, city } = extractLocalityAndCity(address, input.city);
+
+  const locString = locality && city && locality !== city
+    ? `${locality}, ${city}`
+    : locality || city || 'Local Area';
+
+  const contextStr = `${businessName} ${category || ''} ${(types || []).join(' ')} ${summary || ''} ${address || ''}`.toLowerCase();
+
+  const suggestions: LocalSeoKeywordSuggestion[] = [];
+
+  // Determine detected category display name
+  let detectedCategory = category || 'Local Business';
+  if (contextStr.includes('croma') || contextStr.includes('electronics') || contextStr.includes('gadgets')) {
+    detectedCategory = 'Electronics Store';
+  } else if (contextStr.includes('dental') || contextStr.includes('clinic')) {
+    detectedCategory = 'Dental Clinic';
+  } else if (contextStr.includes('sweet') || contextStr.includes('bakery')) {
+    detectedCategory = 'Sweets & Bakery';
+  } else if (contextStr.includes('restaurant') || contextStr.includes('cafe')) {
+    detectedCategory = 'Restaurant & Cafe';
+  } else if (contextStr.includes('salon') || contextStr.includes('spa')) {
+    detectedCategory = 'Salon & Spa';
+  } else if (contextStr.includes('marketing') || contextStr.includes('agency') || contextStr.includes('seo') || contextStr.includes('upmark')) {
+    detectedCategory = 'Digital Marketing Agency';
+  } else if (contextStr.includes('garage') || contextStr.includes('car') || contextStr.includes('auto')) {
+    detectedCategory = 'Automobile Service';
+  } else if (contextStr.includes('coaching') || contextStr.includes('classes') || contextStr.includes('education')) {
+    detectedCategory = 'Education & Coaching';
+  } else if (contextStr.includes('jewel')) {
+    detectedCategory = 'Jewellery Showroom';
+  }
+
+  const categoryLower = detectedCategory.toLowerCase();
+
+  // 1. LOCAL SEO SEARCHES (Location-based high-intent queries)
+  if (locality && city && locality.toLowerCase() !== city.toLowerCase()) {
+    suggestions.push({
+      keyword: `${categoryLower} in ${locality}`,
+      type: 'local_seo',
+      reason: `Primary local pack query for nearby customers searching in ${locality}.`,
+      source: 'place_data',
+      confidence: 'high'
+    });
+    suggestions.push({
+      keyword: `${categoryLower} in ${locality} ${city}`,
+      type: 'local_seo',
+      reason: `High intent geo-qualified discovery query for ${city} residents.`,
+      source: 'place_data',
+      confidence: 'high'
+    });
+    suggestions.push({
+      keyword: `${businessName} ${locality} ${city}`,
+      type: 'local_seo',
+      reason: `Brand + location exact match query for directions and store hours.`,
+      source: 'verified_business_data',
+      confidence: 'high'
+    });
+  } else {
+    suggestions.push({
+      keyword: `${categoryLower} in ${city || 'my area'}`,
+      type: 'local_seo',
+      reason: `Primary city-wide local discovery phrase for ${city}.`,
+      source: 'place_data',
+      confidence: 'high'
+    });
+    suggestions.push({
+      keyword: `best ${categoryLower} near me`,
+      type: 'local_seo',
+      reason: `High-frequency "near me" mobile search query with immediate buyer intent.`,
+      source: 'inference',
+      confidence: 'high'
+    });
+    suggestions.push({
+      keyword: `${businessName} ${city}`,
+      type: 'local_seo',
+      reason: `Direct brand navigational query for customers searching for this specific business.`,
+      source: 'verified_business_data',
+      confidence: 'high'
+    });
+  }
+
+  // 2. PRODUCTS & SERVICES (Verified or inferred from industry category)
+  if (detectedCategory === 'Electronics Store') {
+    suggestions.push(
+      { keyword: 'mobile phones', type: 'product_service', reason: 'High-volume consumer category for electronics retailers.', source: 'place_data', confidence: 'high' },
+      { keyword: 'laptops', type: 'product_service', reason: 'Core product category with frequent in-store inquiries.', source: 'inference', confidence: 'medium' },
+      { keyword: 'televisions', type: 'product_service', reason: 'Major home entertainment department.', source: 'inference', confidence: 'medium' },
+      { keyword: 'home appliances', type: 'product_service', reason: 'Essential large appliance category.', source: 'inference', confidence: 'medium' },
+      { keyword: 'smart watches & accessories', type: 'product_service', reason: 'High-attachment gadget category.', source: 'inference', confidence: 'medium' }
+    );
+  } else if (detectedCategory === 'Dental Clinic') {
+    suggestions.push(
+      { keyword: 'root canal treatment', type: 'product_service', reason: 'High-search clinical dental procedure.', source: 'inference', confidence: 'high' },
+      { keyword: 'teeth whitening', type: 'product_service', reason: 'Popular cosmetic dental service.', source: 'inference', confidence: 'medium' },
+      { keyword: 'dental implants', type: 'product_service', reason: 'High-value restorative treatment.', source: 'inference', confidence: 'medium' },
+      { keyword: 'routine dental checkup', type: 'product_service', reason: 'Standard recurring preventive service.', source: 'place_data', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Sweets & Bakery') {
+    suggestions.push(
+      { keyword: 'pure desi ghee sweets', type: 'product_service', reason: 'Top quality signal for Indian sweet customers.', source: 'inference', confidence: 'high' },
+      { keyword: 'kaju katli', type: 'product_service', reason: 'Highest-demand traditional delicacy.', source: 'inference', confidence: 'high' },
+      { keyword: 'custom birthday cakes', type: 'product_service', reason: 'Frequent celebration order inquiry.', source: 'inference', confidence: 'medium' },
+      { keyword: 'fresh traditional farsan', type: 'product_service', reason: 'Daily high-velocity snack item.', source: 'place_data', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Restaurant & Cafe') {
+    suggestions.push(
+      { keyword: 'delicious multicuisine dining', type: 'product_service', reason: 'Primary food experience offering.', source: 'place_data', confidence: 'high' },
+      { keyword: 'special lunch thali', type: 'product_service', reason: 'Popular daytime meal choice.', source: 'inference', confidence: 'medium' },
+      { keyword: 'fresh brewed coffee', type: 'product_service', reason: 'Core cafe beverage draw.', source: 'inference', confidence: 'medium' },
+      { keyword: 'takeaway & fast delivery', type: 'product_service', reason: 'Essential modern dining convenience.', source: 'inference', confidence: 'medium' }
+    );
+  } else if (detectedCategory === 'Salon & Spa') {
+    suggestions.push(
+      { keyword: 'hair styling & haircut', type: 'product_service', reason: 'Core grooming service.', source: 'place_data', confidence: 'high' },
+      { keyword: 'keratin hair treatment', type: 'product_service', reason: 'High-ticket salon treatment.', source: 'inference', confidence: 'medium' },
+      { keyword: 'bridal makeup', type: 'product_service', reason: 'Peak festival and wedding demand service.', source: 'inference', confidence: 'medium' },
+      { keyword: 'skin facial & spa', type: 'product_service', reason: 'Standard wellness offering.', source: 'inference', confidence: 'medium' }
+    );
+  } else if (detectedCategory === 'Digital Marketing Agency') {
+    suggestions.push(
+      { keyword: 'creative marketing strategy', type: 'product_service', reason: 'Core strategic business offering.', source: 'verified_business_data', confidence: 'high' },
+      { keyword: 'SEO ranking growth', type: 'product_service', reason: 'High-intent client search objective.', source: 'verified_business_data', confidence: 'high' },
+      { keyword: 'social media management', type: 'product_service', reason: 'Continuous retainer service.', source: 'inference', confidence: 'medium' },
+      { keyword: 'Google ads & paid campaigns', type: 'product_service', reason: 'Direct performance marketing service.', source: 'inference', confidence: 'medium' }
+    );
+  } else {
+    suggestions.push(
+      { keyword: `${categoryLower} services`, type: 'product_service', reason: `Core professional offering for ${detectedCategory}.`, source: 'place_data', confidence: 'high' },
+      { keyword: 'custom solutions', type: 'product_service', reason: 'Tailored client requests.', source: 'inference', confidence: 'medium' },
+      { keyword: 'quality consultation', type: 'product_service', reason: 'Professional advisory offering.', source: 'inference', confidence: 'medium' }
+    );
+  }
+
+  // 3. CUSTOMER EXPERIENCE TOPICS (Verified from reviews or proven sentiment signals)
+  let reviewThemesFound = false;
+  if (reviews && Array.isArray(reviews) && reviews.length > 0) {
+    const combinedReviewText = reviews.map((r) => r.text || '').join(' ').toLowerCase();
+
+    if (combinedReviewText.includes('staff') || combinedReviewText.includes('helpful') || combinedReviewText.includes('polite')) {
+      suggestions.push({
+        keyword: 'staff helpfulness',
+        type: 'experience_topic',
+        reason: 'Repeatedly praised by customers in Google Maps reviews.',
+        source: 'available_review_themes',
+        confidence: 'high'
+      });
+      reviewThemesFound = true;
+    }
+    if (combinedReviewText.includes('clean') || combinedReviewText.includes('hygien')) {
+      suggestions.push({
+        keyword: 'store cleanliness & hygiene',
+        type: 'experience_topic',
+        reason: 'Highlighted by visitors as an important comfort factor.',
+        source: 'available_review_themes',
+        confidence: 'high'
+      });
+      reviewThemesFound = true;
+    }
+    if (combinedReviewText.includes('price') || combinedReviewText.includes('worth') || combinedReviewText.includes('rate')) {
+      suggestions.push({
+        keyword: 'value for money',
+        type: 'experience_topic',
+        reason: 'Verified theme in customer sentiment regarding pricing fairness.',
+        source: 'available_review_themes',
+        confidence: 'high'
+      });
+      reviewThemesFound = true;
+    }
+    if (combinedReviewText.includes('demo') || combinedReviewText.includes('explain') || combinedReviewText.includes('guid')) {
+      suggestions.push({
+        keyword: 'product demonstration & guidance',
+        type: 'experience_topic',
+        reason: 'Validated in customer reviews for attentive in-store walkthroughs.',
+        source: 'available_review_themes',
+        confidence: 'high'
+      });
+      reviewThemesFound = true;
+    }
+  }
+
+  // Fallback experience topics if review snippets are sparse or not permitted
+  if (!reviewThemesFound) {
+    suggestions.push(
+      { keyword: 'staff helpfulness', type: 'experience_topic', reason: 'Critical sentiment factor directly driving 5-star ratings.', source: 'inference', confidence: 'high' },
+      { keyword: 'product demonstration', type: 'experience_topic', reason: 'Builds customer confidence and post-purchase satisfaction.', source: 'inference', confidence: 'medium' },
+      { keyword: 'billing experience', type: 'experience_topic', reason: 'Smooth, swift checkout creates positive lasting impression.', source: 'inference', confidence: 'medium' },
+      { keyword: 'shopping experience', type: 'experience_topic', reason: 'Comprehensive measure of visitor satisfaction.', source: 'inference', confidence: 'high' }
+    );
+  }
+
+  const deduplicated = deduplicateKeywordSuggestions(suggestions);
+
+  return {
+    businessName,
+    businessCategory: detectedCategory,
+    location: locString,
+    keywordSuggestions: deduplicated.slice(0, 15),
+    customerQuestions: [
+      'What product or service did you use or explore today?',
+      'How was your in-person experience with our staff, service, and guidance?'
+    ]
+  };
+}
+
+/**
+ * Main AI-Powered Local SEO Keyword Suggestion Engine
+ */
+export async function generateLocalSeoKeywords(
+  aiBinding: any,
+  input: LocalSeoAnalysisInput
+): Promise<LocalSeoAnalysisOutput> {
+  const fallback = buildDeterministicLocalSeoFallback(input);
+
+  if (!aiBinding) {
+    return fallback;
+  }
+
+  const { locality, city } = extractLocalityAndCity(input.address, input.city);
+  const locationDesc = locality && city && locality !== city
+    ? `${locality}, ${city}`
+    : locality || city || 'India';
+
+  const reviewSnippets = (input.reviews || [])
+    .slice(0, 5)
+    .map((r, i) => `Review ${i + 1} (${r.rating || 5}★): "${r.text.substring(0, 200)}"`)
+    .join('\n');
+
+  const systemPrompt = `You are a Senior Digital Marketer, Local SEO Expert, Google Business Profile Specialist, and AI Engineer.
+Your task is to analyze real business data retrieved from Google Places API (New) and generate an explainable, category-specific, location-specific Local SEO keyword report.
+
+RULES:
+1. Generate strictly between 8 and 15 tailored suggestions.
+2. Every suggestion MUST have:
+   - "keyword": 2 to 4 words search phrase.
+   - "type": strictly "local_seo" | "product_service" | "experience_topic".
+     * "local_seo": Location-based local search phrases (e.g. "[category] in [locality]", "[businessName] [locality] [city]").
+     * "product_service": Verified or strongly inferred offerings of this business. Never invent products not sold by this business.
+     * "experience_topic": Customer experience themes (e.g. staff helpfulness, product demonstration, billing speed, cleanliness).
+   - "reason": A 1-sentence digital marketing rationale explaining why this keyword matters for local discovery or customer sentiment.
+   - "source": strictly "place_data" | "verified_business_data" | "available_review_themes" | "inference".
+   - "confidence": strictly "high" | "medium" | "low".
+3. Formulate 2 open-ended, policy-safe "customerQuestions" (e.g. "What product or service did you use?", "How was your overall experience?"). Never tell customers what words to include.
+4. Output strictly valid JSON with this exact structure:
+{
+  "businessName": "${input.businessName}",
+  "businessCategory": "${fallback.businessCategory}",
+  "location": "${locationDesc}",
+  "keywordSuggestions": [
+    {
+      "keyword": "string",
+      "type": "local_seo",
+      "reason": "string",
+      "source": "place_data",
+      "confidence": "high"
+    }
+  ],
+  "customerQuestions": [
+    "string",
+    "string"
+  ]
+}
+5. Do NOT include markdown blocks or any other text outside the JSON object.`;
+
+  const userPrompt = `Analyze Google Place:
+Business Name: "${input.businessName}"
+Category: "${fallback.businessCategory}"
+Google Types: [${(input.types || []).join(', ')}]
+Address: "${input.address || ''}"
+Locality: "${locality}"
+City: "${city}"
+${input.summary ? `Editorial Summary: "${input.summary}"` : ''}
+${input.rating ? `Rating: ${input.rating}★ (${input.userRatingCount || 0} reviews)` : ''}
+${reviewSnippets ? `Recent Review Snippets:\n${reviewSnippets}` : ''}
+
+Generate the JSON report.`;
+
+  try {
+    const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 1200,
+      temperature: 0.2
+    });
+
+    let raw = '';
+    if (typeof response === 'string') {
+      raw = response;
+    } else if (typeof response?.response === 'string') {
+      raw = response.response;
+    } else {
+      raw = JSON.stringify(response || {});
+    }
+
+    raw = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      if (Array.isArray(parsed?.keywordSuggestions) && parsed.keywordSuggestions.length >= 4) {
+        const validTypes = new Set(['local_seo', 'product_service', 'experience_topic']);
+        const validSources = new Set(['place_data', 'verified_business_data', 'available_review_themes', 'inference']);
+        const validConf = new Set(['high', 'medium', 'low']);
+
+        const sanitizedSuggestions: LocalSeoKeywordSuggestion[] = [];
+
+        for (const item of parsed.keywordSuggestions) {
+          if (!item?.keyword || typeof item.keyword !== 'string') continue;
+          const cleanKw = item.keyword.replace(/^[-*•\d.]+\s*/, '').trim();
+          if (!cleanKw || cleanKw.length < 2 || cleanKw.length > 50) continue;
+
+          sanitizedSuggestions.push({
+            keyword: cleanKw,
+            type: validTypes.has(item.type) ? item.type : 'local_seo',
+            reason: typeof item.reason === 'string' && item.reason.length > 5 ? item.reason : `Relevant keyword for ${cleanKw}`,
+            source: validSources.has(item.source) ? item.source : 'inference',
+            confidence: validConf.has(item.confidence) ? item.confidence : 'medium'
+          });
+        }
+
+        const deduplicated = deduplicateKeywordSuggestions(sanitizedSuggestions);
+
+        if (deduplicated.length >= 6) {
+          return {
+            businessName: parsed.businessName || input.businessName,
+            businessCategory: parsed.businessCategory || fallback.businessCategory,
+            location: parsed.location || locationDesc,
+            keywordSuggestions: deduplicated.slice(0, 15),
+            customerQuestions: Array.isArray(parsed.customerQuestions) && parsed.customerQuestions.length >= 2
+              ? parsed.customerQuestions
+              : fallback.customerQuestions
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('AI local SEO keyword generation failed, using tailored deterministic fallback:', err);
+  }
+
+  return fallback;
+}
+
