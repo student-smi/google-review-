@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Building2,
   Save,
-  Cloud,
   Sparkles,
   Plus,
   X,
@@ -434,32 +433,6 @@ export function SettingsPage() {
             <span>Save Store Settings</span>
           </Button>
         </CardFooter>
-      </Card>
-
-      {/* Cloudflare Quota & Tier Card */}
-      <Card className="rounded-2xl border-slate-200/80 bg-white shadow-xs">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-              <Cloud className="h-4 w-4 text-sky-500" />
-              <span>Cloudflare Free-Tier Allocation</span>
-            </CardTitle>
-            <span className="rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold">
-              100% Free Forever
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-5 space-y-3">
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-1.5">
-            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              <span>Zero Maintenance Infrastructure</span>
-            </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              D1 SQLite edge database, KV edge caching, Workers AI (Llama 3.1 8B), and client-side vector rendering operate fully within Cloudflare’s free tier limits with zero surprise invoices.
-            </p>
-          </div>
-        </CardContent>
       </Card>
     </div>
   );
