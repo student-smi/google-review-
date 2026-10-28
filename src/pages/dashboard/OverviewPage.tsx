@@ -307,126 +307,74 @@ export function OverviewPage() {
         )}
       </div>
 
-      {/* 4. ACTIVE QR STANDEES & FREE TIER SAFEGUARDS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Active QR Standees Table */}
-        <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] shadow-md p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                Active QR Standees ({qrList.length})
-              </h3>
-              <p className="text-xs text-slate-500">
-                Connected directly to {activeBusiness?.name || 'your store'}
-              </p>
-            </div>
-            <NavLink to="/dashboard/qr">
-              <button className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer">
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add Standee</span>
-              </button>
-            </NavLink>
+      {/* 4. ACTIVE QR STANDEES */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] shadow-md p-5 space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+              Active QR Standees ({qrList.length})
+            </h3>
+            <p className="text-xs text-slate-500">
+              Connected directly to {activeBusiness?.name || 'your store'}
+            </p>
           </div>
-
-          <div className="space-y-2">
-            {qrList.length === 0 && !isLoading ? (
-              <div className="py-6 text-center space-y-2">
-                <p className="text-xs text-slate-500">No standees created yet.</p>
-                <NavLink to="/dashboard/qr">
-                  <Button size="sm" variant="outline" className="text-xs font-bold rounded-xl gap-1.5">
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Generate First Standee</span>
-                  </Button>
-                </NavLink>
-              </div>
-            ) : (
-              qrList.map((qr) => (
-                <div
-                  key={qr.id}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
-                      <QrCode className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white">{qr.label}</h4>
-                      <p className="text-[11px] font-mono text-purple-600 dark:text-purple-400">/r/{qr.code}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <button
-                      onClick={() => handleCopyLink(qr.code)}
-                      className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs font-semibold cursor-pointer"
-                    >
-                      {copiedCode === qr.code ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span>{copiedCode === qr.code ? 'Copied' : 'Copy'}</span>
-                    </button>
-
-                    <a
-                      href={`/r/${qr.code}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs font-semibold"
-                    >
-                      <span>Test Flow</span>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </a>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <NavLink to="/dashboard/qr">
+            <button className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer">
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Standee</span>
+            </button>
+          </NavLink>
         </div>
 
-        {/* Right: Cloudflare Free Tier Safeguard Card */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F1420] shadow-md p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
-                Resource Safeguards
-              </h3>
-              <p className="text-xs text-slate-500">Cloudflare Free Tier Budget</p>
+        <div className="space-y-2">
+          {qrList.length === 0 && !isLoading ? (
+            <div className="py-6 text-center space-y-2">
+              <p className="text-xs text-slate-500">No standees created yet.</p>
+              <NavLink to="/dashboard/qr">
+                <Button size="sm" variant="outline" className="text-xs font-bold rounded-xl gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Generate First Standee</span>
+                </Button>
+              </NavLink>
             </div>
-            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full font-mono">
-              ₹0 Forever
-            </span>
-          </div>
+          ) : (
+            qrList.map((qr) => (
+              <div
+                key={qr.id}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
+                    <QrCode className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white">{qr.label}</h4>
+                    <p className="text-[11px] font-mono text-purple-600 dark:text-purple-400">/r/{qr.code}</p>
+                  </div>
+                </div>
 
-          <div className="space-y-3 text-xs">
-            {/* Workers AI Progress */}
-            <div className="space-y-1">
-              <div className="flex justify-between font-semibold text-slate-700 dark:text-slate-300">
-                <span>Workers AI (Llama 3.1)</span>
-                <span className="font-mono">0 / 25 daily</span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-pink-500"
-                  style={{ width: '0%' }}
-                />
-              </div>
-              <p className="text-[10px] text-slate-500">25 review drafts daily per business location</p>
-            </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    onClick={() => handleCopyLink(qr.code)}
+                    className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                  >
+                    {copiedCode === qr.code ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedCode === qr.code ? 'Copied' : 'Copy'}</span>
+                  </button>
 
-            {/* D1 Database Writes */}
-            <div className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <div className="flex justify-between font-semibold text-slate-700 dark:text-slate-300">
-                <span>D1 Database Writes</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400">&lt; 0.01% of 100k</span>
+                  <a
+                    href={`/r/${qr.code}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs font-semibold"
+                  >
+                    <span>Test Flow</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                </div>
               </div>
-              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500" style={{ width: '1%' }} />
-              </div>
-              <p className="text-[10px] text-slate-500">KV cached — 0 D1 queries on customer scan</p>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-              <span>Zero gating, authentic Google reviews guaranteed.</span>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>

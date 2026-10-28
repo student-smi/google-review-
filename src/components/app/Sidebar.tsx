@@ -158,36 +158,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </button>
         </div>
       </nav>
-
-      {/* Free Tier Status & Compliance Pill */}
-      <div className="p-3 border-t border-slate-200">
-        {!collapsed ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="text-xs font-bold text-slate-800">
-                  Cloudflare Free
-                </span>
-              </div>
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            </div>
-            <p className="text-[10px] text-slate-500 leading-tight">
-              100% Policy-compliant • Zero Gating
-            </p>
-          </div>
-        ) : (
-          <div className="flex justify-center" title="Cloudflare Free Tier Active">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-          </div>
-        )}
-      </div>
     </aside>
   );
 }
