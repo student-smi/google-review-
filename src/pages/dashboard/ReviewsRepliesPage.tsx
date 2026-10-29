@@ -28,7 +28,11 @@ import {
   Link2,
   Unlink,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Edit2,
+  Plus,
+  X,
+  Trash2
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
@@ -82,6 +86,12 @@ export function ReviewsRepliesPage() {
   const [filterMode, setFilterMode] = useState<'all' | 'needs_reply' | 'replied'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Inline Customer Name Editor & Quick Import Modal State
+  const [editingCustomerNameId, setEditingCustomerNameId] = useState<string | null>(null);
+  const [editingCustomerNameValue, setEditingCustomerNameValue] = useState<string>('');
+  const [isUpdatingCustomerName, setIsUpdatingCustomerName] = useState<boolean>(false);
+  const [isQuickImportModalOpen, setIsQuickImportModalOpen] = useState(false);
 
   // Google Business Profile (GMB) OAuth state
   const [gmbStatus, setGmbStatus] = useState<GmbStatus>({ isConnected: false });
@@ -265,6 +275,39 @@ export function ReviewsRepliesPage() {
       setGmbStatus({ isConnected: false });
     } catch (err) {
       console.error('Failed to disconnect GMB:', err);
+    }
+  };
+
+  const handleSaveCustomerName = async (reviewId: string) => {
+    if (!activeBusiness?.id || !editingCustomerNameValue.trim()) return;
+    setIsUpdatingCustomerName(true);
+    try {
+      await apiFetch(`/api/businesses/${activeBusiness.id}/reviews/${reviewId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ customerName: editingCustomerNameValue.trim() })
+      });
+      setReviews((prev) =>
+        prev.map((r) => (r.id === reviewId ? { ...r, customerName: editingCustomerNameValue.trim() } : r))
+      );
+      setEditingCustomerNameId(null);
+    } catch (err) {
+      console.warn('Failed to update reviewer name:', err);
+      alert('Failed to update reviewer name. Please try again.');
+    } finally {
+      setIsUpdatingCustomerName(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!activeBusiness?.id || !confirm('Are you sure you want to delete this review?')) return;
+    try {
+      await apiFetch(`/api/businesses/${activeBusiness.id}/reviews/${reviewId}`, {
+        method: 'DELETE'
+      });
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    } catch (err) {
+      console.warn('Failed to delete review:', err);
+      alert('Failed to delete review.');
     }
   };
 
@@ -492,6 +535,7 @@ export function ReviewsRepliesPage() {
         setReviews(res.reviews);
         setQuickAuthorName('');
         setQuickReviewText('');
+        setIsQuickImportModalOpen(false);
         setActiveTab('feed');
         const newlyCreated = res.reviews[0];
         if (newlyCreated) {
@@ -628,6 +672,14 @@ export function ReviewsRepliesPage() {
               </Button>
             </a>
           )}
+          <Button
+            size="sm"
+            onClick={() => setIsQuickImportModalOpen(true)}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>+ Import Google Review</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -923,14 +975,61 @@ export function ReviewsRepliesPage() {
                       {/* Review Top Row: Customer Avatar, Stars, Badges, Timestamp */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                            {review.customerName.charAt(0).toUpperCase()}
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs shrink-0">
+                            {(review.customerName || 'V').charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-sm text-slate-900">
-                                {review.customerName}
-                              </span>
+                              {editingCustomerNameId === review.id ? (
+                                <div className="flex items-center gap-1.5 animate-in fade-in">
+                                  <Input
+                                    value={editingCustomerNameValue}
+                                    onChange={(e) => setEditingCustomerNameValue(e.target.value)}
+                                    placeholder="Customer name..."
+                                    className="h-7 text-xs w-44 rounded-lg px-2 bg-white"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSaveCustomerName(review.id);
+                                      if (e.key === 'Escape') setEditingCustomerNameId(null);
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveCustomerName(review.id)}
+                                    disabled={isUpdatingCustomerName}
+                                    className="h-7 px-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 cursor-pointer flex items-center gap-1"
+                                    title="Save name"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                    <span>Save</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingCustomerNameId(null)}
+                                    className="h-7 px-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                    title="Cancel"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 group">
+                                  <span className="font-bold text-sm text-slate-900">
+                                    {review.customerName}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCustomerNameId(review.id);
+                                      setEditingCustomerNameValue(review.customerName === 'Verified Customer' ? '' : review.customerName);
+                                    }}
+                                    className="text-slate-400 hover:text-purple-600 hover:bg-purple-50 p-1 rounded-md transition-colors cursor-pointer"
+                                    title="Edit customer name"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
                               {review.id.startsWith('gmb_') ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                                   <Globe className="h-3 w-3 text-blue-600" />
@@ -970,8 +1069,16 @@ export function ReviewsRepliesPage() {
                           </div>
                         </div>
 
-                        {/* Status Badge */}
-                        <div>
+                        {/* Status Badge & Actions */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteReview(review.id)}
+                            className="text-slate-300 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+                            title="Delete review"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                           {hasExistingReply ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1718,6 +1825,108 @@ export function ReviewsRepliesPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+      )}
+
+      {/* Quick Import Modal */}
+      {isQuickImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <Card className="rounded-3xl border border-slate-200 bg-white shadow-2xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Import Google Maps Review</h3>
+                  <p className="text-xs text-slate-500">Paste any review from your Google Maps profile</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQuickImportModalOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickImportReview} className="space-y-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Reviewer Name (from Google Maps)</Label>
+                <Input
+                  value={quickAuthorName}
+                  onChange={(e) => setQuickAuthorName(e.target.value)}
+                  placeholder="e.g. Smit Panchal, Priya Sharma"
+                  className="rounded-xl text-xs"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Star Rating</Label>
+                <div className="flex items-center gap-1 pt-0.5">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setQuickRating(star)}
+                      className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star
+                        className={`h-5 w-5 ${
+                          star <= quickRating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-xs font-bold text-slate-500 ml-2 font-mono">
+                    {quickRating} of 5 Stars
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Customer Review Text</Label>
+                <Textarea
+                  rows={4}
+                  value={quickReviewText}
+                  onChange={(e) => setQuickReviewText(e.target.value)}
+                  placeholder="Paste the exact Google review text here..."
+                  className="rounded-xl text-xs font-normal leading-relaxed"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsQuickImportModalOpen(false)}
+                  className="text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isQuickImporting || !quickReviewText.trim()}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5"
+                >
+                  {isQuickImporting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Importing…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Import & Generate Reply</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
     </div>

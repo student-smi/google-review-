@@ -414,6 +414,43 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         .returning();
 
       return updated;
+    },
+
+    async updateCustomerReview(businessId: string, reviewId: string, data: {
+      customerName?: string;
+      rating?: number;
+      reviewText?: string;
+    }) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot update review: Unauthorized business');
+      }
+
+      const patchData: Record<string, any> = {};
+      if (typeof data.customerName === 'string') patchData.customerName = data.customerName.trim();
+      if (typeof data.rating === 'number') patchData.rating = data.rating;
+      if (typeof data.reviewText === 'string') patchData.reviewText = data.reviewText.trim();
+
+      const [updated] = await db
+        .update(customerReviews)
+        .set(patchData)
+        .where(and(eq(customerReviews.id, reviewId), eq(customerReviews.businessId, businessId)))
+        .returning();
+
+      return updated;
+    },
+
+    async deleteCustomerReview(businessId: string, reviewId: string) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot delete review: Unauthorized business');
+      }
+
+      await db
+        .delete(customerReviews)
+        .where(and(eq(customerReviews.id, reviewId), eq(customerReviews.businessId, businessId)));
+
+      return { success: true };
     }
   };
 }

@@ -20,7 +20,8 @@ import {
   Heart,
   MessageCircle,
   Plus,
-  Info
+  Info,
+  User
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '@/lib/utils';
@@ -502,21 +503,35 @@ export function CustomerFlowPage() {
               />
             </div>
 
-            {/* Optional Customer Name */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-slate-500">
-                {draftLanguage === 'gu'
-                  ? 'તમારું નામ (વૈકલ્પિક)'
-                  : draftLanguage === 'hi'
-                  ? 'आपका नाम (वैकल्पिक)'
-                  : 'Your Name (Optional)'}
+            {/* Customer Name Input */}
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50/90 to-indigo-50/90 dark:from-purple-950/40 dark:to-indigo-950/40 border border-purple-200/80 dark:border-purple-800/60 space-y-1.5 shadow-2xs">
+              <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-purple-600" />
+                  <span>
+                    {draftLanguage === 'gu'
+                      ? 'તમારું નામ'
+                      : draftLanguage === 'hi'
+                      ? 'आपका नाम'
+                      : 'Your Name'}
+                  </span>
+                </span>
+                <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">
+                  {draftLanguage === 'gu' ? 'જેથી તમને ઓળખી શકાય' : draftLanguage === 'hi' ? 'ताकि स्टोर आपको पहचान सके' : 'For review recognition'}
+                </span>
               </Label>
               <Input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder={draftLanguage === 'gu' ? 'જેમ કે: રાહુલ શાહ' : 'e.g. Rahul Shah'}
-                className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                placeholder={
+                  draftLanguage === 'gu'
+                    ? 'દા.ત. રાહુલ શાહ, સ્મિત પંચાલ'
+                    : draftLanguage === 'hi'
+                    ? 'उदा. राहुल शर्मा, स्मित पांचाल'
+                    : 'e.g. Rahul Sharma, Smit Panchal'
+                }
+                className="text-xs bg-white dark:bg-slate-900 border-purple-200 dark:border-purple-800 font-semibold"
               />
             </div>
           </div>

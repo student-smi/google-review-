@@ -214,3 +214,42 @@ businessRoutes.post('/:id/reviews/:reviewId/reply', async (c) => {
   }
 });
 
+// Update customer review (e.g. edit customer name, rating, or text)
+businessRoutes.patch('/:id/reviews/:reviewId', async (c) => {
+  const ownerId = c.get('ownerId');
+  const businessId = c.req.param('id');
+  const reviewId = c.req.param('reviewId');
+  const body = await c.req.json();
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const updated = await scoped.updateCustomerReview(businessId, reviewId, {
+      customerName: body.customerName,
+      rating: body.rating,
+      reviewText: body.reviewText
+    });
+    return c.json({ success: true, review: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// Delete customer review
+businessRoutes.delete('/:id/reviews/:reviewId', async (c) => {
+  const ownerId = c.get('ownerId');
+  const businessId = c.req.param('id');
+  const reviewId = c.req.param('reviewId');
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    await scoped.deleteCustomerReview(businessId, reviewId);
+    return c.json({ success: true, message: 'Review deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
