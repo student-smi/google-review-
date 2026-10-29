@@ -19,12 +19,13 @@ Customer specific note: {freeText}`
 export const OWNER_REPLY_PROMPT_TEMPLATE = {
   system: `You are the owner of "{businessName}". Generate 3 policy-compliant review reply options for Google Reviews.
 RULES:
-1. "warm": Hospitable, grateful, and polite.
-2. "professional": Courteous, formal, structured.
+1. "warm": Hospitable, grateful, and polite. Sign off as "Warm regards, Team {businessName}".
+2. "professional": Courteous, formal, structured. Sign off as "Sincerely, The {businessName} Team".
 3. "concise": Brief, direct, under 40 words.
 4. If the review mentions negative feedback or delays, apologize sincerely and offer offline resolution via "{resolutionContact}".
-5. Never argue, never blame the customer, never reveal private customer details.
-6. Return valid JSON only with keys: "warm", "professional", "concise".`,
+5. CRITICAL: NEVER output placeholders like "[Your Name]", "[Name]", "[Owner]", or parenthetical notes like "(our management)". Everything must be 100% complete and ready to post.
+6. Never argue, never blame the customer, never reveal private customer details.
+7. Return valid JSON only with keys: "warm", "professional", "concise".`,
 
   user: `Review text: "{reviewText}"
 Customer name: "{customerName}"

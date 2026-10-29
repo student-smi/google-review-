@@ -378,6 +378,16 @@ export function ReviewsRepliesPage() {
     loadGmbStatus();
   }, [activeBusiness?.id]);
 
+  const cleanReplyText = (text: string, storeName: string) => {
+    if (!text) return '';
+    return text
+      .replace(/\[\s*(your\s*name|name|owner|owner's\s*name|insert\s*name|your\s*business|business\s*name|manager)\s*\]\s*(\(our\s*management\))?/gi, `Team ${storeName}`)
+      .replace(/\[[^\]]+\]/g, '')
+      .replace(/\s*\(our\s*management\)/gi, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
   // Generate AI Reply for a specific Customer Review
   const handleGenerateReplyForReview = async (review: CustomerReview) => {
     const rId = review.id;
@@ -386,8 +396,8 @@ export function ReviewsRepliesPage() {
 
     const fallback: AiReplyResult = {
       warm: `Dear ${review.customerName},\n\nThank you so much for visiting ${bizName} and taking the time to share your review! We are thrilled to hear you had such a wonderful experience. Providing welcoming hospitality and top quality is always our priority. We truly appreciate your support and look forward to serving you again soon!\n\nWarm regards,\nThe Team at ${bizName}`,
-      professional: `Dear ${review.customerName},\n\nThank you for reviewing your experience at ${bizName}. We are pleased that our service and standards met your expectations. We appreciate your valuable feedback and patronage, and we remain committed to maintaining the highest level of service on every visit.\n\nSincerely,\nManagement, ${bizName}`,
-      concise: `Hi ${review.customerName}, thank you for the wonderful review of ${bizName}! We really appreciate your kind words and support. Looking forward to welcoming you back again soon!`
+      professional: `Dear ${review.customerName},\n\nThank you for reviewing your experience at ${bizName}. We are pleased that our service and standards met your expectations. We appreciate your valuable feedback and patronage, and we remain committed to maintaining the highest level of service on every visit.\n\nSincerely,\nTeam ${bizName}`,
+      concise: `Hi ${review.customerName}, thank you for the wonderful review of ${bizName}! We really appreciate your kind words and support. Looking forward to welcoming you back again soon!\n\n— Team ${bizName}`
     };
 
     try {
@@ -409,10 +419,15 @@ export function ReviewsRepliesPage() {
       );
 
       const generated = data?.replies || fallback;
-      setReplyReplies((prev) => ({ ...prev, [rId]: generated }));
+      const cleanReplies: AiReplyResult = {
+        warm: cleanReplyText(generated.warm, bizName),
+        professional: cleanReplyText(generated.professional, bizName),
+        concise: cleanReplyText(generated.concise, bizName)
+      };
+      setReplyReplies((prev) => ({ ...prev, [rId]: cleanReplies }));
       const defaultStyle = replySelectedStyle[rId] || 'warm';
       setReplySelectedStyle((prev) => ({ ...prev, [rId]: defaultStyle }));
-      setReplyEditText((prev) => ({ ...prev, [rId]: generated[defaultStyle] }));
+      setReplyEditText((prev) => ({ ...prev, [rId]: cleanReplies[defaultStyle] }));
     } catch (err) {
       console.warn('AI reply generation failed, using template:', err);
       setReplyReplies((prev) => ({ ...prev, [rId]: fallback }));
@@ -580,7 +595,12 @@ export function ReviewsRepliesPage() {
           })
         }
       );
-      setManualAiReplies(data?.replies || fallback);
+      const raw = data?.replies || fallback;
+      setManualAiReplies({
+        warm: cleanReplyText(raw.warm, bizName),
+        professional: cleanReplyText(raw.professional, bizName),
+        concise: cleanReplyText(raw.concise, bizName)
+      });
     } catch {
       setManualAiReplies(fallback);
     } finally {

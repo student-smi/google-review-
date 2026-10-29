@@ -1,7 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { generateOwnerReplies } from '../../server/ai/provider';
+import { generateOwnerReplies, sanitizeOwnerReply } from '../../server/ai/provider';
 
 describe('AI Owner Reply Generator (Phase 3)', () => {
+  it('sanitizes placeholders like [Your Name] and (our management)', () => {
+    const raw = `Dear Tejas,\n\nThank you for choosing Upmark!\n\nBest regards,\n[Your Name] (our management)`;
+    const cleaned = sanitizeOwnerReply(raw, 'Upmark');
+    expect(cleaned).not.toContain('[Your Name]');
+    expect(cleaned).not.toContain('(our management)');
+    expect(cleaned).toContain('Team Upmark');
+  });
+
+  it('removes standalone bracketed placeholders', () => {
+    const raw = `Best regards,\n[Owner Name] at [Business Name]`;
+    const cleaned = sanitizeOwnerReply(raw, 'Upmark');
+    expect(cleaned).not.toContain('[Owner Name]');
+    expect(cleaned).not.toContain('[Business Name]');
+    expect(cleaned).toContain('Team Upmark');
+  });
+
   it('returns warm/professional/concise fallback when aiBinding is null', async () => {
     const result = await generateOwnerReplies(null, {
       businessName: 'Shree Sweets',

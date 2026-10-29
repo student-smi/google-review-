@@ -161,6 +161,20 @@ export interface GenerateOwnerRepliesParams {
   resolutionContact?: string;
 }
 
+export function sanitizeOwnerReply(text: string, businessName: string): string {
+  if (!text) return '';
+  return text
+    // Replace [Your Name] (our management) or any placeholder variant with Team <BusinessName>
+    .replace(/\[\s*(your\s*name|name|owner|owner's\s*name|insert\s*name|your\s*business|business\s*name|manager)\s*\]\s*(\(our\s*management\))?/gi, `Team ${businessName}`)
+    // Remove standalone bracketed placeholders e.g. [xyz]
+    .replace(/\[[^\]]+\]/g, '')
+    // Remove trailing parenthetical "(our management)"
+    .replace(/\s*\(our\s*management\)/gi, '')
+    // Clean up excessive blank lines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export async function generateOwnerReplies(
   aiBinding: any,
   params: GenerateOwnerRepliesParams
@@ -168,9 +182,9 @@ export async function generateOwnerReplies(
   const { businessName, customerName, reviewText, rating, category, city, brandVoice, resolutionContact } = params;
 
   const locInfo = city ? ` (${city})` : '';
-  const fallbackWarm = `Dear ${customerName || 'Guest'},\n\nThank you so much for visiting ${businessName}${locInfo} and sharing your feedback! We truly appreciate your patronage and hope to welcome you back again soon.\n\nWarm regards,\nManagement, ${businessName}`;
-  const fallbackProf = `Dear ${customerName || 'Customer'},\n\nThank you for taking the time to review ${businessName}${locInfo}. Your feedback is valuable to our team. ${resolutionContact ? `If you have further suggestions, please contact us at ${resolutionContact}.` : ''}\n\nSincerely,\n${businessName}`;
-  const fallbackConcise = `Hi ${customerName || 'there'}, thanks for the great review of ${businessName}! We look forward to serving you again.`;
+  const fallbackWarm = `Dear ${customerName || 'Guest'},\n\nThank you so much for visiting ${businessName}${locInfo} and sharing your feedback! We truly appreciate your patronage and hope to welcome you back again soon.\n\nWarm regards,\nThe ${businessName} Team`;
+  const fallbackProf = `Dear ${customerName || 'Customer'},\n\nThank you for taking the time to review ${businessName}${locInfo}. Your feedback is valuable to our team. ${resolutionContact ? `If you have further suggestions, please contact us at ${resolutionContact}.` : ''}\n\nSincerely,\nTeam ${businessName}`;
+  const fallbackConcise = `Hi ${customerName || 'there'}, thanks for the great review of ${businessName}! We look forward to serving you again.\n\n— Team ${businessName}`;
 
   if (!aiBinding) {
     return { warm: fallbackWarm, professional: fallbackProf, concise: fallbackConcise };
@@ -180,14 +194,16 @@ export async function generateOwnerReplies(
 Review text: "${reviewText}"
 Customer name: "${customerName || 'Customer'}"
 Rating: ${rating ? `${rating} stars` : 'Not specified'}
-Resolution contact line: "${resolutionContact || 'our management'}"
+${resolutionContact && resolutionContact !== 'our management' ? `Resolution contact: "${resolutionContact}"` : ''}
 
 Return valid JSON with exactly three keys: "warm", "professional", and "concise".
 RULES:
-- Acknowledge specific points mentioned in the review.
-- Mention your business setting appropriately (${category || 'our store'}).
-- For negative points, apologize sincerely and offer offline resolution without arguing or making excuses.
-- Never promise cash refunds unless asked.`;
+1. Acknowledge specific points mentioned in the review.
+2. Sign off naturally as "The ${businessName} Team" or "Team ${businessName}".
+3. STRICT CRITICAL RULE: NEVER use brackets or placeholder text like "[Your Name]", "[Name]", "[Owner]", "[Business Name]", or "(our management)". Everything must be 100% complete text ready to publish on Google Maps.
+4. For negative points, apologize sincerely and offer offline resolution without arguing or making excuses.
+5. Keep "concise" under 40 words.
+6. Never promise cash refunds unless asked.`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
@@ -200,18 +216,20 @@ RULES:
     });
 
     const extractReplyString = (val: any, fallback: string): string => {
-      if (typeof val === 'string') return val.trim();
-      if (val && typeof val === 'object') {
+      let raw = fallback;
+      if (typeof val === 'string') raw = val.trim();
+      else if (val && typeof val === 'object') {
         if (typeof val.response === 'string') {
           const next = typeof val.next_steps === 'string' ? `\n\n${val.next_steps.trim()}` : '';
-          return `${val.response.trim()}${next}`.trim();
+          raw = `${val.response.trim()}${next}`.trim();
+        } else if (typeof val.text === 'string') raw = val.text.trim();
+        else if (typeof val.reply === 'string') raw = val.reply.trim();
+        else {
+          const parts = Object.values(val).filter((v) => typeof v === 'string') as string[];
+          if (parts.length > 0) raw = parts.join('\n\n').trim();
         }
-        if (typeof val.text === 'string') return val.text.trim();
-        if (typeof val.reply === 'string') return val.reply.trim();
-        const parts = Object.values(val).filter((v) => typeof v === 'string') as string[];
-        if (parts.length > 0) return parts.join('\n\n').trim();
       }
-      return fallback;
+      return sanitizeOwnerReply(raw, businessName);
     };
 
     const text = typeof response === 'object' && typeof response?.response === 'string'
