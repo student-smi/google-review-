@@ -16,8 +16,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Trash2,
-  Check
+  Check,
+  Star,
+  Loader2
 } from 'lucide-react';
+import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { apiFetch, saveStoredBusinesses, saveActiveBusinessId } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
 
@@ -31,13 +34,31 @@ export function BusinessesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Restaurant');
+  const [category, setCategory] = useState('services');
   const [address, setAddress] = useState('Ahmedabad, Gujarat');
+  const [city, setCity] = useState('Ahmedabad');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
+  const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
+  const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
+  const [chips, setChips] = useState<string[]>([]);
+  const [isGeneratingChips, setIsGeneratingChips] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+
+  const handleOpenModal = () => {
+    setName('');
+    setCategory('services');
+    setAddress('Ahmedabad, Gujarat');
+    setCity('Ahmedabad');
+    setGoogleReviewUrl('');
+    setGooglePlaceId(null);
+    setVerifiedPlace(null);
+    setChips([]);
+    setError(null);
+    setIsModalOpen(true);
+  };
 
   // Validate Google review link format
   const isValidGoogleUrl = Boolean(
@@ -68,25 +89,28 @@ export function BusinessesPage() {
       name: name.trim(),
       category,
       address: address.trim(),
-      city: address.split(',')[0]?.trim() || address.trim(),
+      city: city || address.split(',')[0]?.trim() || address.trim(),
+      googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim(),
+      chipsJson: chips.length > 0 ? JSON.stringify(chips) : null,
       brandColor: '#2563EB',
       brandColorSecondary: '#F59E0B'
     };
 
+    let createdId = '';
+
     try {
-      const data = await apiFetch('/api/businesses', {
+      const data = await apiFetch<{ business: any }>('/api/businesses', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
 
       if (data?.business) {
+        createdId = data.business.id;
         onSelectBusiness(data.business.id);
       }
       await refreshBusinesses();
       setIsModalOpen(false);
-      setName('');
-      setGoogleReviewUrl('');
     } catch (err: any) {
       console.warn('API error, saving locally:', err);
       const localBiz: BusinessItem = {
@@ -96,10 +120,13 @@ export function BusinessesPage() {
         category: payload.category,
         address: payload.address,
         city: payload.city,
+        googlePlaceId: payload.googlePlaceId,
         googleReviewUrl: payload.googleReviewUrl,
+        chipsJson: payload.chipsJson,
         brandColor: payload.brandColor,
         brandColorSecondary: payload.brandColorSecondary
       };
+      createdId = localBiz.id;
       const updated = [localBiz, ...businesses];
       saveStoredBusinesses(updated);
       saveActiveBusinessId(localBiz.id);
@@ -107,6 +134,27 @@ export function BusinessesPage() {
       setIsModalOpen(false);
     } finally {
       setIsSubmitting(false);
+    }
+
+    // Also auto-generate default counter standee QR code if available
+    if (createdId) {
+      try {
+        await apiFetch(`/api/qr/business/${createdId}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            label: 'Main Billing Counter',
+            code: `${payload.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) || 'counter'}-${Math.random().toString(36).slice(2, 6)}`,
+            styleJson: {
+              dots: 'rounded',
+              cornersSquare: 'extra-rounded',
+              cornersDot: 'dot',
+              color: '#2563EB'
+            }
+          })
+        });
+      } catch (qrErr) {
+        console.warn('Standee create warning:', qrErr);
+      }
     }
   };
 
@@ -128,7 +176,7 @@ export function BusinessesPage() {
         </div>
 
         <Button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenModal}
           className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs rounded-xl shadow-sm gap-2 h-11 px-4 cursor-pointer shrink-0"
         >
           <Plus className="h-4 w-4" />
@@ -237,14 +285,17 @@ export function BusinessesPage() {
         })}
       </div>
 
-      {/* Add Business Modal */}
+      {/* Add Business Modal (Google Places Auto-fill like Onboarding) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <Card className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0E131F] shadow-2xl w-full max-w-lg p-6 sm:p-7 space-y-5">
+          <Card className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0E131F] shadow-2xl w-full max-w-lg p-6 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Add Business Details
+                <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Add Business Details</span>
+                  <span className="rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-[10px] font-bold">
+                    Google Maps Sync
+                  </span>
                 </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -254,7 +305,7 @@ export function BusinessesPage() {
                 </button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Connect your official Google Review link to generate smart QR posters.
+                Search on Google Maps to auto-fill official review link, location, and verified details.
               </p>
             </div>
 
@@ -265,6 +316,133 @@ export function BusinessesPage() {
             )}
 
             <form onSubmit={handleCreateBusiness} className="space-y-4">
+              {/* 1. Google Places Search Autocomplete */}
+              <div className="space-y-1.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Search on Google Maps (India)
+                  </Label>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    Auto-fills Review Link
+                  </span>
+                </div>
+                <GooglePlacesAutocomplete
+                  initialValue={name}
+                  onSelect={async (place) => {
+                    setName(place.name);
+                    setGooglePlaceId(place.placeId);
+                    setGoogleReviewUrl(place.googleReviewUrl);
+                    setVerifiedPlace(place);
+
+                    // 1. Intelligent Category Mapping
+                    let mappedCategory = 'services';
+                    const catStr = ((place.category || '') + ' ' + ((place as any).types || []).join(' ')).toLowerCase();
+                    if (catStr.includes('sweet') || catStr.includes('bakery') || catStr.includes('cake') || catStr.includes('mithai') || catStr.includes('dairy')) {
+                      mappedCategory = 'sweets';
+                    } else if (catStr.includes('restaurant') || catStr.includes('cafe') || catStr.includes('food') || catStr.includes('dining')) {
+                      mappedCategory = 'restaurant';
+                    } else if (catStr.includes('health') || catStr.includes('clinic') || catStr.includes('dental') || catStr.includes('doctor') || catStr.includes('hospital')) {
+                      mappedCategory = 'healthcare';
+                    } else if (catStr.includes('salon') || catStr.includes('spa') || catStr.includes('beauty') || catStr.includes('hair')) {
+                      mappedCategory = 'salon';
+                    } else if (catStr.includes('retail') || catStr.includes('jewel') || catStr.includes('store') || catStr.includes('shop') || catStr.includes('cloth') || catStr.includes('croma')) {
+                      mappedCategory = 'retail';
+                    } else if (catStr.includes('agency') || catStr.includes('marketing') || catStr.includes('seo') || catStr.includes('software') || catStr.includes('service')) {
+                      mappedCategory = 'services';
+                    }
+                    setCategory(mappedCategory);
+
+                    // 2. City & Address extraction from verified address
+                    if (place.address) {
+                      setAddress(place.address);
+                      const parts = place.address.split(',').map((p) => p.trim());
+                      if (parts.length >= 3) {
+                        setCity(parts[parts.length - 3] || parts[0]);
+                      }
+                    }
+
+                    // 3. Auto-generate AI Keywords directly from verified Google Places information
+                    setIsGeneratingChips(true);
+                    try {
+                      const res = await apiFetch<{ success: boolean; keywords: string[] }>('/api/ai/suggest-keywords', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          businessName: place.name,
+                          category: mappedCategory,
+                          city: city || 'Ahmedabad',
+                          address: place.address,
+                          summary: place.summary,
+                          types: (place as any).types
+                        })
+                      });
+                      if (res?.keywords && Array.isArray(res.keywords) && res.keywords.length > 0) {
+                        setChips(res.keywords.slice(0, 8));
+                      }
+                    } catch (err) {
+                      console.warn('AI keyword suggestion on place select:', err);
+                    } finally {
+                      setIsGeneratingChips(false);
+                    }
+                  }}
+                  placeholder="Search your business on Google Maps..."
+                />
+
+                {/* Google Verified Place Profile Card */}
+                {verifiedPlace && (
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-purple-50/40 border border-blue-200/80 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/20 dark:border-blue-800/60 space-y-2 animate-in fade-in mt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span className="text-xs font-bold text-blue-950 dark:text-blue-100">
+                          Google Verified Business Profile
+                        </span>
+                      </div>
+                      {verifiedPlace.rating && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 font-extrabold text-[10px] border border-amber-200/80">
+                          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                          <span>{verifiedPlace.rating} ({verifiedPlace.userRatingCount || 0} reviews)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                      📍 {verifiedPlace.address}
+                    </p>
+
+                    {/* AI Generated Standee Chips */}
+                    <div className="pt-1.5 border-t border-blue-100 dark:border-blue-900/50">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                          <Sparkles className="h-3 w-3 text-indigo-600" />
+                          <span>AI Standee Highlights (Tailored to Google profile):</span>
+                        </div>
+                        {isGeneratingChips && (
+                          <span className="text-[10px] text-indigo-500 flex items-center gap-1 font-medium">
+                            <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing Google data...
+                          </span>
+                        )}
+                      </div>
+
+                      {chips.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {chips.map((chip, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[9px] font-semibold bg-white dark:bg-slate-900 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800"
+                            >
+                              ✓ {chip}
+                            </span>
+                          ))}
+                        </div>
+                      ) : isGeneratingChips ? (
+                        <div className="text-[10px] text-slate-400 italic">Generating custom review highlight chips...</div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Business Display Name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Business Name</Label>
                 <Input
@@ -276,6 +454,7 @@ export function BusinessesPage() {
                 />
               </div>
 
+              {/* 3. Category & Address / City */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Category</Label>
@@ -284,12 +463,13 @@ export function BusinessesPage() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold h-10"
                   >
-                    <option value="Restaurant">Restaurant / Cafe</option>
-                    <option value="Retail">Retail & Supermarket</option>
-                    <option value="Healthcare">Clinic / Doctor</option>
-                    <option value="Salon">Salon & Spa</option>
-                    <option value="Services">Professional Services</option>
-                    <option value="Automotive">Auto / Garage</option>
+                    <option value="services">Agency & Services</option>
+                    <option value="restaurant">Restaurant / Cafe</option>
+                    <option value="sweets">Sweets & Bakery</option>
+                    <option value="healthcare">Clinic / Doctor</option>
+                    <option value="salon">Salon & Spa</option>
+                    <option value="retail">Retail & Supermarket</option>
+                    <option value="automotive">Auto / Garage</option>
                   </select>
                 </div>
 
@@ -304,6 +484,7 @@ export function BusinessesPage() {
                 </div>
               </div>
 
+              {/* 4. Google Review URL */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold">Google Review URL</Label>
@@ -322,11 +503,12 @@ export function BusinessesPage() {
                   required
                 />
                 <p className="text-[11px] text-slate-400">
-                  Tip: Open Google Maps, search your shop, click "Ask for reviews", and copy the link.
+                  Tip: Searching your business above automatically extracts and verifies this official link.
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <Button
                   type="button"
                   variant="outline"
