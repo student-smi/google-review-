@@ -402,39 +402,106 @@ export function KeywordManagementPage() {
 
             <CardContent className="p-5 space-y-4">
               {/* Category Pills Filter */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Target Industry Template:
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                  {[
-                    { id: 'services', label: '🚀 Digital Agency & IT' },
-                    { id: 'restaurant', label: '☕ Cafe & Restaurant' },
-                    { id: 'sweets', label: '🍰 Sweets & Bakery' },
-                    { id: 'healthcare', label: '🩺 Clinic & Dental' },
-                    { id: 'salon', label: '💇 Salon & Spa' },
-                    { id: 'retail', label: '💎 Jewellery & Fashion' },
-                    { id: 'fitness', label: '🏋️ Gym & Fitness' },
-                    { id: 'automobile', label: '🚗 Auto Garage' },
-                    { id: 'education', label: '📚 Coaching & Classes' },
-                    { id: 'legal', label: '⚖️ CA, Tax & Legal' }
-                  ].map((item) => {
-                    const isSelected = (selectedIndustry || 'services').toLowerCase().includes(item.id);
-                    return (
-                      <button
-                        key={item.id}
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                      Target Industry / Business Category (Dynamic)
+                    </span>
+                    {selectedIndustry && (
+                      <span className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">
+                        Active: {selectedIndustry}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dynamic Category Input with Datalist */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      list="dynamic-industry-suggestions"
+                      value={selectedIndustry}
+                      onChange={(e) => setSelectedIndustry(e.target.value)}
+                      placeholder="e.g. Electronics store, Dental clinic, Indian sweets, Auto garage…"
+                      className="text-xs rounded-xl h-9"
+                    />
+                    {activeBusiness?.category && (
+                      <Button
                         type="button"
-                        onClick={() => setSelectedIndustry(item.id)}
-                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedIndustry(activeBusiness.category || '')}
+                        className={`text-xs font-bold rounded-xl shrink-0 h-9 px-3 gap-1.5 cursor-pointer ${
+                          selectedIndustry.toLowerCase() === (activeBusiness.category || '').toLowerCase()
+                            ? 'bg-purple-50 text-purple-700 border-purple-300 ring-1 ring-purple-400'
+                            : 'text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
+                        title="Reset to Google verified store category"
                       >
-                        {item.label}
-                      </button>
-                    );
-                  })}
+                        <Tag className="h-3 w-3 text-purple-600" />
+                        <span>Google Category: {activeBusiness.category}</span>
+                      </Button>
+                    )}
+                  </div>
+
+                  <datalist id="dynamic-industry-suggestions">
+                    <option value="Electronics store" />
+                    <option value="Cafe & Restaurant" />
+                    <option value="Sweets & Bakery" />
+                    <option value="Clinic & Dental" />
+                    <option value="Salon & Spa" />
+                    <option value="Jewellery & Fashion" />
+                    <option value="Gym & Fitness center" />
+                    <option value="Auto Garage & Repair" />
+                    <option value="Digital Agency & IT" />
+                    <option value="Coaching & Classes" />
+                    <option value="CA, Tax & Legal" />
+                    <option value="Supermarket & Retail" />
+                    <option value="Mobile & Laptop Repair" />
+                    <option value="Hotel & Lodging" />
+                    <option value="Hospital & Healthcare" />
+                  </datalist>
+                </div>
+
+                {/* Quick Industry Template Pills */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Quick Industry Templates:
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                    {[
+                      { id: 'Electronics store', label: '⚡ Electronics & Gadgets' },
+                      { id: 'Digital Agency & IT', label: '🚀 Digital Agency & IT' },
+                      { id: 'Cafe & Restaurant', label: '☕ Cafe & Restaurant' },
+                      { id: 'Sweets & Bakery', label: '🍰 Sweets & Bakery' },
+                      { id: 'Clinic & Dental', label: '🩺 Clinic & Dental' },
+                      { id: 'Salon & Spa', label: '💇 Salon & Spa' },
+                      { id: 'Jewellery & Fashion', label: '💎 Jewellery & Fashion' },
+                      { id: 'Gym & Fitness', label: '🏋️ Gym & Fitness' },
+                      { id: 'Auto Garage', label: '🚗 Auto Garage' },
+                      { id: 'Coaching & Classes', label: '📚 Coaching & Classes' },
+                      { id: 'CA, Tax & Legal', label: '⚖️ CA, Tax & Legal' }
+                    ].map((item) => {
+                      const isSelected =
+                        selectedIndustry.toLowerCase() === item.id.toLowerCase() ||
+                        (selectedIndustry.toLowerCase().includes(item.id.toLowerCase().split(' ')[0]) &&
+                          item.id.toLowerCase().split(' ')[0].length > 3);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedIndustry(item.id)}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
