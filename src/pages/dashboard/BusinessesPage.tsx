@@ -34,7 +34,7 @@ export function BusinessesPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('services');
+  const [category, setCategory] = useState('');
   const [address, setAddress] = useState('Ahmedabad, Gujarat');
   const [city, setCity] = useState('Ahmedabad');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
@@ -49,7 +49,7 @@ export function BusinessesPage() {
 
   const handleOpenModal = () => {
     setName('');
-    setCategory('services');
+    setCategory('');
     setAddress('Ahmedabad, Gujarat');
     setCity('Ahmedabad');
     setGoogleReviewUrl('');
@@ -334,30 +334,18 @@ export function BusinessesPage() {
                     setGoogleReviewUrl(place.googleReviewUrl);
                     setVerifiedPlace(place);
 
-                    // 1. Intelligent Category Mapping
-                    let mappedCategory = 'services';
-                    const catStr = ((place.category || '') + ' ' + ((place as any).types || []).join(' ')).toLowerCase();
-                    if (catStr.includes('sweet') || catStr.includes('bakery') || catStr.includes('cake') || catStr.includes('mithai') || catStr.includes('dairy')) {
-                      mappedCategory = 'sweets';
-                    } else if (catStr.includes('restaurant') || catStr.includes('cafe') || catStr.includes('food') || catStr.includes('dining')) {
-                      mappedCategory = 'restaurant';
-                    } else if (catStr.includes('health') || catStr.includes('clinic') || catStr.includes('dental') || catStr.includes('doctor') || catStr.includes('hospital')) {
-                      mappedCategory = 'healthcare';
-                    } else if (catStr.includes('salon') || catStr.includes('spa') || catStr.includes('beauty') || catStr.includes('hair')) {
-                      mappedCategory = 'salon';
-                    } else if (catStr.includes('retail') || catStr.includes('jewel') || catStr.includes('store') || catStr.includes('shop') || catStr.includes('cloth') || catStr.includes('croma')) {
-                      mappedCategory = 'retail';
-                    } else if (catStr.includes('agency') || catStr.includes('marketing') || catStr.includes('seo') || catStr.includes('software') || catStr.includes('service')) {
-                      mappedCategory = 'services';
-                    }
-                    setCategory(mappedCategory);
+                    // 1. Dynamic Category directly from Google Places info (e.g. Electronics store, Dental clinic, Sweets shop)
+                    const dynamicCategory = place.category || 'Local Business';
+                    setCategory(dynamicCategory);
 
                     // 2. City & Address extraction from verified address
+                    let extractedCity = city || 'Ahmedabad';
                     if (place.address) {
                       setAddress(place.address);
                       const parts = place.address.split(',').map((p) => p.trim());
                       if (parts.length >= 3) {
-                        setCity(parts[parts.length - 3] || parts[0]);
+                        extractedCity = parts[parts.length - 3] || parts[0];
+                        setCity(extractedCity);
                       }
                     }
 
@@ -368,8 +356,8 @@ export function BusinessesPage() {
                         method: 'POST',
                         body: JSON.stringify({
                           businessName: place.name,
-                          category: mappedCategory,
-                          city: city || 'Ahmedabad',
+                          category: dynamicCategory,
+                          city: extractedCity,
                           address: place.address,
                           summary: place.summary,
                           types: (place as any).types
@@ -457,20 +445,38 @@ export function BusinessesPage() {
               {/* 3. Category & Address / City */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Category</Label>
-                  <select
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Category</Label>
+                    {category && (
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800">
+                        Dynamic
+                      </span>
+                    )}
+                  </div>
+                  <Input
+                    list="category-suggestions"
+                    placeholder="e.g. Electronics store, Cafe, Clinic"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-semibold h-10"
-                  >
-                    <option value="services">Agency & Services</option>
-                    <option value="restaurant">Restaurant / Cafe</option>
-                    <option value="sweets">Sweets & Bakery</option>
-                    <option value="healthcare">Clinic / Doctor</option>
-                    <option value="salon">Salon & Spa</option>
-                    <option value="retail">Retail & Supermarket</option>
-                    <option value="automotive">Auto / Garage</option>
-                  </select>
+                    className="h-10 text-xs rounded-xl capitalize"
+                    required
+                  />
+                  <datalist id="category-suggestions">
+                    <option value="Electronics store" />
+                    <option value="Restaurant / Cafe" />
+                    <option value="Sweets & Bakery" />
+                    <option value="Dental Clinic" />
+                    <option value="Salon & Spa" />
+                    <option value="Retail & Supermarket" />
+                    <option value="Jewelry store" />
+                    <option value="Gym & Fitness center" />
+                    <option value="Auto repair shop" />
+                    <option value="Digital Marketing Agency" />
+                    <option value="Coaching & Classes" />
+                    <option value="Chartered Accountant" />
+                    <option value="Hotel & Lodging" />
+                    <option value="Hospital & Healthcare" />
+                  </datalist>
                 </div>
 
                 <div className="space-y-1.5">

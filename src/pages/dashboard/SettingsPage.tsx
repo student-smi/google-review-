@@ -298,6 +298,9 @@ export function SettingsPage() {
               placeholder="Search your business on Google Maps..."
               onSelect={(place) => {
                 setName(place.name);
+                if (place.category) {
+                  setCategory(place.category);
+                }
                 setGoogleUrl(place.googleReviewUrl);
                 if (place.address) {
                   const parts = place.address.split(',').map((p) => p.trim());
@@ -322,25 +325,38 @@ export function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-slate-700">
-                Industry / Business Type
-              </Label>
-              <select
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700">
+                  Industry / Business Type
+                </Label>
+                {category && (
+                  <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                    Dynamic
+                  </span>
+                )}
+              </div>
+              <Input
+                list="settings-category-suggestions"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              >
-                <option value="services">🚀 Digital Marketing & Agency</option>
-                <option value="restaurant">☕ Restaurant, Cafe & Food</option>
-                <option value="sweets">🍰 Sweets, Bakery & Dairy</option>
-                <option value="healthcare">🩺 Clinic & Dental</option>
-                <option value="salon">💇 Salon, Spa & Beauty</option>
-                <option value="retail">💎 Jewellery & Fashion</option>
-                <option value="fitness">🏋️ Gym & Fitness</option>
-                <option value="automobile">🚗 Auto Garage & Service</option>
-                <option value="education">📚 Coaching & Education</option>
-                <option value="legal">⚖️ CA, Tax & Legal</option>
-              </select>
+                placeholder="e.g. Electronics store, Dental clinic, Cafe"
+                className="h-9 px-3 text-xs rounded-xl capitalize"
+              />
+              <datalist id="settings-category-suggestions">
+                <option value="Electronics store" />
+                <option value="Restaurant / Cafe" />
+                <option value="Sweets & Bakery" />
+                <option value="Dental Clinic" />
+                <option value="Salon & Spa" />
+                <option value="Retail & Supermarket" />
+                <option value="Jewelry store" />
+                <option value="Gym & Fitness center" />
+                <option value="Auto repair shop" />
+                <option value="Digital Marketing Agency" />
+                <option value="Coaching & Education" />
+                <option value="Chartered Accountant / Tax" />
+                <option value="Hotel & Lodging" />
+              </datalist>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-bold text-slate-700">

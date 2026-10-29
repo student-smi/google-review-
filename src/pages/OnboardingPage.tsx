@@ -214,23 +214,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     setVerifiedPlace(place);
                     setUrlTested(true);
 
-                    // 1. Intelligent Google Category Mapping
-                    let mappedCategory = 'services';
-                    const catStr = ((place.category || '') + ' ' + ((place as any).types || []).join(' ')).toLowerCase();
-                    if (catStr.includes('sweet') || catStr.includes('bakery') || catStr.includes('cake') || catStr.includes('mithai') || catStr.includes('dairy')) {
-                      mappedCategory = 'sweets';
-                    } else if (catStr.includes('restaurant') || catStr.includes('cafe') || catStr.includes('food') || catStr.includes('dining')) {
-                      mappedCategory = 'restaurant';
-                    } else if (catStr.includes('health') || catStr.includes('clinic') || catStr.includes('dental') || catStr.includes('doctor') || catStr.includes('hospital')) {
-                      mappedCategory = 'healthcare';
-                    } else if (catStr.includes('salon') || catStr.includes('spa') || catStr.includes('beauty') || catStr.includes('hair')) {
-                      mappedCategory = 'salon';
-                    } else if (catStr.includes('retail') || catStr.includes('jewel') || catStr.includes('store') || catStr.includes('shop') || catStr.includes('cloth')) {
-                      mappedCategory = 'retail';
-                    } else if (catStr.includes('agency') || catStr.includes('marketing') || catStr.includes('seo') || catStr.includes('software') || catStr.includes('service')) {
-                      mappedCategory = 'services';
-                    }
-                    setCategory(mappedCategory);
+                    // 1. Dynamic Google Category Assignment
+                    const dynamicCat = place.category || 'Agency & Services';
+                    setCategory(dynamicCat);
 
                     // 2. City extraction from verified address
                     let extractedCity = city || 'India';
@@ -249,7 +235,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                         method: 'POST',
                         body: JSON.stringify({
                           businessName: place.name,
-                          category: mappedCategory,
+                          category: dynamicCat,
                           city: extractedCity,
                           address: place.address,
                           summary: place.summary,
@@ -336,25 +322,55 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Business Category
-                </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Business Category
+                  </Label>
+                  {category && (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800">
+                      Dynamic Google Category
+                    </span>
+                  )}
+                </div>
+                <Input
+                  list="onboarding-category-suggestions"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g. Electronics store, Dental clinic, Cafe"
+                  className="rounded-xl text-xs"
+                />
+                <datalist id="onboarding-category-suggestions">
+                  <option value="Electronics store" />
+                  <option value="Restaurant / Cafe" />
+                  <option value="Sweets & Bakery" />
+                  <option value="Dental Clinic" />
+                  <option value="Salon & Spa" />
+                  <option value="Retail & Supermarket" />
+                  <option value="Jewelry store" />
+                  <option value="Gym & Fitness center" />
+                  <option value="Auto repair shop" />
+                  <option value="Digital Marketing Agency" />
+                  <option value="Coaching & Classes" />
+                  <option value="Chartered Accountant" />
+                  <option value="Hotel & Lodging" />
+                  <option value="Hospital & Healthcare" />
+                </datalist>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                   {categories.map((c) => {
-                    const isSelected = category === c.id;
+                    const isSelected = category.toLowerCase() === c.label.toLowerCase() || category.toLowerCase() === c.id.toLowerCase();
                     return (
                       <button
                         key={c.id}
                         type="button"
-                        onClick={() => setCategory(c.id)}
-                        className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-medium text-left transition-all cursor-pointer ${
+                        onClick={() => setCategory(c.label)}
+                        className={`flex items-center gap-2 rounded-xl border p-2 text-xs font-medium text-left transition-all cursor-pointer ${
                           isSelected
                             ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-bold shadow-xs'
                             : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-500'
                         }`}
                       >
-                        <c.icon className="h-4 w-4 shrink-0 text-purple-600" />
-                        <span className="truncate">{c.label}</span>
+                        <c.icon className="h-3.5 w-3.5 shrink-0 text-purple-600" />
+                        <span className="truncate text-[11px]">{c.label}</span>
                       </button>
                     );
                   })}
