@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import QRCodeStyling from 'qr-code-styling';
 import { jsPDF } from 'jspdf';
+import { toPng } from 'html-to-image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -29,6 +30,157 @@ import {
 import { apiFetch } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
 
+/**
+ * Bulletproof Canvas QR + Logo compositor.
+ * Eliminates browser SVG-in-image canvas tainting and btoa Latin1 encoding crashes.
+ */
+async function renderQrWithLogoToCanvas({
+  size = 1024,
+  targetUrl,
+  dotColor,
+  dotType,
+  cornerSquareType,
+  logoUrl,
+  showQrCenterLogo = true,
+  logoSize = 0.35
+}: {
+  size?: number;
+  targetUrl: string;
+  dotColor: string;
+  dotType: string;
+  cornerSquareType: string;
+  logoUrl?: string | null;
+  showQrCenterLogo?: boolean;
+  logoSize?: number;
+}): Promise<HTMLCanvasElement> {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get 2D canvas context');
+
+  // Fill canvas with pure white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+
+  const hasLogo = Boolean(showQrCenterLogo && logoUrl);
+  // Transparent 1x1 png data URI to safely trigger dot clearance in QRCodeStyling without SVG image taint
+  const transparentPixel =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAArows=';
+
+  const qr = new QRCodeStyling({
+    width: size,
+    height: size,
+    type: 'svg',
+    data: targetUrl,
+    image: hasLogo ? transparentPixel : undefined,
+    dotsOptions: {
+      color: dotColor,
+      type: dotType as any
+    },
+    cornersSquareOptions: {
+      color: dotColor,
+      type: cornerSquareType as any
+    },
+    cornersDotOptions: {
+      color: dotColor,
+      type: 'dot'
+    },
+    backgroundOptions: {
+      color: '#ffffff'
+    },
+    imageOptions: {
+      crossOrigin: 'anonymous',
+      margin: Math.round(size * 0.015),
+      imageSize: logoSize,
+      hideBackgroundDots: hasLogo,
+      saveAsBlob: false
+    }
+  });
+
+  // Get raw SVG Blob and text
+  const rawSvgBlob = await qr.getRawData('svg');
+  if (!rawSvgBlob) throw new Error('Failed to generate QR SVG');
+  const svgText = await (rawSvgBlob as Blob).text();
+
+  // Draw the SVG cleanly to canvas via Image with safe UTF-8 URI encoding
+  const svgDataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+  await new Promise<void>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve();
+    };
+    img.onerror = () => {
+      console.warn('SVG draw to canvas warning, proceeding');
+      resolve();
+    };
+    img.src = svgDataUri;
+  });
+
+  // If center logo is enabled, draw it directly on top with a rounded badge!
+  if (hasLogo && logoUrl) {
+    await new Promise<void>((resolve) => {
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.onload = () => {
+        const badgeSize = Math.round(size * logoSize);
+        const badgeX = Math.round((size - badgeSize) / 2);
+        const badgeY = Math.round((size - badgeSize) / 2);
+        const radius = Math.round(badgeSize * 0.2);
+
+        // Draw shadow for badge
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+        ctx.shadowBlur = Math.round(size * 0.015);
+        ctx.shadowOffsetY = Math.round(size * 0.005);
+
+        // Draw white badge background
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(badgeX, badgeY, badgeSize, badgeSize, radius);
+        } else {
+          ctx.rect(badgeX, badgeY, badgeSize, badgeSize);
+        }
+        ctx.fill();
+        ctx.restore();
+
+        // Draw subtle border around badge
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.lineWidth = Math.max(1, Math.round(size * 0.002));
+        ctx.stroke();
+
+        // Aspect ratio containment with padding
+        const padding = Math.round(badgeSize * 0.12);
+        const innerW = badgeSize - padding * 2;
+        const innerH = badgeSize - padding * 2;
+        const aspect = (logoImg.width || 1) / (logoImg.height || 1);
+        let drawW = innerW;
+        let drawH = innerH;
+        if (aspect > 1) {
+          drawH = innerW / aspect;
+        } else {
+          drawW = innerH * aspect;
+        }
+        const drawX = badgeX + (badgeSize - drawW) / 2;
+        const drawY = badgeY + (badgeSize - drawH) / 2;
+
+        ctx.drawImage(logoImg, drawX, drawY, drawW, drawH);
+        resolve();
+      };
+      logoImg.onerror = () => {
+        console.warn('Failed to draw logo on canvas');
+        resolve();
+      };
+      logoImg.src = logoUrl;
+    });
+  }
+
+  return canvas;
+}
+
 export function QrStudioPage() {
   const { activeBusiness, refreshBusinesses } = useOutletContext<{
     activeBusiness: BusinessItem | null;
@@ -51,6 +203,7 @@ export function QrStudioPage() {
   const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4' | 'round-sticker'>('table-tent');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isDownloading, setIsDownloading] = useState<'standee-png' | 'qr-png' | 'qr-svg' | 'a4-pdf' | null>(null);
 
   // Owner Logo state
   const [logoUrl, setLogoUrl] = useState<string | null>(activeBusiness?.logoUrl || null);
@@ -106,7 +259,11 @@ export function QrStudioPage() {
     ? `${window.location.origin}/r/${shortCode}`
     : `https://reviewqr.panchalsmit.workers.dev/r/${shortCode}`;
 
-  const currentLogo = showQrCenterLogo && logoUrl ? logoUrl : undefined;
+  const hasCenterLogo = Boolean(showQrCenterLogo && logoUrl);
+  // Transparent 1x1 png data URI to safely trigger dot clearance in QRCodeStyling without SVG image taint
+  const transparentPixel =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAArows=';
+  const qrImage = hasCenterLogo ? transparentPixel : undefined;
 
   useEffect(() => {
     if (!qrInstanceRef.current) {
@@ -115,7 +272,7 @@ export function QrStudioPage() {
         height: 220,
         type: 'svg',
         data: targetUrl,
-        image: currentLogo,
+        image: qrImage,
         dotsOptions: {
           color: dotColor,
           type: dotType as any
@@ -135,7 +292,8 @@ export function QrStudioPage() {
           crossOrigin: 'anonymous',
           margin: 4,
           imageSize: logoSize,
-          hideBackgroundDots: true
+          hideBackgroundDots: hasCenterLogo,
+          saveAsBlob: false
         }
       });
 
@@ -146,12 +304,13 @@ export function QrStudioPage() {
     } else {
       qrInstanceRef.current.update({
         data: targetUrl,
-        image: currentLogo || '',
+        image: qrImage || '',
         imageOptions: {
           crossOrigin: 'anonymous',
           margin: 4,
           imageSize: logoSize,
-          hideBackgroundDots: true
+          hideBackgroundDots: hasCenterLogo,
+          saveAsBlob: false
         },
         dotsOptions: {
           color: dotColor,
@@ -166,7 +325,7 @@ export function QrStudioPage() {
         qrInstanceRef.current.append(qrRef.current);
       }
     }
-  }, [targetUrl, dotColor, dotType, cornerSquareType, currentLogo, logoSize]);
+  }, [targetUrl, dotColor, dotType, cornerSquareType, hasCenterLogo, qrImage, logoSize]);
 
   // Handle Logo Upload from device
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,121 +383,219 @@ export function QrStudioPage() {
     }
   };
 
-  const handleDownloadQr = (extension: 'png' | 'svg') => {
-    if (qrInstanceRef.current) {
-      qrInstanceRef.current.download({
-        name: `${shortCode}-qr`,
-        extension
+  // 1. Download Photorealistic Standee Mockup as High-Res PNG (Retina 3x)
+  const handleDownloadStandeePng = async () => {
+    if (!posterRef.current) return;
+    try {
+      setIsDownloading('standee-png');
+      const dataUrl = await toPng(posterRef.current, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: '#ffffff'
       });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${shortCode}-standee-poster.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Standee PNG download failed:', err);
+      alert('Failed to generate Standee PNG. Please try again.');
+    } finally {
+      setIsDownloading(null);
     }
   };
 
+  // 2. Download Standalone High-Res QR Code PNG with Center Logo (1024x1024)
+  const handleDownloadQrPng = async () => {
+    try {
+      setIsDownloading('qr-png');
+      const canvas = await renderQrWithLogoToCanvas({
+        size: 1024,
+        targetUrl,
+        dotColor,
+        dotType,
+        cornerSquareType,
+        logoUrl,
+        showQrCenterLogo,
+        logoSize
+      });
+
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'));
+      if (!blob) throw new Error('Canvas conversion to blob failed');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shortCode}-qr.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('QR PNG download failed:', err);
+      alert('Failed to generate QR PNG. Please try again.');
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
+  // 3. Download Vector QR SVG
+  const handleDownloadQrSvg = async () => {
+    try {
+      setIsDownloading('qr-svg');
+      const size = 800;
+      const hasLogo = Boolean(showQrCenterLogo && logoUrl);
+
+      const qr = new QRCodeStyling({
+        width: size,
+        height: size,
+        type: 'svg',
+        data: targetUrl,
+        image: hasLogo && logoUrl ? logoUrl : undefined,
+        dotsOptions: { color: dotColor, type: dotType as any },
+        cornersSquareOptions: { color: dotColor, type: cornerSquareType as any },
+        cornersDotOptions: { color: dotColor, type: 'dot' },
+        backgroundOptions: { color: '#ffffff' },
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: Math.round(size * 0.015),
+          imageSize: logoSize,
+          hideBackgroundDots: hasLogo,
+          saveAsBlob: false // Crucial: prevents XHR GET crash on base64 data URIs
+        }
+      });
+
+      const rawSvgBlob = await qr.getRawData('svg');
+      if (!rawSvgBlob) throw new Error('Failed to generate QR SVG');
+      const svgText = await (rawSvgBlob as Blob).text();
+
+      const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shortCode}-qr.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('SVG download failed:', err);
+      alert('Failed to generate SVG. Please try again.');
+    } finally {
+      setIsDownloading(null);
+    }
+  };
+
+  // Download delegation helper
+  const handleDownloadQr = (extension: 'png' | 'svg') => {
+    if (extension === 'png') {
+      handleDownloadQrPng();
+    } else {
+      handleDownloadQrSvg();
+    }
+  };
+
+  // 4. Download / Print A4 Poster PDF with High-Res QR Code and Logos
   const handlePrintA4Poster = async () => {
-    if (!qrInstanceRef.current) return;
-    // Generate a high-res PNG data URL for embedding in PDF
-    const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 800;
-    // Render QR to a temp div for SVG → canvas conversion
-    const tempDiv = document.createElement('div');
-    document.body.appendChild(tempDiv);
-    const tempQr = new QRCodeStyling({
-      width: 800,
-      height: 800,
-      type: 'canvas',
-      data: targetUrl,
-      image: showQrCenterLogo && logoUrl ? logoUrl : undefined,
-      dotsOptions: { color: dotColor, type: dotType as any },
-      cornersSquareOptions: { color: dotColor, type: cornerSquareType as any },
-      cornersDotOptions: { color: dotColor, type: 'dot' },
-      backgroundOptions: { color: '#ffffff' },
-      imageOptions: {
-        crossOrigin: 'anonymous',
-        margin: 8,
-        imageSize: logoSize,
-        hideBackgroundDots: true
+    try {
+      setIsDownloading('a4-pdf');
+      // Generate clean high-res QR code PNG with logo
+      const canvas = await renderQrWithLogoToCanvas({
+        size: 1024,
+        targetUrl,
+        dotColor,
+        dotType,
+        cornerSquareType,
+        logoUrl,
+        showQrCenterLogo,
+        logoSize
+      });
+      const qrDataUrl = canvas.toDataURL('image/png');
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const W = 210; // A4 width mm
+      const H = 297; // A4 height mm
+
+      // Background
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, W, H, 'F');
+
+      // Top accent bar
+      doc.setFillColor(...hexToRgb(dotColor));
+      doc.rect(0, 0, W, 12, 'F');
+
+      let textStartY = 38;
+
+      // Optional: Draw Top Owner Logo on A4 Poster safely with dynamic MIME detection
+      if (showStandeeLogo && logoUrl) {
+        try {
+          const logoSizeMm = 20;
+          let format: 'PNG' | 'JPEG' | 'WEBP' = 'PNG';
+          if (logoUrl.startsWith('data:image/jpeg') || logoUrl.startsWith('data:image/jpg')) {
+            format = 'JPEG';
+          } else if (logoUrl.startsWith('data:image/webp')) {
+            format = 'WEBP';
+          }
+          doc.addImage(logoUrl, format, (W - logoSizeMm) / 2, 16, logoSizeMm, logoSizeMm);
+          textStartY = 45;
+        } catch (e) {
+          console.warn('Could not add logo to PDF:', e);
+        }
       }
-    });
-    tempQr.append(tempDiv);
 
-    // Allow rendering time then capture canvas
-    await new Promise((res) => setTimeout(res, 400));
+      // Business name
+      doc.setTextColor(20, 20, 30);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text(activeBusiness?.name || 'My Business', W / 2, textStartY, { align: 'center' });
 
-    const qrCanvas = tempDiv.querySelector('canvas') as HTMLCanvasElement | null;
-    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
-    document.body.removeChild(tempDiv);
+      // Headline
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(70, 70, 90);
+      doc.text(headline || 'Share Your Experience on Google', W / 2, textStartY + 12, { align: 'center', maxWidth: 160 });
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210; // A4 width mm
-    const H = 297; // A4 height mm
-
-    // Background
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, W, H, 'F');
-
-    // Top accent bar
-    doc.setFillColor(...hexToRgb(dotColor));
-    doc.rect(0, 0, W, 12, 'F');
-
-    let textStartY = 38;
-
-    // Optional: Draw Top Owner Logo on A4 Poster
-    if (showStandeeLogo && logoUrl) {
-      try {
-        const logoSizeMm = 20;
-        doc.addImage(logoUrl, 'PNG', (W - logoSizeMm) / 2, 16, logoSizeMm, logoSizeMm);
-        textStartY = 45;
-      } catch (e) {
-        console.warn('Could not add logo to PDF:', e);
+      // QR Code image
+      if (qrDataUrl) {
+        const qrSize = 110;
+        const qrX = (W - qrSize) / 2;
+        doc.addImage(qrDataUrl, 'PNG', qrX, textStartY + 20, qrSize, qrSize);
       }
+
+      // Google badge text
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(66, 133, 244);
+      doc.text('★ Google Reviews', W / 2, textStartY + 138, { align: 'center' });
+
+      // Subheadline
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 140);
+      doc.text(subheadline || 'Scan with your phone camera or Google Lens', W / 2, textStartY + 147, { align: 'center', maxWidth: 140 });
+
+      // Short URL
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...hexToRgb(dotColor));
+      doc.text(`reviewqr.in/r/${shortCode}`, W / 2, textStartY + 158, { align: 'center' });
+
+      // Bottom accent bar
+      doc.setFillColor(...hexToRgb(dotColor));
+      doc.rect(0, H - 10, W, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Powered by ReviewBoost AI', W / 2, H - 3.5, { align: 'center' });
+
+      doc.save(`${shortCode}-a4-poster.pdf`);
+    } catch (err) {
+      console.error('A4 PDF export failed:', err);
+      alert('Failed to generate A4 PDF. Please try again.');
+    } finally {
+      setIsDownloading(null);
     }
-
-    // Business name
-    doc.setTextColor(20, 20, 30);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text(activeBusiness?.name || 'My Business', W / 2, textStartY, { align: 'center' });
-
-    // Headline
-    doc.setFontSize(13);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(70, 70, 90);
-    doc.text(headline || 'Share Your Experience on Google', W / 2, textStartY + 12, { align: 'center', maxWidth: 160 });
-
-    // QR Code image
-    if (qrDataUrl) {
-      const qrSize = 110;
-      const qrX = (W - qrSize) / 2;
-      doc.addImage(qrDataUrl, 'PNG', qrX, textStartY + 20, qrSize, qrSize);
-    }
-
-    // Google badge text
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(66, 133, 244);
-    doc.text('★ Google Reviews', W / 2, textStartY + 138, { align: 'center' });
-
-    // Subheadline
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(120, 120, 140);
-    doc.text(subheadline || 'Scan with your phone camera or Google Lens', W / 2, textStartY + 147, { align: 'center', maxWidth: 140 });
-
-    // Short URL
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...hexToRgb(dotColor));
-    doc.text(`reviewqr.in/r/${shortCode}`, W / 2, textStartY + 158, { align: 'center' });
-
-    // Bottom accent bar
-    doc.setFillColor(...hexToRgb(dotColor));
-    doc.rect(0, H - 10, W, 10, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Powered by ReviewBoost AI', W / 2, H - 3.5, { align: 'center' });
-
-    doc.save(`${shortCode}-a4-poster.pdf`);
   };
 
   const handleCopyLink = () => {
@@ -794,33 +1051,78 @@ export function QrStudioPage() {
                   <span>{isSaved ? 'Saved to Your Active Standees!' : 'Save This Standee to Location'}</span>
                 </Button>
 
-                <div className="flex gap-2">
-                  <Button
-                    id="download-png-btn"
-                    onClick={() => handleDownloadQr('png')}
-                    className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>PNG</span>
-                  </Button>
-                  <Button
-                    id="download-svg-btn"
-                    variant="outline"
-                    onClick={() => handleDownloadQr('svg')}
-                    className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>SVG</span>
-                  </Button>
-                  <Button
-                    id="print-a4-btn"
-                    variant="outline"
-                    onClick={handlePrintA4Poster}
-                    className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold gap-1.5 shadow-xs hover:bg-purple-50 dark:hover:bg-purple-950/40"
-                  >
-                    <Printer className="h-3.5 w-3.5" />
-                    <span>A4 PDF</span>
-                  </Button>
+                {/* Standee Poster Options */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>Standee Poster (Ready to Print)</span>
+                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold">Mockup + Branding</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      id="download-standee-btn"
+                      onClick={handleDownloadStandeePng}
+                      disabled={isDownloading !== null}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                    >
+                      {isDownloading === 'standee-png' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span>Standee PNG</span>
+                    </Button>
+                    <Button
+                      id="print-a4-btn"
+                      variant="outline"
+                      onClick={handlePrintA4Poster}
+                      disabled={isDownloading !== null}
+                      className="flex-1 rounded-xl border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold gap-1.5 shadow-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 cursor-pointer"
+                    >
+                      {isDownloading === 'a4-pdf' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="h-3.5 w-3.5" />
+                      )}
+                      <span>A4 PDF Poster</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Standalone QR Code Options */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>Standalone QR Code</span>
+                    <span className="text-[10px] text-slate-400 font-semibold">HD 1024px with Logo</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      id="download-png-btn"
+                      onClick={handleDownloadQrPng}
+                      disabled={isDownloading !== null}
+                      className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                    >
+                      {isDownloading === 'qr-png' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span>QR Code PNG</span>
+                    </Button>
+                    <Button
+                      id="download-svg-btn"
+                      variant="outline"
+                      onClick={handleDownloadQrSvg}
+                      disabled={isDownloading !== null}
+                      className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      {isDownloading === 'qr-svg' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      <span>Vector SVG</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -871,9 +1173,26 @@ export function QrStudioPage() {
                 </h3>
               </div>
 
-              {/* QR Container Frame */}
-              <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-sm my-1">
+              {/* QR Container Frame with crisp centered Logo badge */}
+              <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-sm my-1 relative flex items-center justify-center">
                 <div ref={qrRef} className="flex items-center justify-center" />
+                {showQrCenterLogo && logoUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div
+                      className="bg-white rounded-xl shadow-xs border border-slate-200/90 flex items-center justify-center p-1 overflow-hidden"
+                      style={{
+                        width: `${Math.round(220 * logoSize)}px`,
+                        height: `${Math.round(220 * logoSize)}px`
+                      }}
+                    >
+                      <img
+                        src={logoUrl}
+                        alt="QR Center Logo"
+                        className="max-w-full max-h-full object-contain rounded-lg"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Official Google Badge */}
@@ -900,7 +1219,38 @@ export function QrStudioPage() {
             <div className="w-56 h-3 bg-slate-400/20 dark:bg-black/40 rounded-full blur-xs mt-3" />
           </div>
 
-          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          {/* Quick Mockup Action Pill */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleDownloadStandeePng}
+              disabled={isDownloading !== null}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+            >
+              {isDownloading === 'standee-png' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span>Download Standee Poster (HD PNG)</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePrintA4Poster}
+              disabled={isDownloading !== null}
+              className="rounded-xl border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold gap-1.5 shadow-xs hover:bg-purple-50 dark:hover:bg-purple-950/40 cursor-pointer"
+            >
+              {isDownloading === 'a4-pdf' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Printer className="h-3.5 w-3.5" />
+              )}
+              <span>Print A4 Poster</span>
+            </Button>
+          </div>
+
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
             <span>High-res vector QR works with any smartphone camera and Google Lens</span>
           </div>
