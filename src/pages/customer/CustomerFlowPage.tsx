@@ -143,18 +143,9 @@ export function CustomerFlowPage() {
     }
   }, [draftLanguage, i18n]);
 
-  // Dynamic chips catalog: Shopkeeper custom chips or intelligent defaults
+  // Dynamic chips catalog: Shopkeeper custom chips ONLY - ZERO default/dummy chips
   const [customChips, setCustomChips] = useState<string[]>([]);
-  const defaultChips = [
-    'Delicious & fresh',
-    'Fast service',
-    'Clean & hygienic',
-    'Friendly staff',
-    'Great value',
-    'Neat packaging',
-    'Attentive service'
-  ];
-  const chipsCatalog = customChips.length > 0 ? customChips : defaultChips;
+  const chipsCatalog = customChips;
 
   const toggleChip = (chip: string) => {
     setSelectedChips((prev) =>
@@ -428,35 +419,43 @@ export function CustomerFlowPage() {
                   : 'How was your visit today?'}
               </h3>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                {draftLanguage === 'gu'
-                  ? 'તમને જે ગમ્યું તે સિલેક્ટ કરો. અમે તમારા શબ્દોમાંથી ૩ રિવ્યૂ વિકલ્પો બનાવીશું.'
-                  : draftLanguage === 'hi'
-                  ? 'जो अच्छा लगा उस पर टैप करें। हम आपके लिए ३ सुंदर रिव्यू विकल्प तैयार करेंगे।'
-                  : 'Tap what stood out or describe below. We will craft 3 authentic review options for you.'}
+                {chipsCatalog.length > 0
+                  ? (draftLanguage === 'gu'
+                      ? 'તમને જે ગમ્યું તે સિલેક્ટ કરો અથવા નીચે વિગત લખો. અમે તમારા શબ્દોમાંથી ૩ રિવ્યૂ બનાવીશું.'
+                      : draftLanguage === 'hi'
+                      ? 'जो अच्छा लगा उस पर टैप करें या नीचे अपनी बात लिखें। हम आपके लिए ३ सुंदर रिव्यू विकल्प बनाएंगे।'
+                      : 'Tap what stood out or describe below. We will craft 3 authentic review options for you.')
+                  : (draftLanguage === 'gu'
+                      ? 'તમારો અનુભવ નીચે લખો અથવા માઇક પર બોલો. અમે તમારા માટે ૩ રિવ્યૂ બનાવી આપીશું.'
+                      : draftLanguage === 'hi'
+                      ? 'अपना अनुभव नीचे लिखें या माइक पर बोलें। हम आपके लिए ३ सुंदर रिव्यू तैयार करेंगे।'
+                      : 'Share a few words below or tap the microphone. We will craft 3 authentic review options for you.')}
               </p>
             </div>
 
             {/* Chips Grid */}
-            <div className="flex flex-wrap gap-2">
-              {chipsCatalog.map((chip) => {
-                const isSelected = selectedChips.includes(chip);
-                return (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => toggleChip(chip)}
-                    className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-medium transition-all select-none flex items-center gap-1.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white font-semibold shadow-xs scale-[1.02]'
-                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {isSelected && <Check className="h-3.5 w-3.5" />}
-                    <span>{chip}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {chipsCatalog.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {chipsCatalog.map((chip) => {
+                  const isSelected = selectedChips.includes(chip);
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => toggleChip(chip)}
+                      className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-medium transition-all select-none flex items-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white font-semibold shadow-xs scale-[1.02]'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3.5 w-3.5" />}
+                      <span>{chip}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Optional Free-Text Input & Voice */}
             <div className="space-y-2 pt-2">
@@ -496,8 +495,10 @@ export function CustomerFlowPage() {
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder={
                   draftLanguage === 'gu'
-                    ? 'જેમ કે: સ્વાદ ખૂબ સ્વાદિષ્ટ હતો, કાજુ કતરી તાજી હતી, સ્ટાફ વિવેકી હતો...'
-                    : 'e.g. Loved the fresh kaju katli, quick billing, clean seating...'
+                    ? 'દા.ત. ખૂબ સરસ સેવા, સમયસર કામ, નમ્ર સ્ટાફ...'
+                    : draftLanguage === 'hi'
+                    ? 'जैसे: बहुत अच्छी सर्विस, समय पर काम, विनम्र स्टाफ...'
+                    : 'e.g. Excellent service, timely assistance, very polite and helpful staff...'
                 }
                 className="text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 leading-relaxed"
               />
