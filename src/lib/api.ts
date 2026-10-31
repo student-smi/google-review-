@@ -72,7 +72,8 @@ export function getStoredBusinesses(): BusinessItem[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(BUSINESSES_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const list: BusinessItem[] = raw ? JSON.parse(raw) : [];
+    return list.filter((b) => b && b.id !== 'demo-biz-1' && !b.name?.toLowerCase().includes('royal sweets'));
   } catch {
     return [];
   }
@@ -81,16 +82,26 @@ export function getStoredBusinesses(): BusinessItem[] {
 export function saveStoredBusinesses(list: BusinessItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(list));
+    const cleanList = list.filter((b) => b && b.id !== 'demo-biz-1' && !b.name?.toLowerCase().includes('royal sweets'));
+    localStorage.setItem(BUSINESSES_KEY, JSON.stringify(cleanList));
   } catch {}
 }
 
 export function getActiveBusinessId(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(ACTIVE_BIZ_KEY);
+  const id = localStorage.getItem(ACTIVE_BIZ_KEY);
+  if (!id || id === 'demo-biz-1') {
+    localStorage.removeItem(ACTIVE_BIZ_KEY);
+    return null;
+  }
+  return id;
 }
 
 export function saveActiveBusinessId(id: string): void {
   if (typeof window === 'undefined') return;
+  if (!id || id === 'demo-biz-1') {
+    localStorage.removeItem(ACTIVE_BIZ_KEY);
+    return;
+  }
   localStorage.setItem(ACTIVE_BIZ_KEY, id);
 }

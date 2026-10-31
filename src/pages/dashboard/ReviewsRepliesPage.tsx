@@ -1342,33 +1342,36 @@ export function ReviewsRepliesPage() {
                                 )}
                               </Button>
 
-                              {/* 1-Click Copy AI Reply & Open on Google Maps */}
-                              <Button
-                                size="sm"
-                                onClick={() => handleCopyAndOpenGoogleMaps(review)}
-                                disabled={!currentDraft.trim()}
-                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                <span>📋 Copy Reply & Open Google Maps ↗</span>
-                              </Button>
-
                               {/* Direct Google Maps GMB API (if OAuth connected) */}
                               {gmbStatus.isConnected && (
                                 <Button
-                                  variant="outline"
                                   size="sm"
                                   onClick={() => handlePostDirectReplyToGoogle(review)}
                                   disabled={isPostingToGoogle[review.id] || !currentDraft.trim()}
-                                  className="border-blue-200 text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
                                 >
                                   {isPostingToGoogle[review.id] ? (
-                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Publishing…</span></>
+                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Posting to Google…</span></>
                                   ) : (
-                                    <><Send className="h-3.5 w-3.5" /><span>Direct GMB API</span></>
+                                    <><Send className="h-3.5 w-3.5" /><span>Post to Google Maps 🚀</span></>
                                   )}
                                 </Button>
                               )}
+
+                              {/* 1-Click Copy AI Reply & Open on Google Maps */}
+                              <Button
+                                size="sm"
+                                variant={gmbStatus.isConnected ? "outline" : "default"}
+                                onClick={() => handleCopyAndOpenGoogleMaps(review)}
+                                disabled={!currentDraft.trim()}
+                                className={gmbStatus.isConnected
+                                  ? "border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                                  : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                                }
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span>📋 Copy & Open Maps ↗</span>
+                              </Button>
                             </div>
                           </div>
 
