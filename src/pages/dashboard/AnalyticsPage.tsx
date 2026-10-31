@@ -140,11 +140,12 @@ export function AnalyticsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <NavLink to="/dashboard/qr">
-            <Button size="sm" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Standee</span>
-            </Button>
+          <NavLink
+            to="/dashboard/qr"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs shadow-xs cursor-pointer no-underline"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Standee</span>
           </NavLink>
         </div>
       </div>
@@ -335,11 +336,12 @@ export function AnalyticsPage() {
             {placements.length === 0 && !isLoading ? (
               <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center space-y-2">
                 <p className="text-xs text-slate-500">No standee placements created yet.</p>
-                <NavLink to="/dashboard/qr">
-                  <Button size="sm" variant="outline" className="text-xs font-bold rounded-xl gap-1.5">
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Generate Your First Standee</span>
-                  </Button>
+                <NavLink
+                  to="/dashboard/qr"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-bold shadow-xs cursor-pointer no-underline"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Generate Your First Standee</span>
                 </NavLink>
               </div>
             ) : (

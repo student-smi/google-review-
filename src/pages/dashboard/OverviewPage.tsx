@@ -43,6 +43,7 @@ export function OverviewPage() {
   const [qrList, setQrList] = useState<RealQrItem[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [placesStats, setPlacesStats] = useState<any>(null);
+  const [analyticsTotals, setAnalyticsTotals] = useState<{ scanCount: number; helpMeWriteCount: number; googleClickCount: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -82,6 +83,22 @@ export function OverviewPage() {
       })
       .catch(() => {});
 
+    apiFetch<{ stats: Array<{ scanCount: number; helpMeWriteCount: number; googleClickCount: number }> }>(`/api/analytics/business/${activeBusiness.id}`)
+      .then((res) => {
+        if (res?.stats && res.stats.length > 0) {
+          const totals = res.stats.reduce(
+            (acc, curr) => ({
+              scanCount: acc.scanCount + (curr.scanCount || 0),
+              helpMeWriteCount: acc.helpMeWriteCount + (curr.helpMeWriteCount || 0),
+              googleClickCount: acc.googleClickCount + (curr.googleClickCount || 0)
+            }),
+            { scanCount: 0, helpMeWriteCount: 0, googleClickCount: 0 }
+          );
+          setAnalyticsTotals(totals);
+        }
+      })
+      .catch(() => {});
+
     apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews`)
       .then((res) => {
         if (res?.reviews) setReviews(res.reviews);
@@ -89,10 +106,14 @@ export function OverviewPage() {
       .catch(() => {});
   }, [activeBusiness?.id]);
 
-  // Real computed totals from actual QR codes
-  const totalScans = qrList.reduce((acc, q) => acc + (q.scans || 0), 0);
-  const totalDrafts = qrList.reduce((acc, q) => acc + (q.drafts || 0), 0);
-  const totalClicks = qrList.reduce((acc, q) => acc + (q.googleClicks || 0), 0);
+  // Real computed totals from actual QR codes & analytics
+  const qrScans = qrList.reduce((acc, q) => acc + (q.scans || 0), 0);
+  const qrDrafts = qrList.reduce((acc, q) => acc + (q.drafts || 0), 0);
+  const qrClicks = qrList.reduce((acc, q) => acc + (q.googleClicks || 0), 0);
+
+  const totalScans = Math.max(qrScans, analyticsTotals?.scanCount || 0);
+  const totalDrafts = Math.max(qrDrafts, analyticsTotals?.helpMeWriteCount || 0);
+  const totalClicks = Math.max(qrClicks, analyticsTotals?.googleClickCount || 0);
   const conversionRate = totalScans > 0 ? ((totalClicks / totalScans) * 100).toFixed(1) : '0.0';
 
   const handleCopyLink = (code: string) => {
@@ -133,18 +154,20 @@ export function OverviewPage() {
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2.5">
-          <NavLink to="/dashboard/qr">
-            <button className="h-9 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer">
-              <FileDown className="h-3.5 w-3.5 text-slate-500" />
-              <span>QR Poster Studio</span>
-            </button>
+          <NavLink
+            to="/dashboard/qr"
+            className="h-9 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer no-underline"
+          >
+            <FileDown className="h-3.5 w-3.5 text-slate-500" />
+            <span>QR Poster Studio</span>
           </NavLink>
 
-          <NavLink to="/dashboard/replies">
-            <button className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer">
-              <Sparkles className="h-3.5 w-3.5 text-pink-400" />
-              <span>AI Reply Copilot</span>
-            </button>
+          <NavLink
+            to="/dashboard/replies"
+            className="h-9 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer no-underline"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-pink-400" />
+            <span>AI Reply Copilot</span>
           </NavLink>
         </div>
       </div>
@@ -270,10 +293,11 @@ export function OverviewPage() {
                       </div>
                     </div>
                   </div>
-                  <NavLink to="/dashboard/replies">
-                    <Button size="sm" variant="outline" className="h-7 text-[11px] font-bold rounded-lg border-slate-200 dark:border-slate-800">
-                      Reply with AI →
-                    </Button>
+                  <NavLink
+                    to="/dashboard/replies"
+                    className="h-7 px-2.5 text-[11px] font-bold rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center cursor-pointer no-underline"
+                  >
+                    Reply with AI →
                   </NavLink>
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
@@ -296,11 +320,12 @@ export function OverviewPage() {
               </p>
             </div>
             <div className="pt-2">
-              <NavLink to="/dashboard/qr">
-                <Button size="sm" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5">
-                  <FileDown className="h-3.5 w-3.5" />
-                  <span>Customize & Print Standee</span>
-                </Button>
+              <NavLink
+                to="/dashboard/qr"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs shadow-xs cursor-pointer no-underline"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                <span>Customize & Print Standee</span>
               </NavLink>
             </div>
           </div>
@@ -318,11 +343,12 @@ export function OverviewPage() {
               Connected directly to {activeBusiness?.name || 'your store'}
             </p>
           </div>
-          <NavLink to="/dashboard/qr">
-            <button className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer">
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Standee</span>
-            </button>
+          <NavLink
+            to="/dashboard/qr"
+            className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer no-underline"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Standee</span>
           </NavLink>
         </div>
 
@@ -330,11 +356,12 @@ export function OverviewPage() {
           {qrList.length === 0 && !isLoading ? (
             <div className="py-6 text-center space-y-2">
               <p className="text-xs text-slate-500">No standees created yet.</p>
-              <NavLink to="/dashboard/qr">
-                <Button size="sm" variant="outline" className="text-xs font-bold rounded-xl gap-1.5">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Generate First Standee</span>
-                </Button>
+              <NavLink
+                to="/dashboard/qr"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-bold shadow-xs cursor-pointer no-underline"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Generate First Standee</span>
               </NavLink>
             </div>
           ) : (

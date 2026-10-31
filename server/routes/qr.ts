@@ -5,7 +5,7 @@ import type { Env } from './public';
 
 export const qrRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
 
-// List QR codes for a business
+// List QR codes for a business with aggregated scan stats
 qrRoutes.get('/business/:businessId', async (c) => {
   const ownerId = c.get('ownerId');
   const businessId = c.req.param('businessId');
@@ -14,7 +14,27 @@ qrRoutes.get('/business/:businessId', async (c) => {
 
   try {
     const list = await scoped.getQrCodes(businessId);
-    return c.json({ qrCodes: list });
+    let statsByQr: Record<string, { scans: number; drafts: number; googleClicks: number }> = {};
+    try {
+      const dailyStats = await scoped.getDailyAnalytics(businessId, 365);
+      for (const stat of dailyStats) {
+        if (!statsByQr[stat.qrId]) {
+          statsByQr[stat.qrId] = { scans: 0, drafts: 0, googleClicks: 0 };
+        }
+        statsByQr[stat.qrId].scans += stat.scanCount || 0;
+        statsByQr[stat.qrId].drafts += stat.helpMeWriteCount || 0;
+        statsByQr[stat.qrId].googleClicks += stat.googleClickCount || 0;
+      }
+    } catch {}
+
+    const enhanced = list.map(q => ({
+      ...q,
+      scans: statsByQr[q.id]?.scans || 0,
+      drafts: statsByQr[q.id]?.drafts || 0,
+      googleClicks: statsByQr[q.id]?.googleClicks || 0
+    }));
+
+    return c.json({ qrCodes: enhanced });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }
