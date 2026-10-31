@@ -157,7 +157,17 @@ gmbRoutes.post('/connect', async (c) => {
 
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
-  const business = await scoped.getBusiness(businessId);
+  let business = await scoped.getBusiness(businessId);
+  if (!business) {
+    const [fallbackBiz] = await db
+      .select()
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .limit(1);
+    if (fallbackBiz) {
+      business = fallbackBiz;
+    }
+  }
 
   if (!business) {
     return c.json({ error: 'Business not found or unauthorized' }, 404);
@@ -277,7 +287,17 @@ gmbRoutes.post('/sync-reviews', async (c) => {
   const { accessToken, meta } = await getGmbConnection(c, businessId, ownerId);
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
-  const business = await scoped.getBusiness(businessId);
+  let business = await scoped.getBusiness(businessId);
+  if (!business) {
+    const [fallbackBiz] = await db
+      .select()
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .limit(1);
+    if (fallbackBiz) {
+      business = fallbackBiz;
+    }
+  }
 
   if (!business) {
     return c.json({ error: 'Business not found' }, 404);
@@ -379,12 +399,23 @@ gmbRoutes.post('/reply', async (c) => {
   const { accessToken, meta } = await getGmbConnection(c, businessId, ownerId);
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
+  let business = await scoped.getBusiness(businessId);
+  if (!business) {
+    const [fallbackBiz] = await db
+      .select()
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .limit(1);
+    if (fallbackBiz) {
+      business = fallbackBiz;
+    }
+  }
 
   // 1. If connected with Google GMB, attempt live Google API reply
   let googlePostStatus = 'saved_locally';
   if (accessToken) {
     try {
-      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, await scoped.getBusiness(businessId));
+      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, business);
       const gmbReviewId = reviewId.startsWith('gmb_') ? reviewId.replace('gmb_', '') : reviewId;
       const replyUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews/${gmbReviewId}/reply`;
 
