@@ -33,8 +33,8 @@ export function BusinessesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
-  const [address, setAddress] = useState('Ahmedabad, Gujarat');
-  const [city, setCity] = useState('Ahmedabad');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
@@ -46,8 +46,8 @@ export function BusinessesPage() {
   const handleOpenModal = () => {
     setName('');
     setCategory('');
-    setAddress('Ahmedabad, Gujarat');
-    setCity('Ahmedabad');
+    setAddress('');
+    setCity('');
     setGoogleReviewUrl('');
     setGooglePlaceId(null);
     setVerifiedPlace(null);
@@ -329,12 +329,12 @@ export function BusinessesPage() {
                     setGoogleReviewUrl(place.googleReviewUrl);
                     setVerifiedPlace(place);
 
-                    // 1. Dynamic Category directly from Google Places info (e.g. Electronics store, Dental clinic, Sweets shop)
-                    const dynamicCategory = place.category || 'Local Business';
+                    // 1. Dynamic Category directly from Google Places info
+                    const dynamicCategory = place.category || '';
                     setCategory(dynamicCategory);
 
                     // 2. City & Address extraction from verified address
-                    let extractedCity = city || 'Ahmedabad';
+                    let extractedCity = city || '';
                     if (place.address) {
                       setAddress(place.address);
                       const parts = place.address.split(',').map((p) => p.trim());

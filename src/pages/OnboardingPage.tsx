@@ -34,7 +34,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
   // Form state - ZERO dummy data pre-filled
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('services');
+  const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -213,11 +213,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     setUrlTested(true);
 
                     // 1. Dynamic Google Category Assignment
-                    const dynamicCat = place.category || 'Agency & Services';
+                    const dynamicCat = place.category || '';
                     setCategory(dynamicCat);
 
                     // 2. City extraction from verified address
-                    let extractedCity = city || 'India';
+                    let extractedCity = city || '';
                     if (place.address) {
                       const parts = place.address.split(',').map((p) => p.trim());
                       if (parts.length >= 3) {

@@ -24,15 +24,7 @@ import {
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
 
-const DEFAULT_CHIPS = [
-  'Fast service',
-  'Friendly staff',
-  'Clean & hygienic',
-  'Great value',
-  'Neat packaging',
-  'Attentive service',
-  'Highly recommended'
-];
+const DEFAULT_CHIPS: string[] = [];
 
 export function KeywordManagementPage() {
   const { activeBusiness, refreshBusinesses } = useOutletContext<{
@@ -47,11 +39,18 @@ export function KeywordManagementPage() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {}
     }
-    return DEFAULT_CHIPS;
+    return [];
   });
 
+  const getCleanCategory = (cat?: string | null) => {
+    if (!cat) return '';
+    const lower = cat.toLowerCase().trim();
+    if (lower === 'services' || lower === 'local business') return '';
+    return cat.trim();
+  };
+
   const [newChipInput, setNewChipInput] = useState('');
-  const [selectedIndustry, setSelectedIndustry] = useState(activeBusiness?.category || 'services');
+  const [selectedIndustry, setSelectedIndustry] = useState(() => getCleanCategory(activeBusiness?.category));
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [detailedAiSuggestions, setDetailedAiSuggestions] = useState<Array<{
     keyword: string;
@@ -69,7 +68,7 @@ export function KeywordManagementPage() {
   // Sync when activeBusiness changes
   useEffect(() => {
     if (activeBusiness) {
-      setSelectedIndustry(activeBusiness.category || 'services');
+      setSelectedIndustry(getCleanCategory(activeBusiness.category));
       if (activeBusiness.chipsJson) {
         try {
           const parsed = JSON.parse(activeBusiness.chipsJson);
@@ -79,9 +78,9 @@ export function KeywordManagementPage() {
           }
         } catch {}
       }
-      setChips(DEFAULT_CHIPS);
+      setChips([]);
     }
-  }, [activeBusiness?.id, activeBusiness?.chipsJson]);
+  }, [activeBusiness?.id, activeBusiness?.chipsJson, activeBusiness?.category]);
 
   const handleAddChip = (text?: string) => {
     const chipToAdd = (text || newChipInput).trim();
@@ -98,12 +97,18 @@ export function KeywordManagementPage() {
     setChips((prev) => prev.filter((_, i) => i !== indexToRemove));
   };
 
-  const handleResetDefaults = () => {
-    setChips(DEFAULT_CHIPS);
+  const handleClearAll = () => {
+    setChips([]);
   };
 
   const handleGenerateAiKeywords = async () => {
     if (!activeBusiness) return;
+    const catToUse = (selectedIndustry || '').trim();
+    if (!catToUse) {
+      setAiStatusMsg('Please enter your Target Industry / Business Category (e.g. Sweets shop, Electronics store, Dental clinic) before generating AI keywords.');
+      return;
+    }
+
     setIsGeneratingAi(true);
     setAiStatusMsg('');
     try {
@@ -129,7 +134,7 @@ export function KeywordManagementPage() {
           businessId: activeBusiness.id,
           placeId: activeBusiness.googlePlaceId,
           businessName: activeBusiness.name,
-          category: selectedIndustry || activeBusiness.category || 'services',
+          category: catToUse,
           city: activeBusiness.city,
           address: activeBusiness.address,
           refresh: true
@@ -140,16 +145,16 @@ export function KeywordManagementPage() {
         const items = data.data.keywordSuggestions;
         setDetailedAiSuggestions(items);
         setAiSuggestions(items.map((k) => k.keyword));
-        setAiStatusMsg(`AI Places Engine generated ${items.length} category & location-specific keywords for "${activeBusiness.name}"!`);
+        setAiStatusMsg(`AI generated ${items.length} category-tailored keywords for "${catToUse}"!`);
       } else if (data?.success && Array.isArray(data.keywords)) {
         setAiSuggestions(data.keywords);
-        setAiStatusMsg(`AI recommended ${data.keywords.length} authentic highlight keywords for "${activeBusiness.name}"!`);
+        setAiStatusMsg(`AI recommended ${data.keywords.length} review keywords for "${catToUse}"!`);
       } else {
-        setAiStatusMsg('Could not fetch suggestions. Please try again.');
+        setAiStatusMsg('Could not fetch suggestions. Please check your category and try again.');
       }
     } catch (err) {
       console.warn('AI suggestions error:', err);
-      setAiStatusMsg('Failed to generate suggestions.');
+      setAiStatusMsg('Failed to generate suggestions. Please try again.');
     } finally {
       setIsGeneratingAi(false);
     }
@@ -168,10 +173,12 @@ export function KeywordManagementPage() {
     setSaveSuccess(false);
 
     try {
+      const catToSave = (selectedIndustry || '').trim();
       await apiFetch(`/api/businesses/${activeBusiness.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          chipsJson: JSON.stringify(chips)
+          chipsJson: JSON.stringify(chips),
+          ...(catToSave ? { category: catToSave } : {})
         })
       });
 
@@ -281,8 +288,9 @@ export function KeywordManagementPage() {
               {/* Active Chip Pills */}
               <div className="min-h-[90px] p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80">
                 {chips.length === 0 ? (
-                  <div className="text-center py-4 text-xs text-slate-400">
-                    No keywords added yet. Type a keyword below or use AI recommendations!
+                  <div className="text-center py-5 text-xs text-slate-400 space-y-1">
+                    <p className="font-semibold text-slate-600">No review highlight keywords added yet.</p>
+                    <p>Enter your business category below and click <strong className="text-indigo-600">✨ AI Suggest Keywords</strong>, or add custom tags manually!</p>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -336,17 +344,19 @@ export function KeywordManagementPage() {
                 </div>
               </div>
 
-              {/* Reset to Defaults Helper */}
+              {/* Clear Tags Helper */}
               <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100">
                 <span>Tip: Keep keywords between 2 to 4 words for best mobile readability.</span>
-                <button
-                  type="button"
-                  onClick={handleResetDefaults}
-                  className="text-slate-500 hover:text-purple-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reset Defaults</span>
-                </button>
+                {chips.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="text-slate-500 hover:text-rose-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Clear All Tags</span>
+                  </button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -423,10 +433,12 @@ export function KeywordManagementPage() {
                       list="dynamic-industry-suggestions"
                       value={selectedIndustry}
                       onChange={(e) => setSelectedIndustry(e.target.value)}
-                      placeholder="e.g. Electronics store, Dental clinic, Indian sweets, Auto garage…"
+                      placeholder="Type your category (e.g. Sweets shop, Dental clinic, Electronics store, Auto repair)..."
                       className="text-xs rounded-xl h-9"
                     />
-                    {activeBusiness?.category && (
+                    {activeBusiness?.category &&
+                      activeBusiness.category.toLowerCase() !== 'services' &&
+                      activeBusiness.category.toLowerCase() !== 'local business' && (
                       <Button
                         type="button"
                         variant="outline"
@@ -437,7 +449,7 @@ export function KeywordManagementPage() {
                             ? 'bg-purple-50 text-purple-700 border-purple-300 ring-1 ring-purple-400'
                             : 'text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
-                        title="Reset to Google verified store category"
+                        title="Use Google verified store category"
                       >
                         <Tag className="h-3 w-3 text-purple-600" />
                         <span>Google Category: {activeBusiness.category}</span>
@@ -591,27 +603,35 @@ export function KeywordManagementPage() {
 
               {/* Live Keyword Chips on Phone */}
               <div className="flex flex-wrap gap-1.5 py-1">
-                {chips.slice(0, 10).map((chip, idx) => {
-                  const isSelected = previewSelectedChip === idx;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setPreviewSelectedChip(idx)}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-2xs scale-[1.02]'
-                          : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'
-                      }`}
-                    >
-                      {isSelected ? `✓ ${chip}` : chip}
-                    </button>
-                  );
-                })}
-                {chips.length > 10 && (
-                  <span className="px-2 py-1 rounded-xl text-[10px] font-medium text-slate-400 bg-slate-100 border border-slate-200">
-                    +{chips.length - 10} more
-                  </span>
+                {chips.length === 0 ? (
+                  <div className="w-full text-center py-4 text-[11px] text-slate-400 italic">
+                    Add keywords on the left to see live standee preview
+                  </div>
+                ) : (
+                  <>
+                    {chips.slice(0, 10).map((chip, idx) => {
+                      const isSelected = previewSelectedChip === idx;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setPreviewSelectedChip(idx)}
+                          className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-600 text-white border-purple-600 shadow-2xs scale-[1.02]'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'
+                          }`}
+                        >
+                          {isSelected ? `✓ ${chip}` : chip}
+                        </button>
+                      );
+                    })}
+                    {chips.length > 10 && (
+                      <span className="px-2 py-1 rounded-xl text-[10px] font-medium text-slate-400 bg-slate-100 border border-slate-200">
+                        +{chips.length - 10} more
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 
