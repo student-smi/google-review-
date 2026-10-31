@@ -184,6 +184,13 @@ export function ReviewsRepliesPage() {
               return;
             }
             if (tokenResponse.access_token) {
+              const scopes = tokenResponse.scope || '';
+              if (!scopes.includes('business.manage')) {
+                alert('⚠️ Google Business Permission Required:\n\nDuring Google sign-in, Google shows checkboxes for permissions. You MUST check the box:\n☑ "See, edit, create, and delete your Google business listings"\n\nWithout this permission, Google blocks ReviewQR from reading your Google Reviews. Please click Connect again and check that box.');
+                setIsConnectingGmb(false);
+                return;
+              }
+
               try {
                 if (!activeBusiness?.id) {
                   alert('Please select an active business first.');
