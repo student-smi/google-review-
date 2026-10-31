@@ -12,13 +12,11 @@ import {
   ExternalLink,
   QrCode,
   MapPin,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
   Trash2,
   Check,
-  Star,
-  Loader2
+  Star
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { apiFetch, saveStoredBusinesses, saveActiveBusinessId } from '@/lib/api';
@@ -40,8 +38,6 @@ export function BusinessesPage() {
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
-  const [chips, setChips] = useState<string[]>([]);
-  const [isGeneratingChips, setIsGeneratingChips] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +51,6 @@ export function BusinessesPage() {
     setGoogleReviewUrl('');
     setGooglePlaceId(null);
     setVerifiedPlace(null);
-    setChips([]);
     setError(null);
     setIsModalOpen(true);
   };
@@ -92,7 +87,7 @@ export function BusinessesPage() {
       city: city || address.split(',')[0]?.trim() || address.trim(),
       googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim(),
-      chipsJson: chips.length > 0 ? JSON.stringify(chips) : null,
+      chipsJson: null,
       brandColor: '#2563EB',
       brandColorSecondary: '#F59E0B'
     };
@@ -348,29 +343,6 @@ export function BusinessesPage() {
                         setCity(extractedCity);
                       }
                     }
-
-                    // 3. Auto-generate AI Keywords directly from verified Google Places information
-                    setIsGeneratingChips(true);
-                    try {
-                      const res = await apiFetch<{ success: boolean; keywords: string[] }>('/api/ai/suggest-keywords', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                          businessName: place.name,
-                          category: dynamicCategory,
-                          city: extractedCity,
-                          address: place.address,
-                          summary: place.summary,
-                          types: (place as any).types
-                        })
-                      });
-                      if (res?.keywords && Array.isArray(res.keywords) && res.keywords.length > 0) {
-                        setChips(res.keywords.slice(0, 8));
-                      }
-                    } catch (err) {
-                      console.warn('AI keyword suggestion on place select:', err);
-                    } finally {
-                      setIsGeneratingChips(false);
-                    }
                   }}
                   placeholder="Search your business on Google Maps..."
                 />
@@ -396,36 +368,6 @@ export function BusinessesPage() {
                     <p className="text-[11px] text-slate-600 dark:text-slate-300">
                       📍 {verifiedPlace.address}
                     </p>
-
-                    {/* AI Generated Standee Chips */}
-                    <div className="pt-1.5 border-t border-blue-100 dark:border-blue-900/50">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
-                          <Sparkles className="h-3 w-3 text-indigo-600" />
-                          <span>AI Standee Highlights (Tailored to Google profile):</span>
-                        </div>
-                        {isGeneratingChips && (
-                          <span className="text-[10px] text-indigo-500 flex items-center gap-1 font-medium">
-                            <Loader2 className="h-3 w-3 animate-spin" /> AI analyzing Google data...
-                          </span>
-                        )}
-                      </div>
-
-                      {chips.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {chips.map((chip, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[9px] font-semibold bg-white dark:bg-slate-900 text-indigo-800 dark:text-indigo-200 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800"
-                            >
-                              ✓ {chip}
-                            </span>
-                          ))}
-                        </div>
-                      ) : isGeneratingChips ? (
-                        <div className="text-[10px] text-slate-400 italic">Generating custom review highlight chips...</div>
-                      ) : null}
-                    </div>
                   </div>
                 )}
               </div>

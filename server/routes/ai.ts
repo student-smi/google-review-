@@ -302,6 +302,7 @@ aiRoutes.post('/local-seo-keywords', async (c) => {
 
   const db = getDb(c.env.DB);
   let targetPlaceId = placeId;
+  const userSpecifiedCategory = typeof category === 'string' && category.trim() ? category.trim() : null;
 
   // 1. If businessId provided, look up in database
   if (businessId) {
@@ -313,7 +314,7 @@ aiRoutes.post('/local-seo-keywords', async (c) => {
         .limit(1);
       if (biz) {
         businessName = businessName || biz.name;
-        category = category || biz.category;
+        category = userSpecifiedCategory || biz.category;
         city = city || biz.city;
         address = address || biz.address;
         targetPlaceId = targetPlaceId || biz.googlePlaceId;
@@ -323,7 +324,7 @@ aiRoutes.post('/local-seo-keywords', async (c) => {
     }
   }
 
-  const cacheKey = `localseo:${targetPlaceId || businessId || (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  const cacheKey = `localseo:${targetPlaceId || businessId || (businessName || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}:${(userSpecifiedCategory || category || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
 
   // 2. Check KV cache if available and refresh not forced
   if (!refresh && c.env.KV) {
@@ -363,7 +364,7 @@ aiRoutes.post('/local-seo-keywords', async (c) => {
       if (placeRes.ok) {
         const placeData = (await placeRes.json()) as any;
         businessName = placeData.displayName?.text || businessName;
-        category = placeData.primaryTypeDisplayName?.text || placeData.primaryType?.replace(/_/g, ' ') || category;
+        category = userSpecifiedCategory || placeData.primaryTypeDisplayName?.text || placeData.primaryType?.replace(/_/g, ' ') || category;
         address = placeData.formattedAddress || address;
         types = Array.isArray(placeData.types) ? placeData.types : [];
         summary = placeData.editorialSummary?.text || summary;

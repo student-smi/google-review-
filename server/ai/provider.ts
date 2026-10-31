@@ -708,10 +708,36 @@ export function buildDeterministicLocalSeoFallback(
 
   const suggestions: LocalSeoKeywordSuggestion[] = [];
 
-  // Determine detected category display name
+  // Determine detected category display name (prioritizing user-inputted category)
+  const catLower = (category || '').toLowerCase().trim();
   let detectedCategory = category || 'Local Business';
-  if (contextStr.includes('croma') || contextStr.includes('electronics') || contextStr.includes('gadgets')) {
+
+  if (catLower.includes('electronic') || catLower.includes('gadget') || catLower.includes('mobile') || contextStr.includes('croma')) {
     detectedCategory = 'Electronics Store';
+  } else if (catLower.includes('dental') || catLower.includes('clinic') || catLower.includes('dentist')) {
+    detectedCategory = 'Dental Clinic';
+  } else if (catLower.includes('sweet') || catLower.includes('bakery') || catLower.includes('cake') || catLower.includes('mithai')) {
+    detectedCategory = 'Sweets & Bakery';
+  } else if (catLower.includes('restaurant') || catLower.includes('cafe') || catLower.includes('food') || catLower.includes('dining')) {
+    detectedCategory = 'Restaurant & Cafe';
+  } else if (catLower.includes('salon') || catLower.includes('spa') || catLower.includes('beauty') || catLower.includes('parlour')) {
+    detectedCategory = 'Salon & Spa';
+  } else if (catLower.includes('marketing') || catLower.includes('agency') || catLower.includes('seo') || catLower.includes('digital') || contextStr.includes('upmark')) {
+    detectedCategory = 'Digital Marketing Agency';
+  } else if (catLower.includes('garage') || catLower.includes('car') || catLower.includes('auto') || catLower.includes('repair')) {
+    detectedCategory = 'Automobile Service';
+  } else if (catLower.includes('coaching') || catLower.includes('classes') || catLower.includes('education') || catLower.includes('tuition')) {
+    detectedCategory = 'Education & Coaching';
+  } else if (catLower.includes('jewel') || catLower.includes('gold') || catLower.includes('diamond')) {
+    detectedCategory = 'Jewellery Showroom';
+  } else if (catLower.includes('gym') || catLower.includes('fitness')) {
+    detectedCategory = 'Gym & Fitness Center';
+  } else if (catLower.includes('tax') || catLower.includes('legal') || catLower.includes('accountant') || catLower.includes('ca')) {
+    detectedCategory = 'CA & Legal Services';
+  } else if (catLower.includes('hospital') || catLower.includes('healthcare') || catLower.includes('doctor')) {
+    detectedCategory = 'Healthcare & Hospital';
+  } else if (category && category !== 'services' && category !== 'Local Business') {
+    detectedCategory = category;
   } else if (contextStr.includes('dental') || contextStr.includes('clinic')) {
     detectedCategory = 'Dental Clinic';
   } else if (contextStr.includes('sweet') || contextStr.includes('bakery')) {
@@ -720,14 +746,8 @@ export function buildDeterministicLocalSeoFallback(
     detectedCategory = 'Restaurant & Cafe';
   } else if (contextStr.includes('salon') || contextStr.includes('spa')) {
     detectedCategory = 'Salon & Spa';
-  } else if (contextStr.includes('marketing') || contextStr.includes('agency') || contextStr.includes('seo') || contextStr.includes('upmark')) {
+  } else if (contextStr.includes('marketing') || contextStr.includes('agency') || contextStr.includes('seo')) {
     detectedCategory = 'Digital Marketing Agency';
-  } else if (contextStr.includes('garage') || contextStr.includes('car') || contextStr.includes('auto')) {
-    detectedCategory = 'Automobile Service';
-  } else if (contextStr.includes('coaching') || contextStr.includes('classes') || contextStr.includes('education')) {
-    detectedCategory = 'Education & Coaching';
-  } else if (contextStr.includes('jewel')) {
-    detectedCategory = 'Jewellery Showroom';
   }
 
   const categoryLower = detectedCategory.toLowerCase();
@@ -822,6 +842,48 @@ export function buildDeterministicLocalSeoFallback(
       { keyword: 'SEO ranking growth', type: 'product_service', reason: 'High-intent client search objective.', source: 'verified_business_data', confidence: 'high' },
       { keyword: 'social media management', type: 'product_service', reason: 'Continuous retainer service.', source: 'inference', confidence: 'medium' },
       { keyword: 'Google ads & paid campaigns', type: 'product_service', reason: 'Direct performance marketing service.', source: 'inference', confidence: 'medium' }
+    );
+  } else if (detectedCategory === 'Automobile Service') {
+    suggestions.push(
+      { keyword: 'periodic car service', type: 'product_service', reason: 'Core vehicle scheduled maintenance.', source: 'place_data', confidence: 'high' },
+      { keyword: 'wheel alignment & balancing', type: 'product_service', reason: 'High-frequency garage service.', source: 'inference', confidence: 'high' },
+      { keyword: 'engine diagnosis & tune-up', type: 'product_service', reason: 'Essential mechanical health check.', source: 'inference', confidence: 'medium' },
+      { keyword: 'genuine spare parts', type: 'product_service', reason: 'Major customer trust factor.', source: 'inference', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Education & Coaching') {
+    suggestions.push(
+      { keyword: 'concept clarity & doubts', type: 'product_service', reason: 'Core academic coaching outcome.', source: 'place_data', confidence: 'high' },
+      { keyword: 'exam-oriented preparation', type: 'product_service', reason: 'Key differentiator for competitive tests.', source: 'inference', confidence: 'high' },
+      { keyword: 'quality study material', type: 'product_service', reason: 'Valuable student learning resource.', source: 'inference', confidence: 'medium' },
+      { keyword: 'experienced faculty guidance', type: 'product_service', reason: 'Primary trust driver for parents and students.', source: 'inference', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Jewellery Showroom') {
+    suggestions.push(
+      { keyword: 'hallmarked gold jewellery', type: 'product_service', reason: 'Essential purity benchmark for gold buyers.', source: 'place_data', confidence: 'high' },
+      { keyword: 'certified diamond jewellery', type: 'product_service', reason: 'High-intent fine jewellery offering.', source: 'inference', confidence: 'high' },
+      { keyword: 'custom bridal jewellery designs', type: 'product_service', reason: 'Major wedding season demand category.', source: 'inference', confidence: 'medium' },
+      { keyword: 'transparent gold rate & making charges', type: 'product_service', reason: 'Key purchase consideration for buyers.', source: 'inference', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Gym & Fitness Center') {
+    suggestions.push(
+      { keyword: 'personal fitness training', type: 'product_service', reason: 'High-value fitness membership service.', source: 'place_data', confidence: 'high' },
+      { keyword: 'modern gym equipment & weights', type: 'product_service', reason: 'Primary facility attraction.', source: 'inference', confidence: 'high' },
+      { keyword: 'weight loss & muscle building programs', type: 'product_service', reason: 'Most common workout goals.', source: 'inference', confidence: 'medium' },
+      { keyword: 'certified trainers & workout plans', type: 'product_service', reason: 'Crucial guidance factor for gym-goers.', source: 'inference', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'CA & Legal Services') {
+    suggestions.push(
+      { keyword: 'income tax return (ITR) filing', type: 'product_service', reason: 'Annual recurring financial compliance service.', source: 'place_data', confidence: 'high' },
+      { keyword: 'GST registration & monthly returns', type: 'product_service', reason: 'Essential ongoing business service.', source: 'inference', confidence: 'high' },
+      { keyword: 'company incorporation & compliance', type: 'product_service', reason: 'High-intent startup and corporate advisory.', source: 'inference', confidence: 'medium' },
+      { keyword: 'auditing & tax planning', type: 'product_service', reason: 'Core professional accounting service.', source: 'inference', confidence: 'high' }
+    );
+  } else if (detectedCategory === 'Healthcare & Hospital') {
+    suggestions.push(
+      { keyword: 'specialist doctor consultation', type: 'product_service', reason: 'Primary patient care offering.', source: 'place_data', confidence: 'high' },
+      { keyword: 'pathology lab & diagnostics', type: 'product_service', reason: 'Essential clinical testing service.', source: 'inference', confidence: 'high' },
+      { keyword: 'emergency medical care', type: 'product_service', reason: '24/7 urgent healthcare reassurance.', source: 'inference', confidence: 'medium' },
+      { keyword: 'caring nursing & patient support', type: 'product_service', reason: 'Key customer satisfaction driver.', source: 'inference', confidence: 'high' }
     );
   } else {
     suggestions.push(

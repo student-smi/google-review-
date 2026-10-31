@@ -131,7 +131,8 @@ export function KeywordManagementPage() {
           businessName: activeBusiness.name,
           category: selectedIndustry || activeBusiness.category || 'services',
           city: activeBusiness.city,
-          address: activeBusiness.address
+          address: activeBusiness.address,
+          refresh: true
         })
       });
 
@@ -461,47 +462,10 @@ export function KeywordManagementPage() {
                     <option value="Hotel & Lodging" />
                     <option value="Hospital & Healthcare" />
                   </datalist>
-                </div>
 
-                {/* Quick Industry Template Pills */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Quick Industry Templates:
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
-                    {[
-                      { id: 'Electronics store', label: '⚡ Electronics & Gadgets' },
-                      { id: 'Digital Agency & IT', label: '🚀 Digital Agency & IT' },
-                      { id: 'Cafe & Restaurant', label: '☕ Cafe & Restaurant' },
-                      { id: 'Sweets & Bakery', label: '🍰 Sweets & Bakery' },
-                      { id: 'Clinic & Dental', label: '🩺 Clinic & Dental' },
-                      { id: 'Salon & Spa', label: '💇 Salon & Spa' },
-                      { id: 'Jewellery & Fashion', label: '💎 Jewellery & Fashion' },
-                      { id: 'Gym & Fitness', label: '🏋️ Gym & Fitness' },
-                      { id: 'Auto Garage', label: '🚗 Auto Garage' },
-                      { id: 'Coaching & Classes', label: '📚 Coaching & Classes' },
-                      { id: 'CA, Tax & Legal', label: '⚖️ CA, Tax & Legal' }
-                    ].map((item) => {
-                      const isSelected =
-                        selectedIndustry.toLowerCase() === item.id.toLowerCase() ||
-                        (selectedIndustry.toLowerCase().includes(item.id.toLowerCase().split(' ')[0]) &&
-                          item.id.toLowerCase().split(' ')[0].length > 3);
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setSelectedIndustry(item.id)}
-                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Enter your specific category or specialty above (e.g. Sweets shop, Dental Clinic, Electronics store, Auto repair). Click <strong className="text-indigo-600 font-semibold">AI Suggest Keywords</strong> to generate customized review highlights tailored to your entered category.
+                  </p>
                 </div>
               </div>
 
