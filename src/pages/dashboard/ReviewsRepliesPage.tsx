@@ -128,19 +128,21 @@ export function ReviewsRepliesPage() {
   } | null>(null);
 
   // Fetch reviews on mount and when activeBusiness changes
-  const loadReviews = async () => {
-    if (!activeBusiness?.id) return;
+  const loadReviews = async (): Promise<CustomerReview[]> => {
+    if (!activeBusiness?.id) return [];
     setIsLoadingReviews(true);
     try {
       const data = await apiFetch<{ reviews: CustomerReview[] }>(`/api/businesses/${activeBusiness.id}/reviews`);
       if (data?.reviews) {
         setReviews(data.reviews);
+        return data.reviews;
       }
     } catch (err) {
       console.warn('Could not fetch reviews:', err);
     } finally {
       setIsLoadingReviews(false);
     }
+    return [];
   };
 
   const loadPlacesStats = async () => {
@@ -245,13 +247,18 @@ export function ReviewsRepliesPage() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      loadReviews();
+      loadReviews().then((revs) => {
+        if (!revs || revs.length === 0) {
+          handleSyncGmb({ silent: true });
+        }
+      });
       loadGmbStatus();
       loadPlacesStats();
     }
   }, [activeBusiness?.id]);
 
-  const handleSyncGmb = async () => {
+  const handleSyncGmb = async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent);
     if (!activeBusiness?.id) return;
     setIsSyncingGmb(true);
     try {
@@ -279,15 +286,21 @@ export function ReviewsRepliesPage() {
             body: JSON.stringify({ businessId: activeBusiness.id })
           }
         );
-        if (res?.reviews) {
+        if (res?.reviews && res.reviews.length > 0) {
           setReviews(res.reviews);
         }
       }
 
-      await loadReviews();
+      const fresh = await loadReviews();
       await loadGmbStatus();
-    } catch (err) {
+      if (!silent) {
+        alert(`✓ Google Reviews synced successfully! Total: ${fresh.length} reviews.`);
+      }
+    } catch (err: any) {
       console.error('Google sync error:', err);
+      if (!silent) {
+        alert('Sync note: ' + (err?.message || 'Could not sync from Google'));
+      }
     } finally {
       setIsSyncingGmb(false);
     }
@@ -797,7 +810,7 @@ export function ReviewsRepliesPage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-center shrink-0">
             <Button
-              onClick={handleSyncGmb}
+              onClick={() => handleSyncGmb()}
               disabled={isSyncingGmb}
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
