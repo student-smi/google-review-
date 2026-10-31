@@ -183,12 +183,16 @@ export function ReviewsRepliesPage() {
             }
             if (tokenResponse.access_token) {
               try {
-                const targetBizId = activeBusiness?.id || 'biz_1792819607646_j5o7t';
+                if (!activeBusiness?.id) {
+                  alert('Please select an active business first.');
+                  setIsConnectingGmb(false);
+                  return;
+                }
                 const connectRes = await apiFetch<any>('/api/gmb/connect', {
                   method: 'POST',
                   body: JSON.stringify({
                     accessToken: tokenResponse.access_token,
-                    businessId: targetBizId
+                    businessId: activeBusiness.id
                   })
                 });
                 console.log('GMB connect response:', connectRes);
@@ -214,6 +218,30 @@ export function ReviewsRepliesPage() {
       alert('Google Identity Services script is loading. Please retry in 2 seconds.');
     }
   };
+
+  const [isCleaningDrafts, setIsCleaningDrafts] = useState(false);
+
+  const handleCleanScannerDrafts = async () => {
+    if (!activeBusiness?.id) return;
+    if (!confirm('Clean all temporary scanner test reviews? Real Google Maps reviews will remain.')) return;
+    setIsCleaningDrafts(true);
+    try {
+      const res = await apiFetch<{ success: boolean; reviews: CustomerReview[] }>(
+        `/api/businesses/${activeBusiness.id}/reviews-scanner-drafts`,
+        { method: 'DELETE' }
+      );
+      if (res?.reviews) {
+        setReviews(res.reviews);
+      }
+      alert('✓ Scanner test reviews cleared! Your feed now only shows genuine Google reviews.');
+    } catch (err) {
+      console.warn('Failed to clean scanner drafts:', err);
+    } finally {
+      setIsCleaningDrafts(false);
+    }
+  };
+
+  const hasScannerDrafts = reviews.some((r) => r.id.startsWith('rev_'));
 
   useEffect(() => {
     if (activeBusiness?.id) {
@@ -692,6 +720,19 @@ export function ReviewsRepliesPage() {
               </Button>
             </a>
           )}
+          {hasScannerDrafts && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCleanScannerDrafts}
+              disabled={isCleaningDrafts}
+              className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 cursor-pointer"
+              title="Remove temporary scanner test reviews and keep only genuine Google Maps reviews"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-amber-600" />
+              <span>{isCleaningDrafts ? 'Clearing…' : 'Clear Scanner Drafts'}</span>
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={() => setIsQuickImportModalOpen(true)}
@@ -798,7 +839,9 @@ export function ReviewsRepliesPage() {
             <MessageSquare className="h-4 w-4 text-purple-600" />
           </div>
           <div className="mt-2 text-2xl font-black text-slate-900">{reviews.length}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">From customer QR flow</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">
+            {gmbStatus.isConnected ? 'Synced from Google Business Profile' : 'Verified Google Maps Reviews'}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white p-4 shadow-xs">

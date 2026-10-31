@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { eq, and, like } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { createScopedDb } from '../db/scoped';
-import { businesses, qrCodes } from '../db/schema';
+import { businesses, qrCodes, customerReviews } from '../db/schema';
 import type { Env } from './public';
 
 export const businessRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
@@ -248,6 +248,29 @@ businessRoutes.delete('/:id/reviews/:reviewId', async (c) => {
   try {
     await scoped.deleteCustomerReview(businessId, reviewId);
     return c.json({ success: true, message: 'Review deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// Clear scanner test drafts (leaving only genuine Google reviews)
+businessRoutes.delete('/:id/reviews-scanner-drafts', async (c) => {
+  const ownerId = c.get('ownerId');
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const business = await scoped.getBusiness(businessId);
+    if (!business) return c.json({ error: 'Business not found' }, 404);
+
+    // Delete reviews where id starts with 'rev_' (scanner temporary events)
+    await db
+      .delete(customerReviews)
+      .where(and(eq(customerReviews.businessId, businessId), like(customerReviews.id, 'rev_%')));
+
+    const remaining = await scoped.getCustomerReviews(businessId);
+    return c.json({ success: true, count: remaining.length, reviews: remaining });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }

@@ -336,21 +336,6 @@ publicRoutes.post('/r/:code/event', async (c) => {
               updatedAt: now
             }
           });
-
-        // Persist customer review into customer_reviews table
-        if (body.reviewText && typeof body.reviewText === 'string' && body.reviewText.trim().length > 0) {
-          const reviewId = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-          await db.insert(customerReviews).values({
-            id: reviewId,
-            businessId: businessId,
-            customerName: typeof body.customerName === 'string' && body.customerName.trim() ? body.customerName.trim() : 'Verified Customer',
-            rating: typeof body.rating === 'number' && body.rating >= 1 && body.rating <= 5 ? body.rating : 5,
-            reviewText: body.reviewText.trim(),
-            chipsJson: Array.isArray(body.chips) ? JSON.stringify(body.chips) : (typeof body.chipsJson === 'string' ? body.chipsJson : null),
-            language: typeof body.language === 'string' ? body.language : 'en',
-            createdAt: now
-          });
-        }
       }
     } catch (err) {
       console.error('Funnel event / review tracking error:', err);
