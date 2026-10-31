@@ -51,13 +51,30 @@ qrRoutes.post('/business/:businessId', async (c) => {
           color: business.brandColor || '#4338CA'
         });
 
-    const qr = await scoped.createQrCode(businessId, {
-      id,
-      code,
-      label,
-      destinationUrl,
-      styleJson
-    });
+    // Safely UPSERT to prevent unique constraint crash on duplicate saves
+    const existingList = await scoped.getQrCodes(businessId);
+    const existingTarget =
+      existingList.find(q => q.code === code) ||
+      (body.qrId ? existingList.find(q => q.id === body.qrId) : null) ||
+      (existingList.length === 1 ? existingList[0] : null);
+
+    let qr: any;
+    if (existingTarget) {
+      qr = await scoped.updateQrCode(existingTarget.id, {
+        code,
+        label,
+        destinationUrl,
+        styleJson
+      });
+    } else {
+      qr = await scoped.createQrCode(businessId, {
+        id,
+        code,
+        label,
+        destinationUrl,
+        styleJson
+      });
+    }
 
     // Write to KV read cache ONLY on creation (never per request)
     if (c.env.KV) {

@@ -199,6 +199,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
     async updateQrCode(
       qrId: string,
       data: Partial<{
+        code: string;
         label: string;
         destinationUrl: string;
         styleJson: string;

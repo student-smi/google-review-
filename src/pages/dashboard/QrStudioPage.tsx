@@ -203,6 +203,8 @@ export function QrStudioPage() {
   const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4' | 'round-sticker'>('table-tent');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [existingQrId, setExistingQrId] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<'standee-png' | 'qr-png' | 'qr-svg' | 'a4-pdf' | null>(null);
 
   // Owner Logo state
@@ -222,13 +224,15 @@ export function QrStudioPage() {
         setLogoUrl(activeBusiness.logoUrl);
       }
       // Check existing QR codes for this business
-      apiFetch<{ qrCodes: Array<{ code: string; label: string; styleJson?: any }> }>(
+      apiFetch<{ qrCodes: Array<{ id: string; code: string; label: string; styleJson?: any }> }>(
         `/api/qr/business/${activeBusiness.id}`
       )
         .then((res) => {
           if (res?.qrCodes && res.qrCodes.length > 0) {
-            setShortCode(res.qrCodes[0].code);
-            const style = res.qrCodes[0].styleJson;
+            const existing = res.qrCodes[0];
+            setExistingQrId(existing.id);
+            setShortCode(existing.code);
+            const style = existing.styleJson;
             if (style) {
               try {
                 const parsed = typeof style === 'string' ? JSON.parse(style) : style;
@@ -236,6 +240,12 @@ export function QrStudioPage() {
                 if (typeof parsed.showStandeeLogo === 'boolean') setShowStandeeLogo(parsed.showStandeeLogo);
                 if (typeof parsed.showQrCenterLogo === 'boolean') setShowQrCenterLogo(parsed.showQrCenterLogo);
                 if (parsed.logoSize) setLogoSize(parsed.logoSize);
+                if (parsed.headline) setHeadline(parsed.headline);
+                if (parsed.subheadline) setSubheadline(parsed.subheadline);
+                if (parsed.color) setDotColor(parsed.color);
+                if (parsed.dots) setDotType(parsed.dots);
+                if (parsed.cornersSquare) setCornerSquareType(parsed.cornersSquare);
+                if (parsed.format) setPosterFormat(parsed.format);
               } catch {}
             }
           } else if (activeBusiness.slug) {
@@ -327,41 +337,64 @@ export function QrStudioPage() {
     }
   }, [targetUrl, dotColor, dotType, cornerSquareType, hasCenterLogo, qrImage, logoSize]);
 
-  // Handle Logo Upload from device
+  // Handle Logo Upload from device with auto-compression (prevents oversized base64 & D1 SQL limits)
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Please choose an image under 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Please choose an image under 10MB');
       return;
     }
 
     setIsUploadingLogo(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result as string;
-        setLogoUrl(base64Data);
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = async () => {
+        URL.revokeObjectURL(objectUrl);
+        const maxDim = 512;
+        let w = img.width || maxDim;
+        let h = img.height || maxDim;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressedBase64 = canvas.toDataURL('image/png');
+          setLogoUrl(compressedBase64);
 
-        // Auto-save logo to business profile
-        if (activeBusiness?.id) {
-          try {
-            await apiFetch(`/api/businesses/${activeBusiness.id}`, {
-              method: 'PATCH',
-              body: JSON.stringify({ logoUrl: base64Data })
-            });
-            refreshBusinesses?.();
-          } catch (err) {
-            console.warn('Failed to save logo to business:', err);
+          // Auto-save logo to business profile
+          if (activeBusiness?.id) {
+            try {
+              await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ logoUrl: compressedBase64 })
+              });
+              refreshBusinesses?.();
+            } catch (err) {
+              console.warn('Failed to save logo to business:', err);
+            }
           }
         }
         setIsUploadingLogo(false);
       };
-      reader.onerror = () => {
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
         setIsUploadingLogo(false);
+        alert('Could not read image file');
       };
-      reader.readAsDataURL(file);
+      img.src = objectUrl;
     } catch {
       setIsUploadingLogo(false);
     }
@@ -390,8 +423,10 @@ export function QrStudioPage() {
       setIsDownloading('standee-png');
       const dataUrl = await toPng(posterRef.current, {
         cacheBust: true,
-        pixelRatio: 3,
-        backgroundColor: '#ffffff'
+        pixelRatio: 2.5,
+        backgroundColor: '#ffffff',
+        skipFonts: true,
+        fontEmbedCSS: ''
       });
       const a = document.createElement('a');
       a.href = dataUrl;
@@ -1014,10 +1049,12 @@ export function QrStudioPage() {
                 <Button
                   onClick={async () => {
                     if (!activeBusiness?.id) return;
+                    setIsSaving(true);
                     try {
-                      await apiFetch(`/api/qr/business/${activeBusiness.id}`, {
+                      const res = await apiFetch<{ qrCode?: { id: string; code: string } }>(`/api/qr/business/${activeBusiness.id}`, {
                         method: 'POST',
                         body: JSON.stringify({
+                          qrId: existingQrId,
                           label: headline || `${posterFormat.toUpperCase()} Standee`,
                           code: shortCode,
                           styleJson: {
@@ -1028,10 +1065,16 @@ export function QrStudioPage() {
                             logoUrl,
                             showStandeeLogo,
                             showQrCenterLogo,
-                            logoSize
+                            logoSize,
+                            headline,
+                            subheadline,
+                            format: posterFormat
                           }
                         })
                       });
+                      if (res?.qrCode?.id) {
+                        setExistingQrId(res.qrCode.id);
+                      }
                       if (logoUrl !== activeBusiness.logoUrl) {
                         await apiFetch(`/api/businesses/${activeBusiness.id}`, {
                           method: 'PATCH',
@@ -1041,14 +1084,30 @@ export function QrStudioPage() {
                       }
                       setIsSaved(true);
                       setTimeout(() => setIsSaved(false), 2500);
-                    } catch (err) {
+                    } catch (err: any) {
                       console.warn('Could not save QR to business:', err);
+                      alert(err?.message || 'Could not save Standee. Please try again.');
+                    } finally {
+                      setIsSaving(false);
                     }
                   }}
+                  disabled={isSaving}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
                 >
-                  {isSaved ? <Check className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  <span>{isSaved ? 'Saved to Your Active Standees!' : 'Save This Standee to Location'}</span>
+                  {isSaving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : isSaved ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  <span>
+                    {isSaving
+                      ? 'Saving Standee...'
+                      : isSaved
+                      ? 'Saved to Your Active Standees!'
+                      : 'Save This Standee to Location'}
+                  </span>
                 </Button>
 
                 {/* Standee Poster Options */}
