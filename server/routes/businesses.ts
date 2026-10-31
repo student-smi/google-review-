@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, and, like, desc } from 'drizzle-orm';
+import { eq, and, like, desc, ne } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { createScopedDb } from '../db/scoped';
 import { businesses, qrCodes, customerReviews } from '../db/schema';
@@ -14,11 +14,16 @@ businessRoutes.get('/', async (c) => {
   const scoped = createScopedDb(db, ownerId);
   let list = await scoped.getBusinesses();
 
-  // If current owner has no businesses yet, provide demo-biz-1 so dashboard is never stuck in 0-business state
+  // If current owner has no businesses yet, fallback to real businesses in database
   if (!list.length) {
-    const demo = await db.select().from(businesses).where(eq(businesses.id, 'demo-biz-1')).limit(1);
-    if (demo.length) {
-      list = demo;
+    const existing = await db
+      .select()
+      .from(businesses)
+      .where(ne(businesses.id, 'demo-biz-1'))
+      .orderBy(desc(businesses.createdAt))
+      .limit(10);
+    if (existing.length) {
+      list = existing;
     }
   }
 
