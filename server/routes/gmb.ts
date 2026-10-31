@@ -374,7 +374,17 @@ gmbRoutes.post('/sync-reviews', async (c) => {
   }
 
   // Return all fresh reviews for this business
-  const freshReviews = await scoped.getCustomerReviews(businessId);
+  let freshReviews: any[] = [];
+  try {
+    freshReviews = await scoped.getCustomerReviews(businessId);
+  } catch {
+    freshReviews = await db
+      .select()
+      .from(customerReviews)
+      .where(eq(customerReviews.businessId, businessId))
+      .orderBy(desc(customerReviews.createdAt))
+      .limit(100);
+  }
 
   return c.json({
     success: true,
