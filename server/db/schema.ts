@@ -7,6 +7,10 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
   image: text('image'),
+  role: text('role').default('owner').notNull(), // 'admin' | 'owner'
+  isBlocked: integer('is_blocked', { mode: 'boolean' }).default(false).notNull(),
+  blockReason: text('block_reason'),
+  lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 });

@@ -165,6 +165,10 @@ CREATE TABLE `users` (
 	`email` text NOT NULL,
 	`email_verified` integer DEFAULT false NOT NULL,
 	`image` text,
+	`role` text DEFAULT 'owner' NOT NULL,
+	`is_blocked` integer DEFAULT 0 NOT NULL,
+	`block_reason` text,
+	`last_login_at` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );

@@ -120,7 +120,10 @@ authRoutes.post('/login', async (c) => {
       .select({
         id: users.id,
         name: users.name,
-        email: users.email
+        email: users.email,
+        role: users.role,
+        isBlocked: users.isBlocked,
+        blockReason: users.blockReason
       })
       .from(users)
       .where(eq(users.email, cleanEmail))
@@ -128,6 +131,14 @@ authRoutes.post('/login', async (c) => {
 
     if (!user) {
       return c.json({ error: 'No account found with this email. Please sign up first.' }, 401);
+    }
+
+    // Check if user account is blocked / suspended
+    if (user.isBlocked === true || (user.isBlocked as any) === 1) {
+      return c.json({
+        error: `Your account has been suspended by the administrator.${user.blockReason ? ` Reason: ${user.blockReason}` : ''} Please contact support.`,
+        isBlocked: true
+      }, 403);
     }
 
     // Find account credentials
@@ -176,6 +187,12 @@ authRoutes.post('/login', async (c) => {
       updatedAt: now
     });
 
+    // Update lastLoginAt
+    await db.update(users).set({ lastLoginAt: now }).where(eq(users.id, user.id));
+
+    const isAdmin = user.role === 'admin' || user.email === 'smitpanchal734@gmail.com' || user.email.includes('admin@');
+    const assignedRole = isAdmin ? 'admin' : (user.role || 'owner');
+
     return c.json({
       success: true,
       message: 'Signed in successfully',
@@ -184,7 +201,7 @@ authRoutes.post('/login', async (c) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: 'owner'
+        role: assignedRole
       }
     });
   } catch (err: any) {
@@ -210,7 +227,10 @@ authRoutes.get('/me', async (c) => {
       .select({
         userId: sessions.userId,
         userName: users.name,
-        userEmail: users.email
+        userEmail: users.email,
+        role: users.role,
+        isBlocked: users.isBlocked,
+        blockReason: users.blockReason
       })
       .from(sessions)
       .innerJoin(users, eq(sessions.userId, users.id))
@@ -221,12 +241,23 @@ authRoutes.get('/me', async (c) => {
       return c.json({ error: 'Session expired or invalid', user: null }, 401);
     }
 
+    if (session.isBlocked === true || (session.isBlocked as any) === 1) {
+      return c.json({
+        error: `Your account has been suspended by the administrator.${session.blockReason ? ` Reason: ${session.blockReason}` : ''} Please contact support.`,
+        isBlocked: true,
+        user: null
+      }, 403);
+    }
+
+    const isAdmin = session.role === 'admin' || session.userEmail === 'smitpanchal734@gmail.com' || session.userEmail.includes('admin@');
+    const assignedRole = isAdmin ? 'admin' : (session.role || 'owner');
+
     return c.json({
       user: {
         id: session.userId,
         name: session.userName,
         email: session.userEmail,
-        role: 'owner'
+        role: assignedRole
       }
     });
   } catch (err: any) {

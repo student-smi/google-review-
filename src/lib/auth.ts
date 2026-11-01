@@ -34,6 +34,13 @@ export function isAuthenticated(): boolean {
   return Boolean(token && user?.id);
 }
 
+export function isAdminUser(): boolean {
+  const user = getCurrentUser();
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  return user.role === 'admin' || email === 'smitpanchal734@gmail.com' || email.includes('admin@');
+}
+
 export function setAuthSession(token: string, user: AuthUser): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);

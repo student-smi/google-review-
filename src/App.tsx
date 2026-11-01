@@ -13,6 +13,7 @@ import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { KeywordManagementPage } from './pages/dashboard/KeywordManagementPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
 import { AuthPage } from './pages/AuthPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 export function App() {
@@ -58,6 +59,16 @@ export function App() {
           <Route path="local-seo" element={<LocalSeoPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
+
+        {/* Super Admin Control Center */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Customer Mobile Flow */}
         <Route path="/r/:code" element={<CustomerFlowPage />} />

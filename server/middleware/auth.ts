@@ -35,6 +35,14 @@ export async function requireAuth(c: Context<{ Bindings: Env; Variables: { owner
         if (session) {
           ownerId = session.userId;
           userProfile = session.user;
+
+          // Check if user is blocked/suspended
+          if (userProfile && (userProfile.isBlocked === true || (userProfile.isBlocked as any) === 1)) {
+            return c.json({
+              error: `Your account has been suspended by the administrator.${userProfile.blockReason ? ` Reason: ${userProfile.blockReason}` : ''} Please contact support.`,
+              isBlocked: true
+            }, 403);
+          }
         }
       } catch (err) {
         console.warn('Session check failed:', err);
@@ -71,4 +79,32 @@ export async function requireAuth(c: Context<{ Bindings: Env; Variables: { owner
   c.set('ownerId', ownerId);
   if (userProfile) c.set('user', userProfile);
   return next();
+}
+
+export async function requireAdmin(c: Context<{ Bindings: Env; Variables: { ownerId: string; user?: any } }>, next: Next) {
+  const user = c.get('user');
+  const ownerId = c.get('ownerId');
+
+  const isAdminEmail = (email?: string | null) => {
+    if (!email) return false;
+    const lower = email.toLowerCase().trim();
+    return lower === 'smitpanchal734@gmail.com' || lower === 'admin@reviewqr.com' || lower === 'admin@upmark.com';
+  };
+
+  if (user && (user.role === 'admin' || isAdminEmail(user.email))) {
+    return next();
+  }
+
+  if (ownerId && ownerId !== 'owner-default') {
+    try {
+      const db = getDb(c.env.DB);
+      const [u] = await db.select().from(users).where(eq(users.id, ownerId)).limit(1);
+      if (u && (u.role === 'admin' || isAdminEmail(u.email))) {
+        c.set('user', u);
+        return next();
+      }
+    } catch {}
+  }
+
+  return c.json({ error: 'Access denied. Super Administrator privileges required.' }, 403);
 }

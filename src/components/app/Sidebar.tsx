@@ -16,10 +16,11 @@ import {
   Store,
   Star,
   LogOut,
-  Tag
+  Tag,
+  Crown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { logoutApi } from '@/lib/auth';
+import { logoutApi, isAdminUser } from '@/lib/auth';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -141,6 +142,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
             </NavLink>
           ))}
+
+          {/* Super Admin Panel Link */}
+          {isAdminUser() && (
+            <div className="pt-2">
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  cn(
+                    'group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-150',
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/80'
+                  )
+                }
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <Crown className="h-4 w-4 shrink-0 text-amber-500" />
+                  {!collapsed && <span className="truncate">Super Admin</span>}
+                </div>
+                {!collapsed && (
+                  <span className="h-4 px-1.5 rounded-full text-[9px] font-black bg-indigo-700 text-white uppercase tracking-wider font-mono">
+                    Master
+                  </span>
+                )}
+              </NavLink>
+            </div>
+          )}
         </div>
 
         {/* Section: Account & Logout */}

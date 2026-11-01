@@ -62,6 +62,16 @@ export async function apiFetch<T = any>(path: string, options: RequestInit = {})
     } catch {
       errJson = { error: errText || `HTTP ${res.status}` };
     }
+
+    if (res.status === 403 && (errJson.isBlocked || errJson.error?.includes('suspended'))) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem('reviewqr_user');
+        alert('⚠️ ' + (errJson.error || 'Your account has been suspended by the administrator.'));
+        window.location.href = '/auth';
+      }
+    }
+
     throw new Error(errJson.error || `Request failed with status ${res.status}`);
   }
 
@@ -104,4 +114,21 @@ export function saveActiveBusinessId(id: string): void {
     return;
   }
   localStorage.setItem(ACTIVE_BIZ_KEY, id);
+}
+
+export function getCurrentUser(): { id?: string; name?: string; email?: string; role?: string } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('reviewqr_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isCurrentUserAdmin(): boolean {
+  const user = getCurrentUser();
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  return user.role === 'admin' || email === 'smitpanchal734@gmail.com' || email.includes('admin@');
 }
