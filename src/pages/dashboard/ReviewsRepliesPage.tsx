@@ -402,6 +402,9 @@ export function ReviewsRepliesPage() {
         );
       }
 
+      // Close the reply editor window immediately so user cannot double-click
+      setActiveReviewId(null);
+
       setGooglePostSuccess((prev) => ({
         ...prev,
         [rId]: res?.message || '🚀 Reply posted directly to Google Maps!'
@@ -412,7 +415,7 @@ export function ReviewsRepliesPage() {
           delete copy[rId];
           return copy;
         });
-      }, 5000);
+      }, 7000);
     } catch (err: any) {
       console.error('Post to Google Maps failed:', err);
       alert('Could not post directly to Google: ' + (err.message || 'Unknown error'));
@@ -548,6 +551,9 @@ export function ReviewsRepliesPage() {
           )
         );
       }
+
+      // Close reply editor window
+      setActiveReviewId(null);
     } catch (err) {
       console.error('Failed to save reply:', err);
     } finally {
@@ -1198,6 +1204,14 @@ export function ReviewsRepliesPage() {
                         "{review.reviewText}"
                       </div>
 
+                      {/* Direct Google Post Success Message (Visible whether expanded or collapsed) */}
+                      {googlePostSuccess[review.id] && (
+                        <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in shadow-xs">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span>{googlePostSuccess[review.id]}</span>
+                        </div>
+                      )}
+
                       {/* Saved Reply (if already replied and not currently editing) */}
                       {hasExistingReply && !isExpanded && (
                         <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-3.5 space-y-2">
@@ -1381,14 +1395,6 @@ export function ReviewsRepliesPage() {
                               </Button>
                             </div>
                           </div>
-
-                          {/* Direct Google Post Success Message */}
-                          {googlePostSuccess[review.id] && (
-                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                              <span>{googlePostSuccess[review.id]}</span>
-                            </div>
-                          )}
                         </div>
                       ) : !hasExistingReply && (
                         /* CTA Button when not yet replied */
