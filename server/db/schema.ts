@@ -65,6 +65,10 @@ export const businesses = sqliteTable('businesses', {
   brandColor: text('brand_color').default('#4338CA').notNull(), // Primary accent
   brandColorSecondary: text('brand_color_secondary').default('#D97706').notNull(), // Saffron accent
   contactResolutionLine: text('contact_resolution_line'), // offline resolution phone or email
+  contactEmail: text('contact_email'),
+  assignedManager: text('assigned_manager'), // Assigned review executive / manager
+  isArchived: integer('is_archived', { mode: 'boolean' }).default(false).notNull(),
+  status: text('status').default('active').notNull(), // 'active' | 'inactive' | 'connection_error'
   chipsJson: text('chips_json'), // Custom keywords / highlights chosen by shopkeeper
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull()
@@ -78,8 +82,14 @@ export const locations = sqliteTable('locations', {
   businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   address: text('address'),
+  phone: text('phone'),
+  googlePlaceId: text('google_place_id'),
   googleReviewUrl: text('google_review_url'),
-  createdAt: integer('created_at').notNull()
+  status: text('status').default('active').notNull(), // 'active' | 'inactive' | 'connection_error'
+  isPrimary: integer('is_primary', { mode: 'boolean' }).default(false).notNull(),
+  assignedManager: text('assigned_manager'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at')
 }, (t) => [
   index('idx_locations_business').on(t.businessId)
 ]);

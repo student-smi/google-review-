@@ -51,6 +51,10 @@ CREATE TABLE `businesses` (
 	`brand_color` text DEFAULT '#4338CA' NOT NULL,
 	`brand_color_secondary` text DEFAULT '#D97706' NOT NULL,
 	`contact_resolution_line` text,
+	`contact_email` text,
+	`assigned_manager` text,
+	`is_archived` integer DEFAULT 0 NOT NULL,
+	`status` text DEFAULT 'active' NOT NULL,
 	`chips_json` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
@@ -65,8 +69,14 @@ CREATE TABLE `locations` (
 	`business_id` text NOT NULL,
 	`name` text NOT NULL,
 	`address` text,
+	`phone` text,
+	`google_place_id` text,
 	`google_review_url` text,
+	`status` text DEFAULT 'active' NOT NULL,
+	`is_primary` integer DEFAULT 0 NOT NULL,
+	`assigned_manager` text,
 	`created_at` integer NOT NULL,
+	`updated_at` integer,
 	FOREIGN KEY (`business_id`) REFERENCES `businesses`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

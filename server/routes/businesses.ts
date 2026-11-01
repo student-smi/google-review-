@@ -2,16 +2,22 @@ import { Hono } from 'hono';
 import { eq, and, like, desc, ne } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { createScopedDb } from '../db/scoped';
-import { businesses, qrCodes, customerReviews } from '../db/schema';
+import { businesses, qrCodes, customerReviews, locations } from '../db/schema';
 import type { Env } from './public';
 
 export const businessRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
 
-// List all businesses belonging to current owner
+const getOwnerId = (c: any): string => c.get('ownerId') || c.req.header('X-Owner-Id') || c.req.header('X-Dev-Owner-Id') || 'owner-default';
+
+// List all businesses belonging to current owner (with search, filter & location enrichment)
 businessRoutes.get('/', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
+  const searchQuery = c.req.query('search')?.toLowerCase().trim() || '';
+  const statusFilter = c.req.query('status')?.toLowerCase().trim();
+  const includeArchived = c.req.query('archived') === 'true';
+
   let list = await scoped.getBusinesses();
 
   // If current owner has no businesses yet, fallback to real businesses in database
@@ -27,12 +33,51 @@ businessRoutes.get('/', async (c) => {
     }
   }
 
-  return c.json({ businesses: list });
+  // Filter archived businesses unless explicitly requested
+  if (!includeArchived) {
+    list = list.filter((b) => !b.isArchived);
+  }
+
+  // Filter by status if specified
+  if (statusFilter && statusFilter !== 'all') {
+    list = list.filter((b) => b.status === statusFilter);
+  }
+
+  // Filter by search query (name, city, category, manager)
+  if (searchQuery) {
+    list = list.filter(
+      (b) =>
+        b.name?.toLowerCase().includes(searchQuery) ||
+        b.city?.toLowerCase().includes(searchQuery) ||
+        b.category?.toLowerCase().includes(searchQuery) ||
+        b.assignedManager?.toLowerCase().includes(searchQuery) ||
+        b.address?.toLowerCase().includes(searchQuery)
+    );
+  }
+
+  // Enrich each business with locations
+  const allLocations = await db.select().from(locations);
+  const locationsByBiz: Record<string, typeof allLocations> = {};
+  for (const loc of allLocations) {
+    if (!locationsByBiz[loc.businessId]) locationsByBiz[loc.businessId] = [];
+    locationsByBiz[loc.businessId].push(loc);
+  }
+
+  const enriched = list.map((b) => {
+    const bizLocs = locationsByBiz[b.id] || [];
+    return {
+      ...b,
+      locations: bizLocs,
+      locationCount: bizLocs.length
+    };
+  });
+
+  return c.json({ businesses: enriched });
 });
 
 // Create new business (Onboarding or Multi-location)
 businessRoutes.post('/', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const body = await c.req.json();
 
   if (!body.name || !body.googleReviewUrl) {
@@ -40,7 +85,8 @@ businessRoutes.post('/', async (c) => {
   }
 
   // Validate Google Review URL format
-  const isGoogleLink = body.googleReviewUrl.includes('google.com') ||
+  const isGoogleLink =
+    body.googleReviewUrl.includes('google.com') ||
     body.googleReviewUrl.includes('g.page') ||
     body.googleReviewUrl.includes('maps.app.goo.gl') ||
     body.googleReviewUrl.includes('search.google.com');
@@ -50,11 +96,14 @@ businessRoutes.post('/', async (c) => {
   }
 
   const id = `biz_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const slug = (body.name as string)
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '-')
-    .replace(/-+/g, '-')
-    .substring(0, 32) + '-' + Math.random().toString(36).substring(2, 6);
+  const slug =
+    (body.name as string)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .substring(0, 32) +
+    '-' +
+    Math.random().toString(36).substring(2, 6);
 
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
@@ -74,15 +123,37 @@ businessRoutes.post('/', async (c) => {
     brandColor: body.brandColor || '#4338CA',
     brandColorSecondary: body.brandColorSecondary || '#D97706',
     contactResolutionLine: body.contactResolutionLine || null,
+    contactEmail: body.contactEmail || null,
+    assignedManager: body.assignedManager || null,
+    status: body.status || 'active',
+    isArchived: false,
     chipsJson: body.chipsJson || (Array.isArray(body.chips) ? JSON.stringify(body.chips) : null)
   });
+
+  // Automatically create the primary location
+  try {
+    const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    await scoped.createLocation(id, {
+      id: locId,
+      name: `${body.name} (Main Office / Head Branch)`,
+      address: body.address || body.city || null,
+      phone: body.phone || null,
+      googlePlaceId: body.googlePlaceId || null,
+      googleReviewUrl: body.googleReviewUrl,
+      status: body.status || 'active',
+      isPrimary: true,
+      assignedManager: body.assignedManager || null
+    });
+  } catch (locErr) {
+    console.warn('Initial location creation note:', locErr);
+  }
 
   return c.json({ business }, 201);
 });
 
 // Get business details
 businessRoutes.get('/:id', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
@@ -97,7 +168,7 @@ businessRoutes.get('/:id', async (c) => {
 
 // Update business
 businessRoutes.patch('/:id', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const body = await c.req.json();
   const db = getDb(c.env.DB);
@@ -139,7 +210,7 @@ businessRoutes.patch('/:id', async (c) => {
 
 // Dedicated fast endpoint to save custom review keywords / chips
 businessRoutes.post('/:id/keywords', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const body = await c.req.json();
   const db = getDb(c.env.DB);
@@ -179,9 +250,126 @@ businessRoutes.post('/:id/keywords', async (c) => {
   }
 });
 
+// ──────────────────────────────────────────────
+// Archive & Unarchive Business Endpoints
+// ──────────────────────────────────────────────
+businessRoutes.post('/:id/archive', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const updated = await scoped.updateBusiness(businessId, {
+      isArchived: true,
+      status: 'inactive'
+    });
+    return c.json({ success: true, message: 'Business archived successfully', business: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+businessRoutes.post('/:id/unarchive', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const updated = await scoped.updateBusiness(businessId, {
+      isArchived: false,
+      status: 'active'
+    });
+    return c.json({ success: true, message: 'Business unarchived successfully', business: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// ──────────────────────────────────────────────
+// Multiple Google Locations Manager Endpoints
+// ──────────────────────────────────────────────
+businessRoutes.get('/:id/locations', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const locList = await scoped.getLocations(businessId);
+    return c.json({ success: true, locations: locList });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+businessRoutes.post('/:id/locations', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  if (!body.name) {
+    return c.json({ error: 'Location name is required' }, 400);
+  }
+
+  const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  try {
+    const created = await scoped.createLocation(businessId, {
+      id: locId,
+      name: body.name.trim(),
+      address: body.address?.trim() || null,
+      phone: body.phone?.trim() || null,
+      googlePlaceId: body.googlePlaceId?.trim() || null,
+      googleReviewUrl: body.googleReviewUrl?.trim() || null,
+      status: body.status || 'active',
+      isPrimary: Boolean(body.isPrimary),
+      assignedManager: body.assignedManager?.trim() || null
+    });
+
+    return c.json({ success: true, location: created }, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+businessRoutes.patch('/:id/locations/:locId', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const locId = c.req.param('locId');
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const updated = await scoped.updateLocation(businessId, locId, body);
+    return c.json({ success: true, location: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+businessRoutes.delete('/:id/locations/:locId', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const locId = c.req.param('locId');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    await scoped.deleteLocation(businessId, locId);
+    return c.json({ success: true, message: 'Location deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
 // Get customer reviews for a business
 businessRoutes.get('/:id/reviews', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
@@ -212,7 +400,7 @@ businessRoutes.get('/:id/reviews', async (c) => {
 
 // Save reply to customer review
 businessRoutes.post('/:id/reviews/:reviewId/reply', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const reviewId = c.req.param('reviewId');
   const body = await c.req.json();
@@ -237,7 +425,7 @@ businessRoutes.post('/:id/reviews/:reviewId/reply', async (c) => {
 
 // Update customer review (e.g. edit customer name, rating, or text)
 businessRoutes.patch('/:id/reviews/:reviewId', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const reviewId = c.req.param('reviewId');
   const body = await c.req.json();
@@ -259,7 +447,7 @@ businessRoutes.patch('/:id/reviews/:reviewId', async (c) => {
 
 // Delete customer review
 businessRoutes.delete('/:id/reviews/:reviewId', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const reviewId = c.req.param('reviewId');
 
@@ -276,7 +464,7 @@ businessRoutes.delete('/:id/reviews/:reviewId', async (c) => {
 
 // Clear scanner test drafts (leaving only genuine Google reviews)
 businessRoutes.delete('/:id/reviews-scanner-drafts', async (c) => {
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);

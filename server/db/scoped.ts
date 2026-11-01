@@ -78,6 +78,10 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       brandColor?: string;
       brandColorSecondary?: string;
       contactResolutionLine?: string;
+      contactEmail?: string;
+      assignedManager?: string;
+      isArchived?: boolean;
+      status?: string;
       chipsJson?: string | null;
     }) {
       const now = Math.floor(Date.now() / 1000);
@@ -86,6 +90,8 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         .values({
           ...data,
           ownerId,
+          status: data.status || 'active',
+          isArchived: data.isArchived ?? false,
           createdAt: now,
           updatedAt: now
         })
@@ -99,6 +105,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       data: Partial<{
         name: string;
         googleReviewUrl: string;
+        googlePlaceId: string;
         category: string;
         phone: string;
         address: string;
@@ -108,6 +115,10 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         brandColor: string;
         brandColorSecondary: string;
         contactResolutionLine: string;
+        contactEmail: string;
+        assignedManager: string;
+        isArchived: boolean;
+        status: string;
         chipsJson: string | null;
       }>
     ) {
@@ -136,6 +147,97 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       return db
         .delete(businesses)
         .where(and(eq(businesses.id, businessId), eq(businesses.ownerId, ownerId)));
+    },
+
+    // ──────────────────────────────────────────────
+    // Locations (Multiple Google Locations per Business)
+    // ──────────────────────────────────────────────
+    async getLocations(businessId: string) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot view locations: Business unauthorized or not found');
+      }
+
+      return db
+        .select()
+        .from(locations)
+        .where(eq(locations.businessId, businessId))
+        .orderBy(desc(locations.createdAt));
+    },
+
+    async createLocation(
+      businessId: string,
+      data: {
+        id: string;
+        name: string;
+        address?: string;
+        phone?: string;
+        googlePlaceId?: string;
+        googleReviewUrl?: string;
+        status?: string;
+        isPrimary?: boolean;
+        assignedManager?: string;
+      }
+    ) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot create location: Business unauthorized or not found');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const [created] = await db
+        .insert(locations)
+        .values({
+          ...data,
+          businessId,
+          status: data.status || 'active',
+          isPrimary: data.isPrimary ?? false,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+
+      return created;
+    },
+
+    async updateLocation(
+      businessId: string,
+      locationId: string,
+      data: Partial<{
+        name: string;
+        address: string;
+        phone: string;
+        googlePlaceId: string;
+        googleReviewUrl: string;
+        status: string;
+        isPrimary: boolean;
+        assignedManager: string;
+      }>
+    ) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot update location: Business unauthorized or not found');
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const [updated] = await db
+        .update(locations)
+        .set({ ...data, updatedAt: now })
+        .where(and(eq(locations.id, locationId), eq(locations.businessId, businessId)))
+        .returning();
+
+      return updated;
+    },
+
+    async deleteLocation(businessId: string, locationId: string) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot delete location: Business unauthorized or not found');
+      }
+
+      return db
+        .delete(locations)
+        .where(and(eq(locations.id, locationId), eq(locations.businessId, businessId)));
     },
 
     // ──────────────────────────────────────────────

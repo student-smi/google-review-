@@ -285,3 +285,4 @@ adminRoutes.post('/users/:userId/role', async (c) => {
     return c.json({ error: err.message || 'Failed to update user role' }, 500);
   }
 });
+

@@ -19,6 +19,20 @@ import {
   saveActiveBusinessId
 } from '@/lib/api';
 
+export interface LocationItem {
+  id: string;
+  businessId: string;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  googlePlaceId?: string | null;
+  googleReviewUrl?: string | null;
+  status?: 'active' | 'inactive' | 'connection_error';
+  isPrimary?: boolean;
+  assignedManager?: string | null;
+  createdAt?: number;
+}
+
 export interface BusinessItem {
   id: string;
   name: string;
@@ -32,8 +46,15 @@ export interface BusinessItem {
   logoUrl?: string | null;
   brandVoice?: string;
   phone?: string | null;
+  contactEmail?: string | null;
+  contactResolutionLine?: string | null;
+  assignedManager?: string | null;
+  isArchived?: boolean;
+  status?: 'active' | 'inactive' | 'connection_error';
   chipsJson?: string | null;
   googlePlaceId?: string | null;
+  locations?: LocationItem[];
+  locationCount?: number;
 }
 
 export function DashboardLayout() {

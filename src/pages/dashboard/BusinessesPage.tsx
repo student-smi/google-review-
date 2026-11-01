@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOutletContext, Link, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,34 @@ import {
   ShieldCheck,
   Trash2,
   Check,
-  Star
+  Star,
+  Search,
+  Archive,
+  ArchiveRestore,
+  Edit2,
+  AlertTriangle,
+  User,
+  Phone,
+  Mail,
+  HelpCircle,
+  X,
+  Layers,
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { apiFetch, saveStoredBusinesses, saveActiveBusinessId } from '@/lib/api';
-import type { BusinessItem } from './DashboardLayout';
+import type { BusinessItem, LocationItem } from './DashboardLayout';
+
+const CATEGORY_OPTIONS = [
+  { value: 'restaurants', label: 'Restaurants & Cafes' },
+  { value: 'retail', label: 'Retail & Sweets' },
+  { value: 'clinics', label: 'Clinics & Healthcare' },
+  { value: 'salons', label: 'Salons & Spas' },
+  { value: 'services', label: 'Professional Services' },
+  { value: 'automotive', label: 'Auto & Repair' },
+  { value: 'other', label: 'Other Business' }
+];
 
 export function BusinessesPage() {
   const { activeBusiness, businesses, refreshBusinesses, onSelectBusiness } = useOutletContext<{
@@ -30,41 +53,94 @@ export function BusinessesPage() {
     onSelectBusiness: (id: string) => void;
   }>();
 
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'connection_error' | 'archived'>('all');
+
+  // Business Add / Edit Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBizId, setEditingBizId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState('restaurants');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [phone, setPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [assignedManager, setAssignedManager] = useState('');
+  const [contactResolutionLine, setContactResolutionLine] = useState('');
+  const [status, setStatus] = useState<'active' | 'inactive' | 'connection_error'>('active');
   const [googleReviewUrl, setGoogleReviewUrl] = useState('');
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
+  const [brandColor, setBrandColor] = useState('#2563EB');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Multi-location Drawer / Modal State
+  const [locationModalBiz, setLocationModalBiz] = useState<BusinessItem | null>(null);
+  const [bizLocations, setBizLocations] = useState<LocationItem[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocAddress, setNewLocAddress] = useState('');
+  const [newLocPhone, setNewLocPhone] = useState('');
+  const [newLocPlaceId, setNewLocPlaceId] = useState('');
+  const [newLocReviewUrl, setNewLocReviewUrl] = useState('');
+  const [newLocManager, setNewLocManager] = useState('');
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+
   const navigate = useNavigate();
 
-  const handleOpenModal = () => {
+  // Open Create Business Modal
+  const handleOpenCreateModal = () => {
+    setEditingBizId(null);
     setName('');
-    setCategory('');
+    setCategory('restaurants');
     setAddress('');
     setCity('');
+    setPhone('');
+    setContactEmail('');
+    setAssignedManager('');
+    setContactResolutionLine('');
+    setStatus('active');
     setGoogleReviewUrl('');
     setGooglePlaceId(null);
     setVerifiedPlace(null);
+    setBrandColor('#2563EB');
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  // Open Edit Business Modal
+  const handleOpenEditModal = (biz: BusinessItem) => {
+    setEditingBizId(biz.id);
+    setName(biz.name || '');
+    setCategory(biz.category || 'restaurants');
+    setAddress(biz.address || '');
+    setCity(biz.city || '');
+    setPhone(biz.phone || '');
+    setContactEmail(biz.contactEmail || '');
+    setAssignedManager(biz.assignedManager || '');
+    setContactResolutionLine(biz.contactResolutionLine || '');
+    setStatus(biz.status || 'active');
+    setGoogleReviewUrl(biz.googleReviewUrl || '');
+    setGooglePlaceId(biz.googlePlaceId || null);
+    setVerifiedPlace(null);
+    setBrandColor(biz.brandColor || '#2563EB');
     setError(null);
     setIsModalOpen(true);
   };
 
   // Validate Google review link format
   const isValidGoogleUrl = Boolean(
-    googleReviewUrl.trim().length > 10 &&
+    googleReviewUrl.trim().length > 8 &&
     (googleReviewUrl.includes('google.com') ||
-     googleReviewUrl.includes('g.page') ||
-     googleReviewUrl.includes('maps.app.goo.gl') ||
-     googleReviewUrl.includes('search.google.com'))
+      googleReviewUrl.includes('g.page') ||
+      googleReviewUrl.includes('maps.app.goo.gl') ||
+      googleReviewUrl.includes('search.google.com'))
   );
 
-  const handleCreateBusiness = async (e: React.FormEvent) => {
+  // Submit Business (Create or Edit)
+  const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -85,399 +161,834 @@ export function BusinessesPage() {
       category,
       address: address.trim(),
       city: city || address.split(',')[0]?.trim() || address.trim(),
+      phone: phone.trim() || undefined,
+      contactEmail: contactEmail.trim() || undefined,
+      assignedManager: assignedManager.trim() || undefined,
+      contactResolutionLine: contactResolutionLine.trim() || undefined,
+      status,
       googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim(),
-      chipsJson: null,
-      brandColor: '#2563EB',
+      brandColor,
       brandColorSecondary: '#F59E0B'
     };
 
-    let createdId = '';
-
     try {
-      const data = await apiFetch<{ business: any }>('/api/businesses', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      if (data?.business) {
-        createdId = data.business.id;
-        onSelectBusiness(data.business.id);
+      if (editingBizId) {
+        // Edit existing business
+        await apiFetch(`/api/businesses/${editingBizId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Create new business
+        const data = await apiFetch<{ business: any }>('/api/businesses', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (data?.business) {
+          onSelectBusiness(data.business.id);
+        }
       }
       await refreshBusinesses();
       setIsModalOpen(false);
     } catch (err: any) {
-      console.warn('API error, saving locally:', err);
-      const localBiz: BusinessItem = {
-        id: `biz_${Date.now()}`,
-        name: payload.name,
-        slug: payload.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 24),
-        category: payload.category,
-        address: payload.address,
-        city: payload.city,
-        googlePlaceId: payload.googlePlaceId,
-        googleReviewUrl: payload.googleReviewUrl,
-        chipsJson: payload.chipsJson,
-        brandColor: payload.brandColor,
-        brandColorSecondary: payload.brandColorSecondary
-      };
-      createdId = localBiz.id;
-      const updated = [localBiz, ...businesses];
-      saveStoredBusinesses(updated);
-      saveActiveBusinessId(localBiz.id);
-      await refreshBusinesses();
-      setIsModalOpen(false);
+      setError(err.message || 'Failed to save business');
     } finally {
       setIsSubmitting(false);
     }
+  };
 
-    // Also auto-generate default counter standee QR code if available
-    if (createdId) {
-      try {
-        await apiFetch(`/api/qr/business/${createdId}`, {
-          method: 'POST',
-          body: JSON.stringify({
-            label: 'Main Billing Counter',
-            code: `${payload.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20) || 'counter'}-${Math.random().toString(36).slice(2, 6)}`,
-            styleJson: {
-              dots: 'rounded',
-              cornersSquare: 'extra-rounded',
-              cornersDot: 'dot',
-              color: '#2563EB'
-            }
-          })
-        });
-      } catch (qrErr) {
-        console.warn('Standee create warning:', qrErr);
-      }
+  // Archive / Unarchive Business
+  const handleToggleArchive = async (biz: BusinessItem) => {
+    const isCurrentlyArchived = Boolean(biz.isArchived);
+    const actionLabel = isCurrentlyArchived ? 'unarchive and activate' : 'archive';
+    if (!confirm(`Are you sure you want to ${actionLabel} "${biz.name}"?`)) return;
+
+    try {
+      const endpoint = isCurrentlyArchived ? `/api/businesses/${biz.id}/unarchive` : `/api/businesses/${biz.id}/archive`;
+      await apiFetch(endpoint, { method: 'POST' });
+      await refreshBusinesses();
+    } catch (err: any) {
+      alert(`Action failed: ${err.message || 'Server error'}`);
     }
   };
 
+  // Manage Locations for a Business
+  const handleOpenLocationsModal = async (biz: BusinessItem) => {
+    setLocationModalBiz(biz);
+    setIsLoadingLocations(true);
+    setNewLocName('');
+    setNewLocAddress('');
+    setNewLocPhone('');
+    setNewLocPlaceId('');
+    setNewLocReviewUrl('');
+    setNewLocManager('');
+    try {
+      const res = await apiFetch<{ success: boolean; locations: LocationItem[] }>(`/api/businesses/${biz.id}/locations`);
+      if (res?.locations) {
+        setBizLocations(res.locations);
+      }
+    } catch (err) {
+      console.warn('Failed to load locations:', err);
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
+
+  // Add new location to business
+  const handleAddLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!locationModalBiz || !newLocName.trim()) return;
+
+    setIsAddingLocation(true);
+    try {
+      const res = await apiFetch<{ success: boolean; location: LocationItem }>(
+        `/api/businesses/${locationModalBiz.id}/locations`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: newLocName.trim(),
+            address: newLocAddress.trim() || undefined,
+            phone: newLocPhone.trim() || undefined,
+            googlePlaceId: newLocPlaceId.trim() || undefined,
+            googleReviewUrl: newLocReviewUrl.trim() || locationModalBiz.googleReviewUrl,
+            assignedManager: newLocManager.trim() || undefined,
+            status: 'active'
+          })
+        }
+      );
+      if (res?.location) {
+        setBizLocations((prev) => [res.location, ...prev]);
+        setNewLocName('');
+        setNewLocAddress('');
+        setNewLocPhone('');
+        setNewLocPlaceId('');
+        setNewLocReviewUrl('');
+        setNewLocManager('');
+      }
+      await refreshBusinesses();
+    } catch (err: any) {
+      alert('Failed to add location: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsAddingLocation(false);
+    }
+  };
+
+  // Delete a location
+  const handleDeleteLocation = async (locId: string) => {
+    if (!locationModalBiz || !confirm('Delete this Google location outlet?')) return;
+    try {
+      await apiFetch(`/api/businesses/${locationModalBiz.id}/locations/${locId}`, { method: 'DELETE' });
+      setBizLocations((prev) => prev.filter((l) => l.id !== locId));
+      await refreshBusinesses();
+    } catch (err: any) {
+      alert('Failed to delete location: ' + err.message);
+    }
+  };
+
+  // Filter & Search Logic
+  const filteredBusinesses = useMemo(() => {
+    return businesses.filter((biz) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        biz.name.toLowerCase().includes(q) ||
+        biz.city?.toLowerCase().includes(q) ||
+        biz.address?.toLowerCase().includes(q) ||
+        biz.category?.toLowerCase().includes(q) ||
+        biz.assignedManager?.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (statusFilter === 'active') return !biz.isArchived && biz.status !== 'connection_error';
+      if (statusFilter === 'connection_error') return biz.status === 'connection_error';
+      if (statusFilter === 'archived') return biz.isArchived;
+      return true;
+    });
+  }, [businesses, searchQuery, statusFilter]);
+
+  // Aggregate KPI metrics
+  const activeCount = businesses.filter((b) => !b.isArchived && b.status !== 'connection_error').length;
+  const errorCount = businesses.filter((b) => b.status === 'connection_error').length;
+  const archivedCount = businesses.filter((b) => b.isArchived).length;
+  const totalLocationsCount = businesses.reduce((acc, b) => acc + (b.locations?.length || 1), 0);
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 font-sans">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 font-sans">
+      {/* 1. Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300 mb-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 mb-2">
             <Building2 className="h-3.5 w-3.5 text-blue-600" />
-            <span>Workspace Profile Management</span>
+            <span>Business & Location Manager</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Businesses & Locations
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            Businesses & Google Locations
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage your shop, restaurant, or clinic profiles. Each business gets its own isolated QR campaigns.
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Store business profiles, contact info, assigned manager, multiple Google locations & sync health status.
           </p>
         </div>
 
         <Button
-          onClick={handleOpenModal}
+          onClick={handleOpenCreateModal}
           className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs rounded-xl shadow-sm gap-2 h-11 px-4 cursor-pointer shrink-0"
         >
           <Plus className="h-4 w-4" />
-          <span>Add Business</span>
+          <span>Add New Business</span>
         </Button>
       </div>
 
-      {/* Businesses Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {businesses.map((biz) => {
-          const isActive = biz.id === activeBusiness?.id;
-          return (
-            <Card
-              key={biz.id}
-              className={`rounded-3xl border transition-all p-5 space-y-4 ${
-                isActive
-                  ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20 shadow-md'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0E131F] hover:border-slate-300 dark:hover:border-slate-700'
+      {/* 2. KPI Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="border-slate-200 bg-white shadow-xs">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Total Businesses
+              </span>
+              <p className="text-2xl font-black text-slate-900">{businesses.length}</p>
+              <span className="text-[11px] text-slate-400">Stores & client brands</span>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Building2 className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white shadow-xs">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Google Locations
+              </span>
+              <p className="text-2xl font-black text-indigo-600">{totalLocationsCount}</p>
+              <span className="text-[11px] text-slate-400">Branches & outlets</span>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Layers className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white shadow-xs">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Active & Healthy
+              </span>
+              <p className="text-2xl font-black text-emerald-600">{activeCount}</p>
+              <span className="text-[11px] text-emerald-600 font-medium">🟢 Connected & live</span>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white shadow-xs">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Attention Needed
+              </span>
+              <p className="text-2xl font-black text-rose-600">{errorCount}</p>
+              <span className="text-[11px] text-rose-500 font-medium">
+                {errorCount === 0 ? '✓ All links healthy' : 'Connection error'}
+              </span>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. Search Bar & Status Filters */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search business by name, city, category, or manager..."
+            className="pl-9 h-10 text-xs sm:text-sm border-slate-200 focus-visible:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {(
+            [
+              { id: 'all', label: `All (${businesses.length})` },
+              { id: 'active', label: `Active (${activeCount})` },
+              { id: 'connection_error', label: `Connection Alert (${errorCount})` },
+              { id: 'archived', label: `Archived (${archivedCount})` }
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                statusFilter === tab.id
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="h-11 w-11 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm"
-                    style={{ backgroundColor: biz.brandColor || '#2563EB' }}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Businesses Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredBusinesses.length === 0 ? (
+          <div className="col-span-full py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+            <div className="h-12 w-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+              <Store className="h-6 w-6" />
+            </div>
+            <h3 className="font-bold text-slate-800 text-base">No businesses found</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              No business matches your current search or filter criteria. Try adjusting your query or add a new business profile.
+            </p>
+          </div>
+        ) : (
+          filteredBusinesses.map((biz) => {
+            const isActiveWorkspace = biz.id === activeBusiness?.id;
+            const isConnectionError = biz.status === 'connection_error';
+            const isArchived = Boolean(biz.isArchived);
+            const locCount = biz.locations?.length || 1;
+
+            return (
+              <Card
+                key={biz.id}
+                className={`rounded-3xl border transition-all p-5 space-y-4 ${
+                  isActiveWorkspace
+                    ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 shadow-md'
+                    : isArchived
+                    ? 'border-slate-200 bg-slate-50/60 opacity-75'
+                    : 'border-slate-200 bg-white hover:border-slate-300 shadow-xs'
+                }`}
+              >
+                {/* Header: Brand Icon, Name, Category & Status Badge */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-11 w-11 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0"
+                      style={{ backgroundColor: biz.brandColor || '#2563EB' }}
+                    >
+                      <Store className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-base text-slate-900 tracking-tight">
+                          {biz.name}
+                        </h3>
+                        {isActiveWorkspace && (
+                          <Badge className="bg-blue-600 text-white text-[10px] uppercase font-bold tracking-wider">
+                            Active Workspace
+                          </Badge>
+                        )}
+                        {isArchived ? (
+                          <Badge className="bg-slate-200 text-slate-700 text-[10px] font-bold">
+                            Archived
+                          </Badge>
+                        ) : isConnectionError ? (
+                          <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] font-bold flex items-center gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5" /> Connection Alert
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                        <MapPin className="h-3 w-3" />
+                        <span>{biz.address || biz.city || 'India'}</span>
+                        {biz.category && (
+                          <>
+                            <span>•</span>
+                            <span className="capitalize">{biz.category}</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {!isActiveWorkspace && !isArchived && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onSelectBusiness(biz.id)}
+                      className="text-xs font-semibold rounded-xl h-8 cursor-pointer shrink-0"
+                    >
+                      Switch
+                    </Button>
+                  )}
+                </div>
+
+                {/* Details Bar: Contact, Assigned Manager & Locations Count */}
+                <div className="grid grid-cols-2 gap-2 text-xs border-y border-slate-100 py-2.5">
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">
+                      Manager: <strong className="text-slate-800">{biz.assignedManager || 'Unassigned'}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-600">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">
+                      {biz.phone || biz.contactEmail || 'No contact set'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Google Locations & Review Link Box */}
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-slate-600 font-medium">
+                    <span className="flex items-center gap-1.5 font-bold text-slate-800">
+                      <Layers className="h-3.5 w-3.5 text-indigo-600" />
+                      <span>{locCount} Google Location{locCount > 1 ? 's' : ''}</span>
+                    </span>
+                    <button
+                      onClick={() => handleOpenLocationsModal(biz)}
+                      className="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>Manage Locations</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                    <span className="truncate max-w-[240px]">
+                      Place ID: <code className="font-mono text-indigo-700 bg-indigo-50/80 px-1 py-0.5 rounded">{biz.googlePlaceId || 'Not connected'}</code>
+                    </span>
+                    <a
+                      href={biz.googleReviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1 font-semibold shrink-0"
+                    >
+                      <span>Test Review Link</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Action Toolbar */}
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleOpenEditModal(biz)}
+                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-slate-900 font-semibold gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3 h-3 text-slate-400" />
+                      <span>Edit</span>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleToggleArchive(biz)}
+                      className="h-8 px-2.5 text-xs text-slate-600 hover:text-amber-700 font-semibold gap-1 cursor-pointer"
+                    >
+                      {isArchived ? (
+                        <>
+                          <ArchiveRestore className="w-3 h-3 text-emerald-600" />
+                          <span>Unarchive</span>
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="w-3 h-3 text-amber-500" />
+                          <span>Archive</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <Link
+                    to="/dashboard/replies"
+                    onClick={() => onSelectBusiness(biz.id)}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
                   >
+                    <span>View Reviews</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* 5. Add / Edit Business Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
                     <Store className="h-5 w-5" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-base text-slate-900 dark:text-white tracking-tight">
-                        {biz.name}
-                      </h3>
-                      {isActive && (
-                        <Badge className="bg-blue-600 text-white text-[10px] uppercase font-bold tracking-wider">
-                          Active
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3 w-3" />
-                      <span>{biz.address || biz.city || 'India'}</span>
-                      {biz.category && (
-                        <>
-                          <span>•</span>
-                          <span className="capitalize">{biz.category}</span>
-                        </>
-                      )}
-                    </span>
+                    <h3 className="font-extrabold text-slate-900 text-base">
+                      {editingBizId ? 'Edit Business Profile' : 'Add New Business & Location'}
+                    </h3>
+                    <p className="text-xs text-slate-500">Configure business identity, category, contact & Google Places</p>
                   </div>
                 </div>
-
-                {!isActive && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onSelectBusiness(biz.id)}
-                    className="text-xs font-semibold rounded-xl h-8 cursor-pointer"
-                  >
-                    Switch
-                  </Button>
-                )}
-              </div>
-
-              {/* Review URL status */}
-              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-3 space-y-1.5 text-xs">
-                <div className="flex items-center justify-between text-slate-500 font-medium">
-                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Valid Google Review Link</span>
-                  </span>
-                  <a
-                    href={biz.googleReviewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 font-semibold text-[11px]"
-                  >
-                    <span>Test link</span>
-                    <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                </div>
-                <p className="text-[11px] text-slate-400 font-mono truncate">
-                  {biz.googleReviewUrl}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                <Link
-                  to="/dashboard/qr"
-                  className="text-xs text-[#2563EB] font-bold flex items-center gap-1 hover:underline"
-                >
-                  <QrCode className="h-3.5 w-3.5" />
-                  <span>Customize Standees</span>
-                </Link>
-
-                <Link
-                  to="/dashboard/settings"
-                  className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white font-medium"
-                >
-                  Edit Profile
-                </Link>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Add Business Modal (Google Places Auto-fill like Onboarding) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <Card className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0E131F] shadow-2xl w-full max-w-lg p-6 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Add Business Details</span>
-                  <span className="rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-[10px] font-bold">
-                    Google Maps Sync
-                  </span>
-                </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-sm cursor-pointer p-1"
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Search on Google Maps to auto-fill official review link, location, and verified details.
-              </p>
-            </div>
 
-            {error && (
-              <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-600 dark:text-red-300 font-medium">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateBusiness} className="space-y-4">
-              {/* 1. Google Places Search Autocomplete */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Search on Google Maps (India)
-                  </Label>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                    Auto-fills Review Link
-                  </span>
+              {error && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-800 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{error}</span>
                 </div>
-                <GooglePlacesAutocomplete
-                  initialValue={name}
-                  onSelect={async (place) => {
-                    setName(place.name);
-                    setGooglePlaceId(place.placeId);
-                    setGoogleReviewUrl(place.googleReviewUrl);
-                    setVerifiedPlace(place);
+              )}
 
-                    // 1. Dynamic Category directly from Google Places info
-                    const dynamicCategory = place.category || '';
-                    setCategory(dynamicCategory);
+              <form onSubmit={handleSaveBusiness} className="space-y-4">
+                {/* 1. Google Places Autocomplete */}
+                {!editingBizId && (
+                  <div className="space-y-1.5 bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+                    <Label className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                      <Search className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Search on Google Maps (Auto-fill details):</span>
+                    </Label>
+                    <GooglePlacesAutocomplete
+                      onSelect={(place) => {
+                        setVerifiedPlace(place);
+                        setName(place.name);
+                        setAddress(place.formattedAddress);
+                        setCity(place.city || '');
+                        if (place.phone) setPhone(place.phone);
+                        if (place.googlePlaceId) setGooglePlaceId(place.googlePlaceId);
+                        if (place.googleReviewUrl) setGoogleReviewUrl(place.googleReviewUrl);
+                      }}
+                    />
+                  </div>
+                )}
 
-                    // 2. City & Address extraction from verified address
-                    let extractedCity = city || '';
-                    if (place.address) {
-                      setAddress(place.address);
-                      const parts = place.address.split(',').map((p) => p.trim());
-                      if (parts.length >= 3) {
-                        extractedCity = parts[parts.length - 3] || parts[0];
-                        setCity(extractedCity);
-                      }
-                    }
-                  }}
-                  placeholder="Search your business on Google Maps..."
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Business Name *</Label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Royal Sweets & Bakery"
+                      required
+                      className="text-xs h-9"
+                    />
+                  </div>
 
-                {/* Google Verified Place Profile Card */}
-                {verifiedPlace && (
-                  <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-purple-50/40 border border-blue-200/80 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/20 dark:border-blue-800/60 space-y-2 animate-in fade-in mt-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
-                        <span className="text-xs font-bold text-blue-950 dark:text-blue-100">
-                          Google Verified Business Profile
-                        </span>
-                      </div>
-                      {verifiedPlace.rating && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 font-extrabold text-[10px] border border-amber-200/80">
-                          <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                          <span>{verifiedPlace.rating} ({verifiedPlace.userRatingCount || 0} reviews)</span>
-                        </span>
-                      )}
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Industry Category</Label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {CATEGORY_OPTIONS.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                      📍 {verifiedPlace.address}
+                {/* Google Review URL */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-700">Official Google Review Link *</Label>
+                    <span className="text-[10px] text-slate-400">Maps or g.page link</span>
+                  </div>
+                  <Input
+                    value={googleReviewUrl}
+                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                    placeholder="https://g.page/r/.../review or search.google.com/local/writereview..."
+                    required
+                    className="text-xs h-9 font-mono"
+                  />
+                </div>
+
+                {/* Address & City */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Address</Label>
+                    <Input
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Street, Area, Landmark"
+                      className="text-xs h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">City</Label>
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Ahmedabad, Surat"
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Phone & Contact Email */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Contact Phone</Label>
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="text-xs h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Contact Email</Label>
+                    <Input
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="info@business.com"
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </div>
+
+                {/* Assigned Manager & Status */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Assigned Manager / Executive</Label>
+                    <Input
+                      value={assignedManager}
+                      onChange={(e) => setAssignedManager(e.target.value)}
+                      placeholder="e.g. Rajesh Shah / Store Head"
+                      className="text-xs h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-bold text-slate-700">Connection Status</Label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as any)}
+                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="active">🟢 Active (Verified & Connected)</option>
+                      <option value="inactive">🟡 Inactive (Paused)</option>
+                      <option value="connection_error">🔴 Connection Error (Attention Needed)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Brand Color */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">Brand Color Accent</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={brandColor}
+                      onChange={(e) => setBrandColor(e.target.value)}
+                      className="h-9 w-12 rounded cursor-pointer border border-slate-200"
+                    />
+                    <span className="text-xs font-mono text-slate-600">{brandColor}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsModalOpen(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSubmitting}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  >
+                    {isSubmitting ? 'Saving...' : editingBizId ? 'Save Changes' : 'Create Business'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Multi-Location Manager Drawer / Modal */}
+      {locationModalBiz && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 my-8 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <Layers className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">
+                      Google Locations for {locationModalBiz.name}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Manage all verified branch outlets, Place IDs, and assigned local managers
                     </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLocationModalBiz(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Form to Add New Branch Location */}
+              <form onSubmit={handleAddLocation} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                  <Plus className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Add Branch / Outlet Location</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <Input
+                    value={newLocName}
+                    onChange={(e) => setNewLocName(e.target.value)}
+                    placeholder="Location Name (e.g. Navrangpura Branch)"
+                    required
+                    className="text-xs h-8 bg-white"
+                  />
+                  <Input
+                    value={newLocAddress}
+                    onChange={(e) => setNewLocAddress(e.target.value)}
+                    placeholder="Address / Area"
+                    className="text-xs h-8 bg-white"
+                  />
+                  <Input
+                    value={newLocPhone}
+                    onChange={(e) => setNewLocPhone(e.target.value)}
+                    placeholder="Branch Phone"
+                    className="text-xs h-8 bg-white"
+                  />
+                  <Input
+                    value={newLocManager}
+                    onChange={(e) => setNewLocManager(e.target.value)}
+                    placeholder="Assigned Branch Manager"
+                    className="text-xs h-8 bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <Input
+                    value={newLocPlaceId}
+                    onChange={(e) => setNewLocPlaceId(e.target.value)}
+                    placeholder="Google Place ID (optional)"
+                    className="text-xs h-8 bg-white font-mono"
+                  />
+                  <Input
+                    value={newLocReviewUrl}
+                    onChange={(e) => setNewLocReviewUrl(e.target.value)}
+                    placeholder="Specific Review Link (defaults to main)"
+                    className="text-xs h-8 bg-white font-mono"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isAddingLocation || !newLocName.trim()}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8"
+                  >
+                    {isAddingLocation ? 'Adding Location...' : 'Save Branch Location'}
+                  </Button>
+                </div>
+              </form>
+
+              {/* Locations List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span>Registered Locations ({bizLocations.length})</span>
+                </div>
+
+                {isLoadingLocations ? (
+                  <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                    <span>Loading location outlets...</span>
+                  </div>
+                ) : bizLocations.length === 0 ? (
+                  <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    No separate branch locations added yet. All reviews route to the primary business Google Maps listing.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto rounded-xl border border-slate-200">
+                    {bizLocations.map((loc) => (
+                      <div key={loc.id} className="p-3 bg-white flex items-center justify-between gap-3 text-xs">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 truncate">{loc.name}</span>
+                            {loc.isPrimary && (
+                              <Badge className="bg-blue-100 text-blue-800 text-[9px] font-bold">
+                                Head Office
+                              </Badge>
+                            )}
+                            <Badge
+                              className={`text-[9px] font-bold ${
+                                loc.status === 'connection_error'
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              {loc.status || 'active'}
+                            </Badge>
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate flex items-center gap-2">
+                            {loc.address && <span>{loc.address}</span>}
+                            {loc.assignedManager && (
+                              <span>• Manager: <strong>{loc.assignedManager}</strong></span>
+                            )}
+                          </div>
+                        </div>
+
+                        {!loc.isPrimary && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteLocation(loc.id)}
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {/* 2. Business Display Name */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Business Name</Label>
-                <Input
-                  placeholder="e.g. Sharma Restaurant"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-10 text-xs rounded-xl"
-                  required
-                />
-              </div>
-
-              {/* 3. Category & Address / City */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold">Category</Label>
-                    {category && (
-                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-200 dark:border-blue-800">
-                        Dynamic
-                      </span>
-                    )}
-                  </div>
-                  <Input
-                    list="category-suggestions"
-                    placeholder="e.g. Electronics store, Cafe, Clinic"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="h-10 text-xs rounded-xl capitalize"
-                    required
-                  />
-                  <datalist id="category-suggestions">
-                    <option value="Electronics store" />
-                    <option value="Restaurant / Cafe" />
-                    <option value="Sweets & Bakery" />
-                    <option value="Dental Clinic" />
-                    <option value="Salon & Spa" />
-                    <option value="Retail & Supermarket" />
-                    <option value="Jewelry store" />
-                    <option value="Gym & Fitness center" />
-                    <option value="Auto repair shop" />
-                    <option value="Digital Marketing Agency" />
-                    <option value="Coaching & Classes" />
-                    <option value="Chartered Accountant" />
-                    <option value="Hotel & Lodging" />
-                    <option value="Hospital & Healthcare" />
-                  </datalist>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Address / City</Label>
-                  <Input
-                    placeholder="e.g. Ahmedabad, Gujarat"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-              </div>
-
-              {/* 4. Google Review URL */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold">Google Review URL</Label>
-                  {isValidGoogleUrl && (
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in">
-                      <Check className="h-3 w-3 stroke-[3]" />
-                      <span>Valid Google Review URL</span>
-                    </span>
-                  )}
-                </div>
-                <Input
-                  placeholder="e.g. https://g.co/kgs/abc123 or https://search.google.com/local/writereview?placeid=..."
-                  value={googleReviewUrl}
-                  onChange={(e) => setGoogleReviewUrl(e.target.value)}
-                  className="h-10 text-xs rounded-xl font-mono"
-                  required
-                />
-                <p className="text-[11px] text-slate-400">
-                  Tip: Searching your business above automatically extracts and verifies this official link.
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-xs rounded-xl h-10 cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  isLoading={isSubmitting}
-                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs rounded-xl h-10 px-5 shadow-sm cursor-pointer"
-                >
-                  Save Business
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <Button size="sm" variant="outline" onClick={() => setLocationModalBiz(null)}>
+                  Close
                 </Button>
               </div>
-            </form>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
-export default BusinessesPage;
