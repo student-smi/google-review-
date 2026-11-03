@@ -265,10 +265,10 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <Link to="/dashboard/keywords">
+        <Link to="/dashboard/keywords" className="w-full sm:w-auto">
           <Button
             size="sm"
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 shrink-0 cursor-pointer"
+            className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 shrink-0 cursor-pointer w-full sm:w-auto"
           >
             <span>Open Keyword Management →</span>
           </Button>

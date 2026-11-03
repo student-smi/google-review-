@@ -1196,12 +1196,12 @@ export function QrStudioPage() {
           </div>
 
           {/* Standee Shadow Stage */}
-          <div className="w-full max-w-md p-6 sm:p-10 rounded-3xl bg-radial from-slate-100 to-slate-200/50 dark:from-slate-900/60 dark:to-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 flex flex-col items-center justify-center shadow-inner">
+          <div className="w-full max-w-md p-3 sm:p-10 rounded-2xl sm:rounded-3xl bg-radial from-slate-100 to-slate-200/50 dark:from-slate-900/60 dark:to-slate-950/80 border border-slate-200/70 dark:border-slate-800/80 flex flex-col items-center justify-center shadow-inner overflow-hidden">
             {/* Real Mockup Box */}
             <div
               ref={posterRef}
-              className={`w-full max-w-sm rounded-3xl bg-white text-slate-900 p-7 shadow-2xl flex flex-col items-center text-center transition-all border border-slate-200/90 ${
-                posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-9' : ''
+              className={`w-full max-w-sm rounded-2xl sm:rounded-3xl bg-white text-slate-900 p-4 sm:p-7 shadow-2xl flex flex-col items-center text-center transition-all border border-slate-200/90 ${
+                posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-6 sm:p-9' : ''
               }`}
             >
               {/* Business Badge with optional Owner Logo */}

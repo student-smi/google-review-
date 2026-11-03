@@ -737,7 +737,7 @@ export function ReviewsRepliesPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           {activeBusiness?.googleReviewUrl && (
             <a href={activeBusiness.googleReviewUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-slate-200 hover:bg-slate-50 text-slate-700">
@@ -784,7 +784,7 @@ export function ReviewsRepliesPage() {
       <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-blue-50/40 p-5 shadow-xs transition-all">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -1026,7 +1026,7 @@ export function ReviewsRepliesPage() {
                   <span>Showing <strong className="font-bold text-slate-800">{totalReviews === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of <strong className="font-bold text-slate-800">{totalReviews}</strong> customer reviews</span>
                 </div>
                 {totalPages > 1 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/60">
                       Page {validCurrentPage} of {totalPages}
                     </span>
@@ -1159,7 +1159,7 @@ export function ReviewsRepliesPage() {
                         </div>
 
                         {/* Status Badge & Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                           <button
                             type="button"
                             onClick={() => handleDeleteReview(review.id)}
@@ -1256,7 +1256,7 @@ export function ReviewsRepliesPage() {
                       {isExpanded ? (
                         <div className="rounded-2xl border border-purple-200 bg-purple-50/30 p-4 sm:p-5 space-y-4 animate-in fade-in duration-200">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-100 pb-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                               <Sparkles className="h-4 w-4 text-purple-600" />
                               <span className="text-xs sm:text-sm font-bold text-slate-900">
                                 AI Generated Response for {review.customerName}
@@ -1541,7 +1541,7 @@ export function ReviewsRepliesPage() {
             <div className="lg:col-span-6 space-y-4">
               <Card className="rounded-2xl border-slate-200/80 bg-white shadow-xs">
                 <CardHeader className="pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     <span className="p-1 rounded-md bg-purple-100 text-purple-700 font-black text-xs font-mono">1</span>
                     <CardTitle className="text-sm font-extrabold text-slate-900">
                       ⚡ Target Specific Google Reviewer
@@ -1632,7 +1632,7 @@ export function ReviewsRepliesPage() {
               {/* Bookmarklet Card */}
               <Card className="rounded-2xl border-slate-200/80 bg-white shadow-xs">
                 <CardHeader className="pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     <span className="p-1 rounded-md bg-indigo-100 text-indigo-700 font-black text-xs font-mono">2</span>
                     <CardTitle className="text-sm font-extrabold text-slate-900">
                       📥 1-Click Google Maps Bookmarklet (Zero Install)
@@ -1705,7 +1705,7 @@ export function ReviewsRepliesPage() {
               {/* Chrome Extension Box */}
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                     <Globe className="h-4 w-4 text-blue-600" />
                     <span className="text-xs font-extrabold text-slate-900">Chrome Extension Package</span>
                   </div>
@@ -1922,10 +1922,10 @@ export function ReviewsRepliesPage() {
 
       {/* Quick Import Modal */}
       {isQuickImportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <Card className="rounded-3xl border border-slate-200 bg-white shadow-2xl w-full max-w-lg p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+          <Card className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-6 space-y-4 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
                 <div className="h-8 w-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
                   <Plus className="h-4 w-4" />
                 </div>

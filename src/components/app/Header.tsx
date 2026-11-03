@@ -8,7 +8,8 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  Command
+  Command,
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 interface HeaderProps {
   onOpenCommand: () => void;
+  onToggleMobileMenu?: () => void;
   activeBusiness: {
     id: string;
     name: string;
@@ -37,6 +39,7 @@ const pageTitles: Record<string, string> = {
   '/dashboard/businesses': 'Business Profiles',
   '/dashboard/qr': 'QR Studio & Campaigns',
   '/dashboard/replies': 'Reviews & AI Replies',
+  '/dashboard/keywords': 'Keyword Management',
   '/dashboard/analytics': 'Conversion Analytics',
   '/dashboard/local-seo': 'Local SEO Checklist',
   '/dashboard/settings': 'Settings & Google Link'
@@ -44,6 +47,7 @@ const pageTitles: Record<string, string> = {
 
 export function Header({
   onOpenCommand,
+  onToggleMobileMenu,
   activeBusiness,
   businesses,
   onSelectBusiness
@@ -55,27 +59,39 @@ export function Header({
   const currentSection = pageTitles[location.pathname] || 'Workspace';
 
   return (
-    <header className="flex h-15 items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 z-20">
-      {/* Left: Breadcrumbs & Business Switcher */}
-      <div className="flex items-center gap-3">
+    <header className="flex h-15 items-center justify-between border-b border-slate-200/80 bg-white px-3 sm:px-6 z-20 shrink-0">
+      {/* Left: Mobile Hamburger, Breadcrumbs & Business Switcher */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Mobile Hamburger Button */}
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0 shadow-2xs cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-4.5 w-4.5" />
+          </button>
+        )}
+
         {/* Business Selector Dropdown */}
         <div className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 hover:border-blue-300 hover:bg-slate-100 transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-800 hover:border-blue-300 hover:bg-slate-100 transition-all cursor-pointer shadow-xs max-w-[170px] xs:max-w-[210px] sm:max-w-xs"
           >
-            <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-gradient-to-tr from-[#2563EB] to-[#7B68EE] text-white text-[10px] font-black uppercase">
+            <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-gradient-to-tr from-[#2563EB] to-[#7B68EE] text-white text-[10px] font-black uppercase shrink-0">
               {activeBusiness?.name ? activeBusiness.name.charAt(0) : '★'}
             </div>
-            <span className="truncate max-w-[140px] sm:max-w-[200px]">
+            <span className="truncate max-w-[90px] xs:max-w-[130px] sm:max-w-[180px]">
               {activeBusiness?.name || 'My Location'}
             </span>
             {activeBusiness?.city && (
-              <span className="hidden sm:inline-flex rounded-md bg-blue-50 text-blue-600 font-semibold text-[10px] px-1.5 py-0.5">
+              <span className="hidden md:inline-flex rounded-md bg-blue-50 text-blue-600 font-semibold text-[10px] px-1.5 py-0.5 shrink-0">
                 {activeBusiness.city}
               </span>
             )}
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5 shrink-0" />
           </button>
 
           {dropdownOpen && (
@@ -139,7 +155,7 @@ export function Header({
       </div>
 
       {/* Right: Actions, Search, Quick QR, Theme, User */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Command Palette Trigger */}
         <button
           onClick={onOpenCommand}
@@ -155,8 +171,8 @@ export function Header({
         {/* Quick New Standee Button */}
         <Button
           size="sm"
-          onClick={() => navigate('/dashboard/qr-studio')}
-          className="hidden sm:inline-flex bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5"
+          onClick={() => navigate('/dashboard/qr')}
+          className="hidden sm:inline-flex bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>New Standee</span>
@@ -171,7 +187,7 @@ export function Header({
             title="Open official Google review destination"
             className="hidden xl:inline-flex"
           >
-            <button className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            <button className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">
               <span>Google Link</span>
               <ExternalLink className="h-3 w-3 text-slate-400" />
             </button>

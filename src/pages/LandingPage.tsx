@@ -30,7 +30,9 @@ import {
   Building2,
   MapPin,
   Flame,
-  CheckSquare
+  CheckSquare,
+  Menu,
+  X
 } from 'lucide-react';
 
 interface CategoryTemplate {
@@ -106,6 +108,7 @@ const CATEGORIES: CategoryTemplate[] = [
 export function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [activeCategory, setActiveCategory] = useState<string>('restaurants');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const selectedTemplate =
     CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
@@ -190,31 +193,90 @@ export function LandingPage() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated() ? (
               <NavLink to="/dashboard">
-                <button className="h-9 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm">
-                  Go to Dashboard
+                <button className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm">
+                  Dashboard
                 </button>
               </NavLink>
             ) : (
               <>
                 <NavLink
                   to="/login"
-                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 transition-colors hidden sm:block"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 py-1.5 transition-colors hidden sm:block"
                 >
                   Login
                 </NavLink>
 
                 <NavLink to="/signup">
-                  <button className="h-9 px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
+                  <button className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
                     Get Started Free
                   </button>
                 </NavLink>
               </>
             )}
+
+            {/* Mobile Nav Toggle Button */}
+            <button
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors"
+              aria-label="Toggle mobile menu"
+            >
+              {mobileNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Dropdown */}
+        {mobileNavOpen && (
+          <div className="lg:hidden border-t border-slate-200/80 bg-white px-4 py-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150 shadow-md">
+            <a
+              href="#features"
+              onClick={() => setMobileNavOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
+            >
+              AI Reviews & Templates
+            </a>
+            <a
+              href="#how-it-works"
+              onClick={() => setMobileNavOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
+            >
+              How It Works
+            </a>
+            <a
+              href="#trust"
+              onClick={() => setMobileNavOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
+            >
+              Google Policy & Compliance
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileNavOpen(false)}
+              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
+            >
+              Free Forever Guarantee
+            </a>
+            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+              <NavLink
+                to="/login"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex-1 text-center py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Sign In
+              </NavLink>
+              <NavLink
+                to="/signup"
+                onClick={() => setMobileNavOpen(false)}
+                className="flex-1 text-center py-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
+              >
+                Sign Up Free
+              </NavLink>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 3. HERO SECTION (ClickUp 4.0 Exact Two-Column Layout) */}

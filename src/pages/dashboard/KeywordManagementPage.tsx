@@ -211,7 +211,7 @@ export function KeywordManagementPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
           {activeBusiness?.slug && (
             <a href={`/r/${activeBusiness.slug}`} target="_blank" rel="noopener noreferrer">
               <Button
