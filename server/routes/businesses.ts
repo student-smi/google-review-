@@ -366,7 +366,7 @@ businessRoutes.get('/:id/reviews', async (c) => {
     return c.json({ reviews });
   } catch (err: any) {
     // Only permit Super Admin to view unowned business reviews
-    const currentUser = c.get('user');
+    const currentUser = (c as any).get('user') as any;
     const isAdmin =
       currentUser?.role === 'admin' ||
       currentUser?.email === 'smitpanchal734@gmail.com' ||

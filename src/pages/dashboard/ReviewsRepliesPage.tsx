@@ -270,6 +270,19 @@ export function ReviewsRepliesPage() {
       loadGmbStatus();
       loadPlacesStats();
     }
+
+    const handleSynced = () => {
+      loadReviews();
+      loadGmbStatus();
+      loadPlacesStats();
+    };
+
+    window.addEventListener('reviews-synced', handleSynced);
+    window.addEventListener('gmb-status-changed', handleSynced);
+    return () => {
+      window.removeEventListener('reviews-synced', handleSynced);
+      window.removeEventListener('gmb-status-changed', handleSynced);
+    };
   }, [activeBusiness?.id]);
 
   const handleSyncGmb = async (opts?: { silent?: boolean; directToken?: string }) => {
@@ -1476,7 +1489,7 @@ export function ReviewsRepliesPage() {
                               {/* 1-Click Copy AI Reply & Open on Google Maps */}
                               <Button
                                 size="sm"
-                                variant={gmbStatus.isConnected ? "outline" : "default"}
+                                variant={gmbStatus.isConnected ? "outline" : "primary"}
                                 onClick={() => handleCopyAndOpenGoogleMaps(review)}
                                 disabled={!currentDraft.trim()}
                                 className={gmbStatus.isConnected

@@ -104,6 +104,25 @@ export function OverviewPage() {
         if (res?.reviews) setReviews(res.reviews);
       })
       .catch(() => {});
+
+    const handleSynced = () => {
+      if (!activeBusiness?.id) return;
+      apiFetch<{ success: boolean; data: any }>(`/api/gmb/places-stats/${activeBusiness.id}`)
+        .then((res) => {
+          if (res?.data) setPlacesStats(res.data);
+        })
+        .catch(() => {});
+      apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews`)
+        .then((res) => {
+          if (res?.reviews) setReviews(res.reviews);
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener('reviews-synced', handleSynced);
+    return () => {
+      window.removeEventListener('reviews-synced', handleSynced);
+    };
   }, [activeBusiness?.id]);
 
   // Real computed totals from actual QR codes & analytics

@@ -120,7 +120,7 @@ export function BusinessesPage() {
     setPhone(biz.phone || '');
     setContactEmail(biz.contactEmail || '');
     setAssignedManager(biz.assignedManager || '');
-    setContactResolutionLine(biz.contactResolutionLine || '');
+    setContactResolutionLine((biz as any).contactResolutionLine || '');
     setStatus(biz.status || 'active');
     setGoogleReviewUrl(biz.googleReviewUrl || '');
     setGooglePlaceId(biz.googlePlaceId || null);
@@ -668,10 +668,8 @@ export function BusinessesPage() {
                       onSelect={(place) => {
                         setVerifiedPlace(place);
                         setName(place.name);
-                        setAddress(place.formattedAddress);
-                        setCity(place.city || '');
-                        if (place.phone) setPhone(place.phone);
-                        if (place.googlePlaceId) setGooglePlaceId(place.googlePlaceId);
+                        setAddress(place.address);
+                        if (place.placeId) setGooglePlaceId(place.placeId);
                         if (place.googleReviewUrl) setGoogleReviewUrl(place.googleReviewUrl);
                       }}
                     />
