@@ -22,29 +22,32 @@ export function AuthPage() {
   const navigate = useNavigate();
 
   // Sync existing user businesses from remote D1 database and redirect directly to dashboard
-  const handlePostAuthSync = async () => {
+  const handlePostAuthSync = async (forceDashboard = true) => {
     setIsLoading(true);
     try {
       const bizData = await apiFetch<{ businesses: any[] }>('/api/businesses');
       if (bizData?.businesses && Array.isArray(bizData.businesses) && bizData.businesses.length > 0) {
         saveStoredBusinesses(bizData.businesses);
         saveActiveBusinessId(bizData.businesses[0].id);
-        navigate('/dashboard', { replace: true });
-        return;
       }
     } catch (err) {
       console.warn('Could not sync user businesses:', err);
     } finally {
       setIsLoading(false);
     }
-    // Only route to onboarding if user genuinely has zero businesses saved
-    navigate('/onboarding', { replace: true });
+
+    // Login ALWAYS goes straight to dashboard. Only brand new signups go to onboarding.
+    if (forceDashboard || isLogin) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      navigate('/onboarding', { replace: true });
+    }
   };
 
-  // If already authenticated, sync businesses and go directly to dashboard
+  // If already authenticated, go directly to dashboard
   useEffect(() => {
     if (isAuthenticated()) {
-      handlePostAuthSync();
+      navigate('/dashboard', { replace: true });
     }
   }, [navigate]);
 
@@ -80,7 +83,7 @@ export function AuthPage() {
       if (isLogin) {
         await loginApi(email, password);
         // Automatically restore existing user data & go straight to dashboard
-        await handlePostAuthSync();
+        await handlePostAuthSync(true);
       } else {
         // User Signup: Create brand new user
         await signupApi(name, email, password);
@@ -128,7 +131,7 @@ export function AuthPage() {
           <div className="space-y-3">
             <GoogleAuthButton
               onSuccess={async () => {
-                await handlePostAuthSync();
+                await handlePostAuthSync(isLogin);
               }}
             />
             <div className="relative flex items-center justify-center">

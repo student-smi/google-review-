@@ -28,11 +28,17 @@ app.route('/api/ai', aiRoutes);
 app.route('/api/auth', authRoutes);
 
 // Authenticated Owner Routes
+app.use('/api/businesses', requireAuth);
 app.use('/api/businesses/*', requireAuth);
+app.use('/api/qr', requireAuth);
 app.use('/api/qr/*', requireAuth);
+app.use('/api/analytics', requireAuth);
 app.use('/api/analytics/*', requireAuth);
+app.use('/api/media', requireAuth);
 app.use('/api/media/*', requireAuth);
+app.use('/api/gmb', requireAuth);
 app.use('/api/gmb/*', requireAuth);
+app.use('/api/hierarchy', requireAuth);
 app.use('/api/hierarchy/*', requireAuth);
 
 app.route('/api/businesses', businessRoutes);

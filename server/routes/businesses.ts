@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { eq, and, like, desc, ne } from 'drizzle-orm';
+import { eq, and, like, desc, ne, inArray } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { createScopedDb } from '../db/scoped';
-import { businesses, qrCodes, customerReviews, locations } from '../db/schema';
+import { businesses, qrCodes, customerReviews, locations, memberships } from '../db/schema';
 import type { Env } from './public';
 
-export const businessRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
+export const businessRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string; user?: any } }>();
 
 const getOwnerId = (c: any): string => c.get('ownerId') || c.req.header('X-Owner-Id') || c.req.header('X-Dev-Owner-Id') || 'owner-default';
 
@@ -19,6 +19,32 @@ businessRoutes.get('/', async (c) => {
   const includeArchived = c.req.query('archived') === 'true';
 
   let list = await scoped.getBusinesses();
+
+  // If no direct businesses found, check for Admin privileges or membership roles
+  if (list.length === 0) {
+    const user = c.get('user');
+    const isAdmin =
+      user?.role === 'admin' ||
+      user?.email === 'smitpanchal734@gmail.com' ||
+      ownerId === 'usr_admin_smit';
+
+    if (isAdmin) {
+      list = await db.select().from(businesses).orderBy(desc(businesses.createdAt));
+    } else {
+      const userMemberships = await db
+        .select()
+        .from(memberships)
+        .where(and(eq(memberships.userId, ownerId), eq(memberships.status, 'active')));
+      const bizIds = userMemberships.map((m: any) => m.businessId).filter(Boolean);
+      if (bizIds.length > 0) {
+        list = await db
+          .select()
+          .from(businesses)
+          .where(inArray(businesses.id, bizIds))
+          .orderBy(desc(businesses.createdAt));
+      }
+    }
+  }
 
   // Filter archived businesses unless explicitly requested
   if (!includeArchived) {
