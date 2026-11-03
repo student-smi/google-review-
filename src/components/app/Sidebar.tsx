@@ -56,6 +56,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'All Branches', to: '/dashboard/branches', icon: Store, badge: null },
     { label: 'All Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'AI Reply Center', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review Campaigns', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
     { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Team & Permissions', to: '/dashboard/team', icon: ShieldCheck, badge: null },
@@ -69,6 +70,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branches', to: '/dashboard/branches', icon: Store, badge: 'Outlets' },
     { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'AI Replies', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'Copilot' },
+    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review Collection', to: '/dashboard/qr', icon: QrCode, badge: 'QR/NFC' },
     { label: 'Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Staff & Roles', to: '/dashboard/team', icon: ShieldCheck, badge: null },
@@ -82,6 +84,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Google Connection', to: '/dashboard/settings', icon: Star, badge: 'GMB Live' },
     { label: 'Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: '1-Click' },
+    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Branch Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
@@ -222,6 +225,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                     'h-4 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center font-mono',
                     item.badge === 'AI' || item.badge === 'Copilot'
                       ? 'bg-pink-500/10 text-pink-600'
+                      : item.badge === 'SEO'
+                      ? 'bg-purple-500/10 text-purple-700'
                       : 'bg-blue-500/10 text-blue-600'
                   )}
                 >

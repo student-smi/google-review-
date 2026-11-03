@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 const DEFAULT_CHIPS: string[] = [];
 
@@ -31,6 +32,7 @@ export function KeywordManagementPage() {
     activeBusiness: BusinessItem | null;
     refreshBusinesses?: () => Promise<void>;
   }>();
+  const { currentLevel, activeBranch } = useHierarchy();
 
   const [chips, setChips] = useState<string[]>(() => {
     if (activeBusiness?.chipsJson) {
@@ -209,6 +211,15 @@ export function KeywordManagementPage() {
           <p className="text-xs sm:text-sm text-slate-500">
             Customize the service & product keywords customers tap when they scan your standee. The AI incorporates these into authentic Google reviews.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs font-semibold text-slate-500">Target Entity:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              <Layers className="h-3 w-3 text-blue-600" />
+              {currentLevel === 'branch' && activeBranch
+                ? `${activeBranch.name} (Branch)`
+                : activeBusiness?.name || 'Active Business'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
