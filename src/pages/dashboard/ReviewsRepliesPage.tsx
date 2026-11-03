@@ -59,6 +59,8 @@ interface AiReplyResult {
 
 export interface GmbStatus {
   isConnected: boolean;
+  isExpired?: boolean;
+  expiresAt?: number | null;
   accountName?: string | null;
   locationName?: string | null;
   connectedEmail?: string | null;
@@ -169,9 +171,12 @@ export function ReviewsRepliesPage() {
     }
   };
 
-  const handleConnectGmb = () => {
-    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
-      setIsConnectingGmb(true);
+  // Reusable helper to request fresh Google OAuth Access Token via Google Identity Services
+  const requestFreshGoogleToken = (promptMode: '' | 'consent' = 'consent'): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined' || !(window as any).google?.accounts?.oauth2) {
+        return reject(new Error('Google Identity Services script is loading. Please retry in 2 seconds.'));
+      }
       try {
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com',
@@ -179,52 +184,55 @@ export function ReviewsRepliesPage() {
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
               console.error('Google OAuth error:', tokenResponse);
-              alert('Google Sign-in Error: ' + (tokenResponse.error_description || tokenResponse.error));
-              setIsConnectingGmb(false);
-              return;
+              return reject(new Error(tokenResponse.error_description || tokenResponse.error));
             }
             if (tokenResponse.access_token) {
               const scopes = tokenResponse.scope || '';
-              if (!scopes.includes('business.manage')) {
-                alert('⚠️ Google Business Permission Required:\n\nDuring Google sign-in, Google shows checkboxes for permissions. You MUST check the box:\n☑ "See, edit, create, and delete your Google business listings"\n\nWithout this permission, Google blocks ReviewQR from reading your Google Reviews. Please click Connect again and check that box.');
-                setIsConnectingGmb(false);
-                return;
+              if (scopes && !scopes.includes('business.manage')) {
+                alert('⚠️ Google Business Permission Required:\n\nDuring Google sign-in, you MUST check the box:\n☑ "See, edit, create, and delete your Google business listings"\n\nWithout this permission, Google blocks ReviewQR from reading your Google Reviews.');
+                return reject(new Error('business.manage permission not granted'));
               }
-
-              try {
-                if (!activeBusiness?.id) {
-                  alert('Please select an active business first.');
-                  setIsConnectingGmb(false);
-                  return;
-                }
-                const connectRes = await apiFetch<any>('/api/gmb/connect', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    accessToken: tokenResponse.access_token,
-                    businessId: activeBusiness.id
-                  })
-                });
-                console.log('GMB connect response:', connectRes);
-                alert('🎉 Google Business Profile Connected Successfully!');
-                await loadGmbStatus();
-                await handleSyncGmb();
-              } catch (e: any) {
-                console.error('GMB connect failed:', e);
-                alert('GMB Connect backend notice: ' + (e?.message || 'Server error'));
-              } finally {
-                setIsConnectingGmb(false);
-              }
+              resolve(tokenResponse.access_token);
+            } else {
+              reject(new Error('No access_token returned by Google'));
             }
           }
         });
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-      } catch (err: any) {
-        console.error('initTokenClient error:', err);
-        alert('Init token error: ' + (err?.message || 'Unknown error'));
-        setIsConnectingGmb(false);
+        tokenClient.requestAccessToken({ prompt: promptMode });
+      } catch (err) {
+        reject(err);
       }
-    } else {
-      alert('Google Identity Services script is loading. Please retry in 2 seconds.');
+    });
+  };
+
+  const handleConnectGmb = async () => {
+    if (!activeBusiness?.id) {
+      alert('Please select an active business first.');
+      return;
+    }
+    setIsConnectingGmb(true);
+    try {
+      const accessToken = await requestFreshGoogleToken('consent');
+      if (!accessToken) return;
+
+      const connectRes = await apiFetch<any>('/api/gmb/connect', {
+        method: 'POST',
+        body: JSON.stringify({
+          accessToken,
+          businessId: activeBusiness.id
+        })
+      });
+      console.log('GMB connect response:', connectRes);
+      alert('🎉 Google Business Profile Connected Successfully!');
+      await loadGmbStatus();
+      await handleSyncGmb({ directToken: accessToken });
+    } catch (e: any) {
+      console.error('GMB connect failed:', e);
+      if (e?.message !== 'business.manage permission not granted') {
+        alert('GMB Connect notice: ' + (e?.message || 'Server error'));
+      }
+    } finally {
+      setIsConnectingGmb(false);
     }
   };
 
@@ -264,7 +272,7 @@ export function ReviewsRepliesPage() {
     }
   }, [activeBusiness?.id]);
 
-  const handleSyncGmb = async (opts?: { silent?: boolean }) => {
+  const handleSyncGmb = async (opts?: { silent?: boolean; directToken?: string }) => {
     const silent = Boolean(opts?.silent);
     if (!activeBusiness?.id) return;
     setIsSyncingGmb(true);
@@ -285,16 +293,70 @@ export function ReviewsRepliesPage() {
       }
 
       // 2. Also sync GMB OAuth reviews if connected
-      if (gmbStatus.isConnected) {
-        const res = await apiFetch<{ reviews?: CustomerReview[]; syncedCount?: number }>(
-          '/api/gmb/sync-reviews',
-          {
-            method: 'POST',
-            body: JSON.stringify({ businessId: activeBusiness.id })
+      if (gmbStatus.isConnected || opts?.directToken) {
+        let activeToken = opts?.directToken;
+
+        // If session is expired and no direct token was provided, seamlessly prompt for fresh token
+        if (!activeToken && gmbStatus.isExpired) {
+          try {
+            activeToken = await requestFreshGoogleToken('consent');
+            if (activeToken) {
+              await apiFetch('/api/gmb/connect', {
+                method: 'POST',
+                body: JSON.stringify({
+                  accessToken: activeToken,
+                  businessId: activeBusiness.id
+                })
+              });
+            }
+          } catch (tokErr) {
+            console.warn('Proactive token refresh error:', tokErr);
           }
-        );
-        if (res?.reviews && res.reviews.length > 0) {
-          setReviews(res.reviews);
+        }
+
+        let syncRes: any = null;
+        try {
+          syncRes = await apiFetch<{ reviews?: CustomerReview[]; syncedCount?: number }>(
+            '/api/gmb/sync-reviews',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                businessId: activeBusiness.id,
+                accessToken: activeToken || undefined
+              })
+            }
+          );
+        } catch (syncErr: any) {
+          // If server reports 401 or token expired, auto-refresh token and retry sync without needing user to disconnect!
+          if (syncErr?.status === 401 || syncErr?.message?.includes('expired') || syncErr?.message?.includes('authorization') || syncErr?.message?.includes('OAuth')) {
+            console.log('Token expired during sync, refreshing token automatically...');
+            const freshToken = await requestFreshGoogleToken('consent');
+            if (freshToken) {
+              await apiFetch('/api/gmb/connect', {
+                method: 'POST',
+                body: JSON.stringify({
+                  accessToken: freshToken,
+                  businessId: activeBusiness.id
+                })
+              });
+              syncRes = await apiFetch<{ reviews?: CustomerReview[]; syncedCount?: number }>(
+                '/api/gmb/sync-reviews',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    businessId: activeBusiness.id,
+                    accessToken: freshToken
+                  })
+                }
+              );
+            }
+          } else {
+            throw syncErr;
+          }
+        }
+
+        if (syncRes?.reviews && syncRes.reviews.length > 0) {
+          setReviews(syncRes.reviews);
         }
       }
 
@@ -856,15 +918,23 @@ export function ReviewsRepliesPage() {
               <span>{isSyncingGmb ? 'Syncing Live Google Data…' : '🔄 Sync Live Google Rating & Reviews'}</span>
             </Button>
             {gmbStatus.isConnected ? (
-              <Button
-                variant="outline"
-                onClick={handleDisconnectGmb}
-                size="sm"
-                className="border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-600 text-xs font-semibold rounded-xl cursor-pointer"
-              >
-                <Unlink className="w-3.5 h-3.5 mr-1" />
-                <span>Disconnect GMB</span>
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                {gmbStatus.isExpired && (
+                  <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200/80 px-2.5 py-1 rounded-xl font-medium flex items-center gap-1 shadow-2xs">
+                    <Clock className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Session Expired (Click Sync to refresh)</span>
+                  </span>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectGmb}
+                  size="sm"
+                  className="border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-600 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  <Unlink className="w-3.5 h-3.5 mr-1" />
+                  <span>Disconnect GMB</span>
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="outline"

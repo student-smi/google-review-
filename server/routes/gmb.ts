@@ -27,6 +27,8 @@ async function getGmbConnection(c: any, businessId: string, ownerId: string) {
   let meta: GmbMetadata | null = null;
   let accessToken: string | null = null;
   let refreshToken: string | null = null;
+  let isExpired = false;
+  let expiresAtMs: number | null = null;
 
   if (c.env.KV) {
     try {
@@ -35,6 +37,9 @@ async function getGmbConnection(c: any, businessId: string, ownerId: string) {
         meta = cached.meta;
         accessToken = cached.accessToken;
         refreshToken = cached.refreshToken;
+        if (cached.expiresAtMs) {
+          expiresAtMs = Number(cached.expiresAtMs);
+        }
       }
     } catch {}
   }
@@ -51,13 +56,23 @@ async function getGmbConnection(c: any, businessId: string, ownerId: string) {
     if (acc) {
       accessToken = acc.accessToken;
       refreshToken = acc.refreshToken;
+      if (acc.expiresAt) {
+        expiresAtMs = acc.expiresAt instanceof Date
+          ? acc.expiresAt.getTime()
+          : (typeof acc.expiresAt === 'number' ? (acc.expiresAt > 1e11 ? acc.expiresAt : acc.expiresAt * 1000) : null);
+      }
       if (acc.password) {
         try { meta = JSON.parse(acc.password); } catch {}
       }
     }
   }
 
-  return { accessToken, refreshToken, meta };
+  // Check if token has passed its expiration
+  if (expiresAtMs && expiresAtMs <= Date.now()) {
+    isExpired = true;
+  }
+
+  return { accessToken, refreshToken, meta, isExpired, expiresAtMs };
 }
 
 // Helper: Save GMB connection
@@ -70,7 +85,8 @@ async function saveGmbConnection(
   meta: GmbMetadata,
   expiresInSeconds: number = 3600
 ) {
-  const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+  const expiresAtMs = Date.now() + expiresInSeconds * 1000;
+  const expiresAt = new Date(expiresAtMs);
   const now = new Date();
   const db = getDb(c.env.DB);
 
@@ -113,7 +129,7 @@ async function saveGmbConnection(
     try {
       await c.env.KV.put(
         `gmb:${businessId}`,
-        JSON.stringify({ accessToken, refreshToken, meta }),
+        JSON.stringify({ accessToken, refreshToken, meta, expiresAtMs }),
         { expirationTtl: expiresInSeconds }
       );
     } catch {}
@@ -131,10 +147,12 @@ gmbRoutes.get('/status', async (c) => {
     return c.json({ error: 'businessId query param required' }, 400);
   }
 
-  const { accessToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const { accessToken, meta, isExpired, expiresAtMs } = await getGmbConnection(c, businessId, ownerId);
 
   return c.json({
     isConnected: !!accessToken,
+    isExpired: isExpired || false,
+    expiresAt: expiresAtMs || null,
     accountName: meta?.accountName || meta?.businessTitle || null,
     locationName: meta?.locationName || null,
     connectedEmail: meta?.connectedEmail || null,
@@ -300,14 +318,17 @@ async function resolveGmbIds(accessToken: string, meta: GmbMetadata | null, busi
 // ──────────────────────────────────────────────
 gmbRoutes.post('/sync-reviews', async (c) => {
   const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
   const businessId = body.businessId;
+  const directAccessToken = body.accessToken;
 
   if (!businessId) {
     return c.json({ error: 'businessId is required' }, 400);
   }
 
-  const { accessToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const { accessToken: savedToken, meta, isExpired } = await getGmbConnection(c, businessId, ownerId);
+  const effectiveToken = directAccessToken || savedToken;
+
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
   let business = await scoped.getBusiness(businessId);
@@ -326,73 +347,95 @@ gmbRoutes.post('/sync-reviews', async (c) => {
     return c.json({ error: 'Business not found' }, 404);
   }
 
+  if (!effectiveToken) {
+    return c.json({
+      success: false,
+      requiresReauth: true,
+      error: 'Google Business Profile is not connected or authorization is missing.'
+    }, 401);
+  }
+
+  // If a direct fresh accessToken was supplied from frontend, save it immediately
+  if (directAccessToken && meta) {
+    await saveGmbConnection(c, businessId, ownerId, directAccessToken, null, meta, 3600);
+  }
+
   let importedReviewsCount = 0;
   const now = Math.floor(Date.now() / 1000);
 
   // If connected via OAuth, fetch from GMB v4 reviews endpoint
-  if (accessToken) {
-    try {
-      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, business);
-      if (!cleanAcc || !cleanLoc) {
-        return c.json({
-          error: 'Google Business Profile account or location could not be identified. Please click Disconnect GMB and connect again, ensuring you check the "See, edit, create, and delete your Google business listings" box on Google sign-in.'
-        }, 400);
-      }
-      const reviewsUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews?pageSize=50`;
-      const gmbRes = await fetch(reviewsUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+  try {
+    const { cleanAcc, cleanLoc } = await resolveGmbIds(effectiveToken, meta, business);
+    if (!cleanAcc || !cleanLoc) {
+      return c.json({
+        requiresReauth: true,
+        error: 'Google Business Profile account or location could not be identified. Please click Disconnect GMB and connect again, ensuring you check the "See, edit, create, and delete your Google business listings" box on Google sign-in.'
+      }, 400);
+    }
+    const reviewsUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews?pageSize=50`;
+    const gmbRes = await fetch(reviewsUrl, {
+      headers: { Authorization: `Bearer ${effectiveToken}` }
+    });
 
-      if (gmbRes.ok) {
-        const data = (await gmbRes.json()) as any;
-        if (data.reviews && Array.isArray(data.reviews)) {
-          for (const r of data.reviews) {
-            const starMap: Record<string, number> = {
-              ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5
-            };
-            const rating = starMap[r.starRating] || 5;
-            const revId = `gmb_${r.reviewId || Date.now()}`;
-            const customerName = r.reviewer?.displayName || 'Google User';
-            const reviewText = r.comment || 'Great experience!';
-            const replyText = r.reviewReply?.comment || null;
-            const repliedAt = r.reviewReply ? Math.floor(new Date(r.reviewReply.updateTime).getTime() / 1000) : null;
-            const createdAt = Math.floor(new Date(r.createTime || Date.now()).getTime() / 1000);
+    if (gmbRes.ok) {
+      const data = (await gmbRes.json()) as any;
+      if (data.reviews && Array.isArray(data.reviews)) {
+        for (const r of data.reviews) {
+          const starMap: Record<string, number> = {
+            ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5
+          };
+          const rating = starMap[r.starRating] || 5;
+          const revId = `gmb_${r.reviewId || Date.now()}`;
+          const customerName = r.reviewer?.displayName || 'Google User';
+          const reviewText = r.comment || 'Great experience!';
+          const replyText = r.reviewReply?.comment || null;
+          const repliedAt = r.reviewReply ? Math.floor(new Date(r.reviewReply.updateTime).getTime() / 1000) : null;
+          const createdAt = Math.floor(new Date(r.createTime || Date.now()).getTime() / 1000);
 
-            // Upsert into customerReviews
-            const [existing] = await db
-              .select({ id: customerReviews.id })
-              .from(customerReviews)
-              .where(eq(customerReviews.id, revId))
-              .limit(1);
+          // Upsert into customerReviews
+          const [existing] = await db
+            .select({ id: customerReviews.id })
+            .from(customerReviews)
+            .where(eq(customerReviews.id, revId))
+            .limit(1);
 
-            if (existing) {
-              await db
-                .update(customerReviews)
-                .set({
-                  replyText: replyText || undefined,
-                  repliedAt: repliedAt || undefined
-                })
-                .where(eq(customerReviews.id, revId));
-            } else {
-              await db.insert(customerReviews).values({
-                id: revId,
-                businessId,
-                customerName,
-                rating,
-                reviewText,
-                replyText,
-                repliedAt,
-                language: 'en',
-                createdAt
-              });
-              importedReviewsCount++;
-            }
+          if (existing) {
+            await db
+              .update(customerReviews)
+              .set({
+                replyText: replyText || undefined,
+                repliedAt: repliedAt || undefined
+              })
+              .where(eq(customerReviews.id, revId));
+          } else {
+            await db.insert(customerReviews).values({
+              id: revId,
+              businessId,
+              customerName,
+              rating,
+              reviewText,
+              replyText,
+              repliedAt,
+              language: 'en',
+              createdAt
+            });
+            importedReviewsCount++;
           }
         }
       }
-    } catch (err) {
-      console.warn('GMB sync failed:', err);
+    } else if (gmbRes.status === 401) {
+      console.warn('GMB sync failed with 401 Unauthorized - token expired');
+      return c.json({
+        success: false,
+        requiresReauth: true,
+        error: 'Google OAuth session expired. Token refresh needed.'
+      }, 401);
+    } else {
+      const errTxt = await gmbRes.text();
+      console.warn('GMB reviews fetch notice:', gmbRes.status, errTxt);
     }
+  } catch (err: any) {
+    console.warn('GMB sync exception:', err);
   }
 
   // Update last synced timestamp
@@ -427,14 +470,16 @@ gmbRoutes.post('/sync-reviews', async (c) => {
 // ──────────────────────────────────────────────
 gmbRoutes.post('/reply', async (c) => {
   const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
-  const body = await c.req.json();
-  const { businessId, reviewId, replyText, replyStyle } = body;
+  const body = await c.req.json().catch(() => ({}));
+  const { businessId, reviewId, replyText, replyStyle, accessToken: directAccessToken } = body;
 
   if (!businessId || !reviewId || !replyText?.trim()) {
     return c.json({ error: 'businessId, reviewId and replyText are required' }, 400);
   }
 
-  const { accessToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const { accessToken: savedToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const effectiveToken = directAccessToken || savedToken;
+
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
   let business = await scoped.getBusiness(businessId);
@@ -452,9 +497,9 @@ gmbRoutes.post('/reply', async (c) => {
   // 1. If connected with Google GMB, attempt live Google API reply
   let googlePostStatus = 'saved_locally';
   let googleApiNotice = '';
-  if (accessToken) {
+  if (effectiveToken) {
     try {
-      const { cleanAcc, cleanLoc } = await resolveGmbIds(accessToken, meta, business);
+      const { cleanAcc, cleanLoc } = await resolveGmbIds(effectiveToken, meta, business);
       const gmbReviewId = reviewId.startsWith('gmb_') ? reviewId.replace('gmb_', '') : reviewId;
       const replyUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/reviews/${gmbReviewId}/reply`;
 
@@ -462,7 +507,7 @@ gmbRoutes.post('/reply', async (c) => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`
+          Authorization: `Bearer ${effectiveToken}`
         },
         body: JSON.stringify({
           comment: replyText.trim()
@@ -471,6 +516,9 @@ gmbRoutes.post('/reply', async (c) => {
 
       if (gmbRes.ok) {
         googlePostStatus = 'posted_to_google';
+      } else if (gmbRes.status === 401) {
+        googlePostStatus = 'token_expired_401';
+        googleApiNotice = 'Google session expired. Re-authorization required.';
       } else {
         const errText = await gmbRes.text();
         console.warn('GMB reply post warning:', gmbRes.status, errText);
@@ -509,6 +557,8 @@ gmbRoutes.post('/reply', async (c) => {
   let userMessage = 'Reply saved in ReviewQR.';
   if (googlePostStatus === 'posted_to_google') {
     userMessage = '🚀 Reply published directly to Google Maps!';
+  } else if (googlePostStatus === 'token_expired_401') {
+    userMessage = 'Google session expired. Reply saved locally; click "Sync" to refresh Google connection.';
   } else if (googlePostStatus.includes('404')) {
     userMessage = 'Review ID not found on Google Maps API. Use "Copy & Open Google Maps" to publish directly.';
   } else if (googlePostStatus.startsWith('google_api_notice')) {
