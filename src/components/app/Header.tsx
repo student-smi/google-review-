@@ -12,9 +12,11 @@ import {
   QrCode,
   Layers,
   LogOut,
-  AlertTriangle,
   CheckCircle2,
-  Share2
+  Network,
+  Building2,
+  Store,
+  StoreIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -30,34 +32,22 @@ import {
   type GmbStatus
 } from '@/lib/gmb';
 import { cn } from '@/lib/utils';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 interface HeaderProps {
   onOpenCommand: () => void;
   onToggleMobileMenu?: () => void;
-  activeBusiness: {
-    id: string;
-    name: string;
-    slug?: string;
-    city?: string | null;
-    googleReviewUrl: string;
-    brandColor?: string;
-    logoUrl?: string;
-  } | null;
-  businesses: Array<{
-    id: string;
-    name: string;
-    slug?: string;
-    city?: string | null;
-    googleReviewUrl: string;
-  }>;
-  onSelectBusiness: (businessId: string) => void;
 }
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Live Overview',
   '/dashboard/businesses': 'Business Profiles',
-  '/dashboard/qr': 'QR Studio & Campaigns',
-  '/dashboard/replies': 'Reviews & AI Replies',
+  '/dashboard/branches': 'Branch Locations',
+  '/dashboard/qr': 'QR Studio & Standees',
+  '/dashboard/replies': 'Reviews & Replies',
+  '/dashboard/ai-replies': 'AI Reply Center',
+  '/dashboard/team': 'Team & Permissions',
+  '/dashboard/billing': 'Package & Billing',
   '/dashboard/keywords': 'Keyword Management',
   '/dashboard/analytics': 'Conversion Analytics',
   '/dashboard/local-seo': 'Local SEO Checklist',
@@ -66,11 +56,22 @@ const pageTitles: Record<string, string> = {
 
 export function Header({
   onOpenCommand,
-  onToggleMobileMenu,
-  activeBusiness,
-  businesses,
-  onSelectBusiness
+  onToggleMobileMenu
 }: HeaderProps) {
+  const {
+    currentLevel,
+    setLevel,
+    activeBrand,
+    activeBusiness,
+    activeBranch,
+    brands,
+    businesses,
+    branches,
+    selectBrand,
+    selectBusiness,
+    selectBranch
+  } = useHierarchy();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [gmbMenuOpen, setGmbMenuOpen] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -164,11 +165,26 @@ export function Header({
     window.open(path, '_blank');
   };
 
+  // Current entity name and icon based on active level
+  const activeEntityLabel =
+    currentLevel === 'brand'
+      ? activeBrand?.name || 'All Organizations'
+      : currentLevel === 'business'
+      ? activeBusiness?.name || 'Selected Business'
+      : activeBranch?.name || activeBusiness?.name || 'Selected Branch';
+
+  const activeEntityIcon =
+    currentLevel === 'brand'
+      ? Network
+      : currentLevel === 'business'
+      ? Building2
+      : Store;
+
   return (
     <>
-      <header className="flex h-15 items-center justify-between border-b border-slate-200/80 bg-white px-2.5 sm:px-5 lg:px-6 z-20 shrink-0 gap-2">
-        {/* Left: Mobile Hamburger, Business Switcher & Breadcrumbs */}
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+      <header className="flex h-15 items-center justify-between border-b border-slate-200/80 bg-white px-2.5 sm:px-4 lg:px-6 z-20 shrink-0 gap-2">
+        {/* Left: Hamburger, 3-Tier Switcher, Entity Dropdown */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
           {/* Mobile Hamburger Button */}
           {onToggleMobileMenu && (
             <button
@@ -181,23 +197,56 @@ export function Header({
             </button>
           )}
 
-          {/* Business Selector Dropdown */}
+          {/* 3-Level Segmented Switcher (Image 2, 3, 4) */}
+          <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/90 shadow-2xs shrink-0">
+            <button
+              type="button"
+              onClick={() => setLevel('brand')}
+              className={cn(
+                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                currentLevel === 'brand'
+                  ? 'bg-white text-blue-600 shadow-2xs font-black'
+                  : 'text-slate-500 hover:text-slate-800'
+              )}
+            >
+              Brand
+            </button>
+            <button
+              type="button"
+              onClick={() => setLevel('business')}
+              className={cn(
+                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                currentLevel === 'business'
+                  ? 'bg-white text-blue-600 shadow-2xs font-black'
+                  : 'text-slate-500 hover:text-slate-800'
+              )}
+            >
+              Business
+            </button>
+            <button
+              type="button"
+              onClick={() => setLevel('branch')}
+              className={cn(
+                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                currentLevel === 'branch'
+                  ? 'bg-white text-blue-600 shadow-2xs font-black'
+                  : 'text-slate-500 hover:text-slate-800'
+              )}
+            >
+              Branch
+            </button>
+          </div>
+
+          {/* Context Entity Switcher Dropdown */}
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-800 hover:border-blue-300 hover:bg-slate-100 transition-all cursor-pointer shadow-xs max-w-[125px] xs:max-w-[170px] sm:max-w-[220px] md:max-w-xs"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 sm:px-2.5 py-1 text-xs font-bold text-slate-800 hover:border-blue-300 hover:bg-slate-100 transition-all cursor-pointer shadow-xs max-w-[130px] xs:max-w-[170px] sm:max-w-[210px] md:max-w-xs"
             >
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-gradient-to-tr from-[#2563EB] to-[#7B68EE] text-white text-[10px] font-black uppercase shrink-0">
-                {activeBusiness?.name ? activeBusiness.name.charAt(0) : '★'}
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-blue-600 text-white text-[10px] font-black uppercase shrink-0">
+                {activeEntityLabel.charAt(0)}
               </div>
-              <span className="truncate">
-                {activeBusiness?.name || 'My Location'}
-              </span>
-              {activeBusiness?.city && (
-                <span className="hidden xl:inline-flex rounded-md bg-blue-50 text-blue-600 font-semibold text-[10px] px-1.5 py-0.5 shrink-0">
-                  {activeBusiness.city}
-                </span>
-              )}
+              <span className="truncate">{activeEntityLabel}</span>
               <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5 shrink-0" />
             </button>
 
@@ -205,63 +254,111 @@ export function Header({
               <>
                 <div className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
                 <div className="absolute left-0 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl z-40 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                    Locations & Stores
+                  <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span>
+                      {currentLevel === 'brand'
+                        ? 'Brands & Organizations'
+                        : currentLevel === 'business'
+                        ? 'Business Entities'
+                        : 'Branch Outlets'}
+                    </span>
+                    <span className="text-blue-600 lowercase font-mono">
+                      {currentLevel === 'brand'
+                        ? `${brands.length} brands`
+                        : currentLevel === 'business'
+                        ? `${businesses.length} biz`
+                        : `${branches.length} branches`}
+                    </span>
                   </div>
 
                   <div className="space-y-1 max-h-56 overflow-y-auto">
-                    {businesses.map((biz) => {
-                      const isSelected = biz.id === activeBusiness?.id;
-                      return (
+                    {currentLevel === 'brand' &&
+                      brands.map((b) => (
                         <button
-                          key={biz.id}
+                          key={b.id}
                           onClick={() => {
-                            onSelectBusiness(biz.id);
+                            selectBrand(b.id);
                             setDropdownOpen(false);
                           }}
                           className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
-                            isSelected
+                            b.id === activeBrand?.id
+                              ? 'bg-blue-50 text-blue-700 font-bold'
+                              : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          <span className="truncate">{b.name}</span>
+                          {b.id === activeBrand?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                        </button>
+                      ))}
+
+                    {currentLevel === 'business' &&
+                      businesses.map((bz) => (
+                        <button
+                          key={bz.id}
+                          onClick={() => {
+                            selectBusiness(bz.id);
+                            setDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
+                            bz.id === activeBusiness?.id
                               ? 'bg-blue-50 text-blue-700 font-bold'
                               : 'hover:bg-slate-100 text-slate-700'
                           }`}
                         >
                           <div className="flex flex-col min-w-0 pr-2">
-                            <span className="truncate">{biz.name}</span>
+                            <span className="truncate">{bz.name}</span>
                             <span className="text-[10px] text-slate-400 truncate">
-                              {biz.city || 'India'}
+                              {bz.businessType === 'franchise' ? 'Franchise' : 'Company-Owned'} • {bz.city || 'India'}
                             </span>
                           </div>
-                          {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                          {bz.id === activeBusiness?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
                         </button>
-                      );
-                    })}
+                      ))}
+
+                    {currentLevel === 'branch' &&
+                      branches.map((br) => (
+                        <button
+                          key={br.id}
+                          onClick={() => {
+                            selectBranch(br.id);
+                            setDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
+                            br.id === activeBranch?.id
+                              ? 'bg-blue-50 text-blue-700 font-bold'
+                              : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className="truncate">{br.name}</span>
+                            <span className="text-[10px] text-slate-400 truncate">
+                              {br.address || br.city || 'Location Outlet'}
+                            </span>
+                          </div>
+                          {br.id === activeBranch?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                        </button>
+                      ))}
                   </div>
 
                   <div className="pt-2 mt-1.5 border-t border-slate-100">
                     <button
                       onClick={() => {
                         setDropdownOpen(false);
-                        navigate('/onboarding');
+                        navigate('/dashboard/businesses');
                       }}
                       className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      <span>Add New Location / Store</span>
+                      <span>Manage Entities & Branches</span>
                     </button>
                   </div>
                 </div>
               </>
             )}
           </div>
-
-          {/* Breadcrumb path */}
-          <div className="hidden 2xl:flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-            <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-            <span className="font-bold text-slate-800">{currentSection}</span>
-          </div>
         </div>
 
-        {/* Right: Connect/Disconnect (Live) | Sync | Preview Link | QR | Standee View */}
+        {/* Right: Quick Action Controls */}
         <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
           {/* 1. Connect / Disconnect (Live) Control */}
           <div className="relative">
@@ -271,23 +368,23 @@ export function Header({
                 onClick={() => setGmbMenuOpen(!gmbMenuOpen)}
                 title="Google Business Profile Connected & Live (Click for Options)"
                 className={cn(
-                  "flex items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs",
+                  'flex items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs',
                   gmbStatus.isExpired
-                    ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80"
+                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80'
                 )}
               >
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span
                     className={cn(
-                      "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
-                      gmbStatus.isExpired ? "bg-amber-400" : "bg-emerald-400"
+                      'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
+                      gmbStatus.isExpired ? 'bg-amber-400' : 'bg-emerald-400'
                     )}
                   />
                   <span
                     className={cn(
-                      "relative inline-flex rounded-full h-2 w-2",
-                      gmbStatus.isExpired ? "bg-amber-500" : "bg-emerald-500"
+                      'relative inline-flex rounded-full h-2 w-2',
+                      gmbStatus.isExpired ? 'bg-amber-500' : 'bg-emerald-500'
                     )}
                   />
                 </span>

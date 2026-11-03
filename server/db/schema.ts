@@ -48,10 +48,31 @@ export const verifications = sqliteTable('verifications', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
 });
 
-// ReviewQR Business Domain Tables
+// ReviewQR Multi-Entity Hierarchy Tables
+
+// Tier 1: Brand / Organization (e.g. ABC Wellness Group)
+export const brands = sqliteTable('brands', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  logoUrl: text('logo_url'),
+  description: text('description'),
+  plan: text('plan').default('growth').notNull(), // 'starter' | 'growth' | 'enterprise'
+  status: text('status').default('active').notNull(), // 'active' | 'suspended'
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, (t) => [
+  index('idx_brands_owner').on(t.ownerId),
+  index('idx_brands_slug').on(t.slug)
+]);
+
+// Tier 2: Business / Entity (e.g. ABC Wellness Pvt Ltd / Franchise)
 export const businesses = sqliteTable('businesses', {
   id: text('id').primaryKey(),
   ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  brandId: text('brand_id').references(() => brands.id, { onDelete: 'set null' }),
+  businessType: text('business_type').default('company_owned').notNull(), // 'company_owned' | 'franchise' | 'independent'
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   googlePlaceId: text('google_place_id'),
@@ -74,29 +95,57 @@ export const businesses = sqliteTable('businesses', {
   updatedAt: integer('updated_at').notNull()
 }, (t) => [
   index('idx_businesses_owner').on(t.ownerId),
+  index('idx_businesses_brand').on(t.brandId),
   index('idx_businesses_slug').on(t.slug)
 ]);
 
+// Tier 3: Branch / Location (e.g. Ahmedabad Branch, Place ID A1)
 export const locations = sqliteTable('locations', {
   id: text('id').primaryKey(),
   businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
+  slug: text('slug'),
   address: text('address'),
+  city: text('city'),
   phone: text('phone'),
   googlePlaceId: text('google_place_id'),
   googleReviewUrl: text('google_review_url'),
   status: text('status').default('active').notNull(), // 'active' | 'inactive' | 'connection_error'
   isPrimary: integer('is_primary', { mode: 'boolean' }).default(false).notNull(),
   assignedManager: text('assigned_manager'),
+  assignedManagerId: text('assigned_manager_id').references(() => users.id, { onDelete: 'set null' }),
+  category: text('category'),
+  brandColor: text('brand_color'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at')
 }, (t) => [
-  index('idx_locations_business').on(t.businessId)
+  index('idx_locations_business').on(t.businessId),
+  index('idx_locations_place').on(t.googlePlaceId)
+]);
+
+// Membership-Based RBAC Permissions
+export const memberships = sqliteTable('memberships', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // 'super_admin' | 'brand_admin' | 'business_admin' | 'branch_manager' | 'review_executive' | 'finance_manager'
+  brandId: text('brand_id').references(() => brands.id, { onDelete: 'cascade' }),
+  businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }),
+  branchId: text('branch_id').references(() => locations.id, { onDelete: 'cascade' }),
+  status: text('status').default('active').notNull(), // 'active' | 'invited' | 'suspended'
+  invitedEmail: text('invited_email'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, (t) => [
+  index('idx_memberships_user').on(t.userId),
+  index('idx_memberships_brand').on(t.brandId),
+  index('idx_memberships_business').on(t.businessId),
+  index('idx_memberships_branch').on(t.branchId)
 ]);
 
 export const qrCodes = sqliteTable('qr_codes', {
   id: text('id').primaryKey(),
   businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  branchId: text('branch_id').references(() => locations.id, { onDelete: 'set null' }),
   code: text('code').notNull().unique(), // Short code scanned by customer (e.g. /r/cafe101)
   label: text('label').notNull(), // e.g. "Main Cash Counter", "Table 1"
   destinationUrl: text('destination_url').notNull(), // Target review destination
@@ -106,7 +155,8 @@ export const qrCodes = sqliteTable('qr_codes', {
   updatedAt: integer('updated_at').notNull()
 }, (t) => [
   uniqueIndex('idx_qr_codes_code').on(t.code),
-  index('idx_qr_codes_business').on(t.businessId)
+  index('idx_qr_codes_business').on(t.businessId),
+  index('idx_qr_codes_branch').on(t.branchId)
 ]);
 
 export const scanDailyStats = sqliteTable('scan_daily_stats', {
@@ -162,17 +212,22 @@ export const aiUsageDaily = sqliteTable('ai_usage_daily', {
 export const customerReviews = sqliteTable('customer_reviews', {
   id: text('id').primaryKey(),
   businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  branchId: text('branch_id').references(() => locations.id, { onDelete: 'set null' }),
   customerName: text('customer_name').default('Verified Customer').notNull(),
+  customerPhone: text('customer_phone'),
   rating: integer('rating').default(5).notNull(),
   reviewText: text('review_text').notNull(),
   chipsJson: text('chips_json'),
   language: text('language').default('en').notNull(),
+  isPrivateFeedback: integer('is_private_feedback', { mode: 'boolean' }).default(false).notNull(),
+  resolutionStatus: text('resolution_status').default('open'), // 'open' | 'in_progress' | 'resolved'
   replyText: text('reply_text'),
   replyStyle: text('reply_style'),
   repliedAt: integer('replied_at'),
   createdAt: integer('created_at').notNull()
 }, (t) => [
   index('idx_customer_reviews_business').on(t.businessId),
+  index('idx_customer_reviews_branch').on(t.branchId),
   index('idx_customer_reviews_created').on(t.createdAt)
 ]);
 

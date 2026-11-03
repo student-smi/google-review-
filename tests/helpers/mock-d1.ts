@@ -5,18 +5,30 @@ import * as path from 'node:path';
 export function createTestD1Database() {
   const sqlite = new DatabaseSync(':memory:');
 
-  // Load and apply initial drizzle migration
-  const migrationPath = path.resolve(__dirname, '../../drizzle/0000_blue_joystick.sql');
-  if (fs.existsSync(migrationPath)) {
-    const sql = fs.readFileSync(migrationPath, 'utf8');
-    // SQLite can execute multiple statements separated by semicolon
-    const statements = sql
-      .split('--> statement-breakpoint')
-      .map(s => s.trim())
-      .filter(Boolean);
+  // Load and apply all drizzle migrations in order
+  const drizzleDir = path.resolve(__dirname, '../../drizzle');
+  if (fs.existsSync(drizzleDir)) {
+    const files = fs.readdirSync(drizzleDir).filter(f => f.endsWith('.sql')).sort();
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(drizzleDir, file), 'utf8');
+      const statements = sql
+        .split('--> statement-breakpoint')
+        .map(s => s.trim())
+        .filter(Boolean);
 
-    for (const stmt of statements) {
-      sqlite.exec(stmt);
+      for (const stmt of statements) {
+        try {
+          sqlite.exec(stmt);
+        } catch (e: any) {
+          // If customer_reviews already existed, ensure new columns are added
+          if (stmt.includes('CREATE TABLE `customer_reviews`')) {
+            try { sqlite.exec('ALTER TABLE `customer_reviews` ADD `branch_id` text'); } catch {}
+            try { sqlite.exec('ALTER TABLE `customer_reviews` ADD `customer_phone` text'); } catch {}
+            try { sqlite.exec('ALTER TABLE `customer_reviews` ADD `is_private_feedback` integer DEFAULT 0 NOT NULL'); } catch {}
+            try { sqlite.exec('ALTER TABLE `customer_reviews` ADD `resolution_status` text DEFAULT "open"'); } catch {}
+          }
+        }
+      }
     }
   }
 

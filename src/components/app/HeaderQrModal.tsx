@@ -203,3 +203,4 @@ export function HeaderQrModal({ isOpen, onClose, business }: HeaderQrModalProps)
     </div>
   );
 }
+

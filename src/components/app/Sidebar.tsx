@@ -11,17 +11,20 @@ import {
   ChevronRight,
   ShieldCheck,
   Inbox,
-  CheckSquare,
   Sparkles,
   Store,
   Star,
   LogOut,
   Tag,
   Crown,
-  X
+  X,
+  CreditCard,
+  Layers,
+  Network
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logoutApi, isAdminUser } from '@/lib/auth';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -32,6 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
+  const { currentLevel, activeBrand, activeBusiness, activeBranch } = useHierarchy();
 
   const handleSignOut = async () => {
     onCloseMobile?.();
@@ -45,24 +49,80 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     onCloseMobile?.();
   };
 
-  const primaryNavItems = [
+  // 1. Brand Level Items (Image 2)
+  const brandNavItems = [
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
-    { label: 'Businesses', to: '/dashboard/businesses', icon: Building2, badge: null },
-    { label: 'QR Studio', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
-    { label: 'Reviews & Replies', to: '/dashboard/replies', icon: MessageSquareQuote, badge: 'AI Copilot' },
-    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'Chips' },
-    { label: 'Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
-    { label: 'Local SEO', to: '/dashboard/local-seo', icon: MapPin, badge: null },
+    { label: 'Businesses', to: '/dashboard/businesses', icon: Building2, badge: 'Entities' },
+    { label: 'All Branches', to: '/dashboard/branches', icon: Store, badge: null },
+    { label: 'All Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
+    { label: 'AI Reply Center', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Review Campaigns', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
+    { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
+    { label: 'Team & Permissions', to: '/dashboard/team', icon: ShieldCheck, badge: null },
+    { label: 'Package & Billing', to: '/dashboard/billing', icon: Crown, badge: null },
     { label: 'Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
+
+  // 2. Business Level Items (Image 3)
+  const businessNavItems = [
+    { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
+    { label: 'Branches', to: '/dashboard/branches', icon: Store, badge: 'Outlets' },
+    { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
+    { label: 'AI Replies', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'Copilot' },
+    { label: 'Review Collection', to: '/dashboard/qr', icon: QrCode, badge: 'QR/NFC' },
+    { label: 'Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
+    { label: 'Staff & Roles', to: '/dashboard/team', icon: ShieldCheck, badge: null },
+    { label: 'Subscription & Invoices', to: '/dashboard/billing', icon: CreditCard, badge: null },
+    { label: 'Business Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+  ];
+
+  // 3. Branch Level Items (Image 4)
+  const branchNavItems = [
+    { label: 'Branch Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
+    { label: 'Google Connection', to: '/dashboard/settings', icon: Star, badge: 'GMB Live' },
+    { label: 'Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
+    { label: 'Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: '1-Click' },
+    { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
+    { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
+    { label: 'Branch Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
+    { label: 'Staff', to: '/dashboard/team', icon: ShieldCheck, badge: null },
+    { label: 'Branch Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+  ];
+
+  const currentNavItems =
+    currentLevel === 'brand'
+      ? brandNavItems
+      : currentLevel === 'business'
+      ? businessNavItems
+      : branchNavItems;
+
+  const currentContextTitle =
+    currentLevel === 'brand'
+      ? {
+          title: activeBrand?.name || 'Brand Group',
+          subtitle: 'Consolidated management',
+          icon: Network,
+          badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        }
+      : currentLevel === 'business'
+      ? {
+          title: activeBusiness?.name || 'Business operations',
+          subtitle: activeBusiness?.businessType === 'franchise' ? 'Franchise entity' : 'Company-owned operations',
+          icon: Building2,
+          badgeColor: 'bg-blue-50 text-blue-700 border-blue-200'
+        }
+      : {
+          title: activeBranch?.name || activeBusiness?.name || 'Branch operations',
+          subtitle: 'Location-specific operations',
+          icon: Store,
+          badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        };
 
   return (
     <aside
       className={cn(
-        // Desktop styles (lg and up)
         'lg:relative lg:flex lg:flex-col lg:translate-x-0 border-r border-slate-200 bg-white transition-all duration-300 ease-in-out shrink-0 select-none font-sans',
         collapsed ? 'lg:w-[72px]' : 'lg:w-64',
-        // Mobile styles (< lg): slide-in drawer
         'fixed inset-y-0 left-0 z-50 w-72 flex flex-col shadow-2xl lg:shadow-none',
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}
@@ -70,7 +130,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200">
         <NavLink to="/dashboard" onClick={handleNavClick} className="flex items-center gap-2.5 overflow-hidden">
-          {/* ReviewBoost AI Brand Mark */}
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-sm shadow-md shadow-blue-500/20 shrink-0">
             RB
           </div>
@@ -80,7 +139,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                 ReviewBoost <span className="text-[#2563EB] bg-blue-50 px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider border border-blue-200">AI</span>
               </span>
               <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
-                Google Review QR
+                3-Tier Hierarchy
               </span>
             </div>
           )}
@@ -106,40 +165,46 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 space-y-4 p-3 overflow-y-auto">
-        {/* Workspace Quick Switcher / Home Pill */}
+      <nav className="flex-1 space-y-3 p-3 overflow-y-auto">
+        {/* Active Context Card (Image 2, 3, 4 style) */}
         {(!collapsed || mobileOpen) && (
           <div className="p-1">
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800 shadow-xs">
-              <span className="flex items-center gap-2 truncate">
-                <span className="text-amber-500">⭐</span>
-                <span className="truncate">Google Review Space</span>
-              </span>
-              <span className="text-[10px] text-slate-400">▾</span>
+            <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-2.5 shadow-2xs">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-700 shadow-2xs shrink-0">
+                <currentContextTitle.icon className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex flex-col min-w-0 pr-1">
+                <span className="text-xs font-black text-slate-900 truncate leading-tight">
+                  {currentContextTitle.title}
+                </span>
+                <span className="text-[10px] font-medium text-slate-400 truncate mt-0.5">
+                  {currentContextTitle.subtitle}
+                </span>
+              </div>
             </div>
           </div>
         )}
 
         {/* Section: Main Menu */}
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <div
             className={cn(
               'px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono',
               collapsed && !mobileOpen && 'text-center'
             )}
           >
-            {collapsed && !mobileOpen ? '•' : 'Core Tools'}
+            {collapsed && !mobileOpen ? '•' : `${currentLevel.toUpperCase()} NAVIGATION`}
           </div>
 
-          {primaryNavItems.map((item) => (
+          {currentNavItems.map((item) => (
             <NavLink
-              key={item.to}
+              key={item.to + item.label}
               to={item.to}
               end={item.to === '/dashboard'}
               onClick={handleNavClick}
               className={({ isActive }) =>
                 cn(
-                  'group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all duration-150',
+                  'group flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-150',
                   isActive
                     ? 'bg-blue-50 text-blue-600 font-bold border-l-2 border-blue-600 shadow-xs'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -155,7 +220,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                 <span
                   className={cn(
                     'h-4 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center font-mono',
-                    item.badge === 'AI Copilot'
+                    item.badge === 'AI' || item.badge === 'Copilot'
                       ? 'bg-pink-500/10 text-pink-600'
                       : 'bg-blue-500/10 text-blue-600'
                   )}
@@ -174,7 +239,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                 onClick={handleNavClick}
                 className={({ isActive }) =>
                   cn(
-                    'group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-150',
+                    'group flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150',
                     isActive
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/80'
@@ -187,7 +252,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                 </div>
                 {(!collapsed || mobileOpen) && (
                   <span className="h-4 px-1.5 rounded-full text-[9px] font-black bg-indigo-700 text-white uppercase tracking-wider font-mono">
-                    Master
+                    Platform
                   </span>
                 )}
               </NavLink>

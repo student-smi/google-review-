@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { Sidebar } from '@/components/app/Sidebar';
 import { Header } from '@/components/app/Header';
@@ -7,22 +7,24 @@ import { Button } from '@/components/ui/button';
 import {
   Building2,
   Plus,
-  Sparkles,
-  ArrowRight,
   Store,
   LayoutDashboard,
   QrCode,
   MessageSquareQuote,
-  Menu
+  Menu,
+  ShieldCheck,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  apiFetch,
-  getStoredBusinesses,
-  saveStoredBusinesses,
-  getActiveBusinessId,
-  saveActiveBusinessId
-} from '@/lib/api';
+  HierarchyProvider,
+  useHierarchy,
+  type BusinessItem,
+  type BranchItem,
+  type BrandItem
+} from '@/context/HierarchyContext';
+
+export type { BusinessItem };
 
 export interface LocationItem {
   id: string;
@@ -38,81 +40,23 @@ export interface LocationItem {
   createdAt?: number;
 }
 
-export interface BusinessItem {
-  id: string;
-  name: string;
-  slug: string;
-  category?: string | null;
-  address?: string | null;
-  city?: string | null;
-  phone?: string | null;
-  contactEmail?: string | null;
-  assignedManager?: string | null;
-  status?: 'active' | 'inactive' | 'connection_error';
-  isArchived?: boolean;
-  archivedAt?: number | null;
-  locations?: LocationItem[];
-  brandVoice?: string;
-  chipsJson?: string;
-  googleReviewUrl: string;
-  googlePlaceId?: string | null;
-  brandColor?: string;
-  logoUrl?: string;
-  qrCode?: {
-    id: string;
-    code: string;
-    svgUrl?: string;
-  };
-}
-
-export function DashboardLayout() {
+function DashboardContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Active business & locations state loaded from persistent storage - ZERO dummy fallback
-  const [businesses, setBusinesses] = useState<BusinessItem[]>(() => getStoredBusinesses());
-  const [activeBusinessId, setActiveBusinessId] = useState<string>(() => {
-    const stored = getActiveBusinessId();
-    if (stored) return stored;
-    const initialList = getStoredBusinesses();
-    return initialList[0]?.id || '';
-  });
-
-  const refreshBusinesses = useCallback(async () => {
-    try {
-      const data = await apiFetch<{ businesses: BusinessItem[] }>('/api/businesses');
-      if (data?.businesses && Array.isArray(data.businesses)) {
-        if (data.businesses.length > 0) {
-          setBusinesses(data.businesses);
-          saveStoredBusinesses(data.businesses);
-          setActiveBusinessId((curr) => {
-            const exists = data.businesses.some((b) => b.id === curr);
-            const nextId = exists ? curr : data.businesses[0].id;
-            saveActiveBusinessId(nextId);
-            return nextId;
-          });
-        }
-      }
-    } catch (err) {
-      console.warn('Could not sync businesses from API:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshBusinesses();
-  }, [refreshBusinesses]);
-
-  const handleSelectBusiness = (id: string) => {
-    setActiveBusinessId(id);
-    saveActiveBusinessId(id);
-  };
-
-  const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || businesses[0] || null;
+  const {
+    currentLevel,
+    activeBrand,
+    activeBusiness,
+    activeBranch,
+    businesses,
+    branches,
+    isLoading,
+    refreshHierarchy,
+    selectBusiness
+  } = useHierarchy();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 antialiased font-sans">
@@ -125,7 +69,7 @@ export function DashboardLayout() {
         />
       )}
 
-      {/* Sidebar (Desktop Collapsible & Mobile Slide-in Drawer) */}
+      {/* Sidebar with 3-Tier Multi-Entity Navigation */}
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -138,9 +82,6 @@ export function DashboardLayout() {
         <Header
           onOpenCommand={() => setCommandOpen(true)}
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
-          activeBusiness={activeBusiness}
-          businesses={businesses}
-          onSelectBusiness={handleSelectBusiness}
         />
 
         <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8 bg-[#F8FAFC]">
@@ -148,11 +89,11 @@ export function DashboardLayout() {
             <div className="flex h-full min-h-[400px] items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-3 border-blue-600 border-t-transparent" />
-                <p className="text-xs font-semibold text-slate-500">Restoring your workspace & standees...</p>
+                <p className="text-xs font-semibold text-slate-500">Restoring your workspace & entities...</p>
               </div>
             </div>
           ) : businesses.length === 0 ? (
-            /* Empty State: Only shown if user has truly zero businesses */
+            /* Empty State */
             <div className="max-w-xl mx-auto my-12 text-center p-6 sm:p-8 rounded-3xl border border-slate-200 bg-white shadow-xl space-y-5">
               <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-200">
                 <Store className="h-8 w-8" />
@@ -162,7 +103,7 @@ export function DashboardLayout() {
                   Welcome to ReviewQR
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
-                  You haven't set up your business location yet. Add your Google Maps listing to generate your first live QR standee.
+                  Set up your organization, business brand, and first Google branch outlet.
                 </p>
               </div>
               <div className="pt-2">
@@ -171,17 +112,21 @@ export function DashboardLayout() {
                   className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-xl shadow-xs gap-2 px-6 py-2.5 cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Set Up Your Business Location</span>
+                  <span>Set Up Business & Branches</span>
                 </Button>
               </div>
             </div>
           ) : (
             <Outlet
               context={{
+                currentLevel,
+                activeBrand,
                 activeBusiness,
+                activeBranch,
                 businesses,
-                refreshBusinesses,
-                onSelectBusiness: handleSelectBusiness
+                branches,
+                refreshBusinesses: refreshHierarchy,
+                onSelectBusiness: selectBusiness
               }}
             />
           )}
@@ -213,7 +158,7 @@ export function DashboardLayout() {
             }
           >
             <Building2 className="h-4.5 w-4.5" />
-            <span>Stores</span>
+            <span>Entities</span>
           </NavLink>
 
           <NavLink
@@ -226,7 +171,7 @@ export function DashboardLayout() {
             }
           >
             <QrCode className="h-4.5 w-4.5" />
-            <span>QR Studio</span>
+            <span>QR & Standee</span>
           </NavLink>
 
           <NavLink
@@ -260,5 +205,13 @@ export function DashboardLayout() {
         activeBusiness={activeBusiness}
       />
     </div>
+  );
+}
+
+export function DashboardLayout() {
+  return (
+    <HierarchyProvider>
+      <DashboardContent />
+    </HierarchyProvider>
   );
 }

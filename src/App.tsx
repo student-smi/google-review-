@@ -11,6 +11,8 @@ import { LocalSeoPage } from './pages/dashboard/LocalSeoPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { KeywordManagementPage } from './pages/dashboard/KeywordManagementPage';
+import { TeamPermissionsPage } from './pages/dashboard/TeamPermissionsPage';
+import { PackageBillingPage } from './pages/dashboard/PackageBillingPage';
 import { CustomerFlowPage } from './pages/customer/CustomerFlowPage';
 import { AuthPage } from './pages/AuthPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
@@ -51,9 +53,14 @@ export function App() {
         >
           <Route index element={<OverviewPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
+          <Route path="branches" element={<BusinessesPage />} />
           <Route path="qr" element={<QrStudioPage />} />
           <Route path="media" element={<Navigate to="/dashboard" replace />} />
           <Route path="replies" element={<ReviewsRepliesPage />} />
+          <Route path="ai-replies" element={<ReviewsRepliesPage />} />
+          <Route path="customer-requests" element={<ReviewsRepliesPage />} />
+          <Route path="team" element={<TeamPermissionsPage />} />
+          <Route path="billing" element={<PackageBillingPage />} />
           <Route path="keywords" element={<KeywordManagementPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="local-seo" element={<LocalSeoPage />} />

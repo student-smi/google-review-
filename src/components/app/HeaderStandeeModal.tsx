@@ -223,3 +223,4 @@ export function HeaderStandeeModal({ isOpen, onClose, business }: HeaderStandeeM
     </div>
   );
 }
+
