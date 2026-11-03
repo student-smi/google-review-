@@ -146,5 +146,27 @@ describe('Super Admin Control Center & User Blocking Suite', () => {
     const data = await res.json() as any;
     expect(data.error).toContain('Super Administrator');
   });
+
+  it('prevents a user with email containing admin@ from accessing admin routes', async () => {
+    const imposterId = 'usr_imposter_admin';
+    await db.insert(users).values({
+      id: imposterId,
+      name: 'Imposter Admin',
+      email: 'admin@vampupmedia.com',
+      role: 'owner',
+      isBlocked: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    const res = await adminRoutes.request('/overview', {
+      method: 'GET',
+      headers: { 'X-Owner-Id': imposterId }
+    }, { DB: d1Mock, KV: null, R2: null, AI: null });
+
+    expect(res.status).toBe(403);
+    const data = await res.json() as any;
+    expect(data.error).toContain('Super Administrator');
+  });
 });
 

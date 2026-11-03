@@ -130,5 +130,5 @@ export function isCurrentUserAdmin(): boolean {
   const user = getCurrentUser();
   if (!user) return false;
   const email = (user.email || '').toLowerCase().trim();
-  return user.role === 'admin' || email === 'smitpanchal734@gmail.com' || email.includes('admin@');
+  return user.role === 'admin' || email === 'smitpanchal734@gmail.com' || email === 'admin@reviewqr.com';
 }

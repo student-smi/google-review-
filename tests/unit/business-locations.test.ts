@@ -188,4 +188,18 @@ describe('Business & Location Manager Test Suite (Section 2)', () => {
     const remaining = await db.select().from(locations).where(eq(locations.id, branchLocId));
     expect(remaining.length).toBe(0);
   });
+
+  it('guarantees tenant isolation: a new user with 0 businesses receives an empty list, not other users stores', async () => {
+    const newOwnerId = 'usr_brand_new_isolated_user';
+    const res = await businessRoutes.request('/', {
+      method: 'GET',
+      headers: { 'X-Owner-Id': newOwnerId }
+    }, { DB: d1Mock, KV: null, R2: null, AI: null });
+
+    expect(res.status).toBe(200);
+    const data = await res.json() as any;
+    expect(data.businesses).toBeDefined();
+    expect(data.businesses.length).toBe(0);
+  });
 });
+

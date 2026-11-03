@@ -190,7 +190,7 @@ authRoutes.post('/login', async (c) => {
     // Update lastLoginAt
     await db.update(users).set({ lastLoginAt: now }).where(eq(users.id, user.id));
 
-    const isAdmin = user.role === 'admin' || user.email === 'smitpanchal734@gmail.com' || user.email.includes('admin@');
+    const isAdmin = user.role === 'admin' || user.email === 'smitpanchal734@gmail.com' || user.email === 'admin@reviewqr.com';
     const assignedRole = isAdmin ? 'admin' : (user.role || 'owner');
 
     return c.json({
@@ -249,7 +249,7 @@ authRoutes.get('/me', async (c) => {
       }, 403);
     }
 
-    const isAdmin = session.role === 'admin' || session.userEmail === 'smitpanchal734@gmail.com' || session.userEmail.includes('admin@');
+    const isAdmin = session.role === 'admin' || session.userEmail === 'smitpanchal734@gmail.com' || session.userEmail === 'admin@reviewqr.com';
     const assignedRole = isAdmin ? 'admin' : (session.role || 'owner');
 
     return c.json({

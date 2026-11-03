@@ -88,7 +88,7 @@ export async function requireAdmin(c: Context<{ Bindings: Env; Variables: { owne
   const isAdminEmail = (email?: string | null) => {
     if (!email) return false;
     const lower = email.toLowerCase().trim();
-    return lower === 'smitpanchal734@gmail.com' || lower === 'admin@reviewqr.com' || lower === 'admin@upmark.com';
+    return lower === 'smitpanchal734@gmail.com' || lower === 'admin@reviewqr.com';
   };
 
   if (user && (user.role === 'admin' || isAdminEmail(user.email))) {

@@ -64,7 +64,7 @@ export function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly>
               <AdminUsersPage />
             </ProtectedRoute>
           }

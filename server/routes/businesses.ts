@@ -20,19 +20,6 @@ businessRoutes.get('/', async (c) => {
 
   let list = await scoped.getBusinesses();
 
-  // If current owner has no businesses yet, fallback to real businesses in database
-  if (!list.length) {
-    const existing = await db
-      .select()
-      .from(businesses)
-      .where(ne(businesses.id, 'demo-biz-1'))
-      .orderBy(desc(businesses.createdAt))
-      .limit(10);
-    if (existing.length) {
-      list = existing;
-    }
-  }
-
   // Filter archived businesses unless explicitly requested
   if (!includeArchived) {
     list = list.filter((b) => !b.isArchived);
@@ -378,14 +365,14 @@ businessRoutes.get('/:id/reviews', async (c) => {
     const reviews = await scoped.getCustomerReviews(businessId);
     return c.json({ reviews });
   } catch (err: any) {
-    // Graceful fallback: If business exists, return its customer reviews directly
-    const [biz] = await db
-      .select({ id: businesses.id })
-      .from(businesses)
-      .where(eq(businesses.id, businessId))
-      .limit(1);
+    // Only permit Super Admin to view unowned business reviews
+    const currentUser = c.get('user');
+    const isAdmin =
+      currentUser?.role === 'admin' ||
+      currentUser?.email === 'smitpanchal734@gmail.com' ||
+      currentUser?.email === 'admin@reviewqr.com';
 
-    if (biz) {
+    if (isAdmin) {
       const reviews = await db
         .select()
         .from(customerReviews)
@@ -394,7 +381,7 @@ businessRoutes.get('/:id/reviews', async (c) => {
         .limit(100);
       return c.json({ reviews });
     }
-    return c.json({ error: err.message }, 403);
+    return c.json({ error: err.message || 'Unauthorized business' }, 403);
   }
 });
 

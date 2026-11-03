@@ -104,9 +104,13 @@ export function AdminUsersPage() {
   };
 
   useEffect(() => {
-    // Check if user is logged in
+    // Check if user is logged in and is super admin
     if (!currentUser) {
       navigate('/login', { replace: true });
+      return;
+    }
+    if (!isAdminUser()) {
+      navigate('/dashboard', { replace: true });
       return;
     }
     loadAdminData();
