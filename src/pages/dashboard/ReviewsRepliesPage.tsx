@@ -439,17 +439,42 @@ export function ReviewsRepliesPage() {
       .trim();
   };
 
+  const getClientFallbackReplies = (customerName: string, storeName: string, seed: number): AiReplyResult => {
+    const cName = customerName?.trim() || 'Valued Customer';
+    const s = Math.abs(seed);
+    const warmVariations = [
+      `Hi ${cName},\n\nYour wonderful review truly made our day! Thank you so much for choosing ${storeName} and sharing such kind words. We are thrilled to know our team delivered such a positive experience. We look forward to welcoming you back soon!\n\nWarm regards,\nTeam ${storeName}`,
+      `Dear ${cName},\n\nThank you so much for taking the time to share this incredible review! Having you visit ${storeName} was an absolute pleasure, and knowing our commitment to excellence resonated with you means the world to our team. See you again soon!\n\nWith gratitude,\nThe ${storeName} Team`,
+      `Hello ${cName}!\n\nHuge thanks from everyone at ${storeName} for the stellar feedback! We work hard to ensure every customer receives top-tier service, and reviews like yours inspire us even more. We can't wait to serve you again!\n\nBest wishes,\nTeam ${storeName}`,
+      `Hi ${cName},\n\nThank you for the wonderful 5-star review! Our entire team at ${storeName} is overjoyed to hear your feedback. Customer happiness is always our top priority, and we truly appreciate your trust and recommendation!\n\nWarmly,\nTeam ${storeName}`
+    ];
+    const profVariations = [
+      `Dear ${cName},\n\nThank you for sharing your thoughtful review of ${storeName}. We take immense pride in upholding the highest standards of service, and we are delighted that our team met your expectations. We look forward to continuing to serve you.\n\nSincerely,\nTeam ${storeName}`,
+      `Hello ${cName},\n\nThank you for reviewing ${storeName}. Your feedback is invaluable to us, and we are pleased that you had a seamless, professional experience. Rest assured, our dedication to exceptional quality remains our highest commitment.\n\nBest regards,\nThe ${storeName} Management Team`,
+      `Dear ${cName},\n\nWe sincerely appreciate you taking the time to review your experience with ${storeName}. Delivering reliable, high-grade results is at the core of everything we do, and we are honored by your trust and patronage.\n\nKind regards,\nTeam ${storeName}`,
+      `Greetings ${cName},\n\nThank you for your review. We are delighted that ${storeName} delivered the level of professionalism and quality you deserve. We appreciate your valuable partnership and look forward to assisting you again in the future.\n\nRespectfully,\nTeam ${storeName}`
+    ];
+    const conciseVariations = [
+      `Hi ${cName}, thank you for the fantastic review of ${storeName}! We truly appreciate your support and look forward to serving you again.\n\n— Team ${storeName}`,
+      `Thanks so much for the 5 stars, ${cName}! Really glad you had a great experience with ${storeName}. See you next time!\n\n— Team ${storeName}`,
+      `Hi ${cName}, huge thanks for your kind words! We're thrilled you had a top-notch experience at ${storeName}.\n\n— The ${storeName} Team`,
+      `Thank you ${cName}! Your support of ${storeName} means a lot to our team. Looking forward to your next visit!\n\n— Team ${storeName}`
+    ];
+    return {
+      warm: warmVariations[s % warmVariations.length],
+      professional: profVariations[s % profVariations.length],
+      concise: conciseVariations[s % conciseVariations.length]
+    };
+  };
+
   // Generate AI Reply for a specific Customer Review
   const handleGenerateReplyForReview = async (review: CustomerReview) => {
     const rId = review.id;
+    const runSeed = Date.now() + Math.floor(Math.random() * 10000);
     setIsGeneratingForReview((prev) => ({ ...prev, [rId]: true }));
     setActiveReviewId(rId);
 
-    const fallback: AiReplyResult = {
-      warm: `Dear ${review.customerName},\n\nThank you so much for visiting ${bizName} and taking the time to share your review! We are thrilled to hear you had such a wonderful experience. Providing welcoming hospitality and top quality is always our priority. We truly appreciate your support and look forward to serving you again soon!\n\nWarm regards,\nThe Team at ${bizName}`,
-      professional: `Dear ${review.customerName},\n\nThank you for reviewing your experience at ${bizName}. We are pleased that our service and standards met your expectations. We appreciate your valuable feedback and patronage, and we remain committed to maintaining the highest level of service on every visit.\n\nSincerely,\nTeam ${bizName}`,
-      concise: `Hi ${review.customerName}, thank you for the wonderful review of ${bizName}! We really appreciate your kind words and support. Looking forward to welcoming you back again soon!\n\n— Team ${bizName}`
-    };
+    const fallback: AiReplyResult = getClientFallbackReplies(review.customerName, bizName, runSeed);
 
     try {
       const data = await apiFetch<{ success: boolean; replies: AiReplyResult }>(
@@ -464,7 +489,8 @@ export function ReviewsRepliesPage() {
             rating: review.rating,
             city: activeBusiness?.city,
             category: activeBusiness?.category,
-            brandVoice: activeBusiness?.brandVoice || 'warm_grateful'
+            brandVoice: activeBusiness?.brandVoice || 'warm_grateful',
+            seed: runSeed
           })
         }
       );
@@ -480,7 +506,7 @@ export function ReviewsRepliesPage() {
       setReplySelectedStyle((prev) => ({ ...prev, [rId]: defaultStyle }));
       setReplyEditText((prev) => ({ ...prev, [rId]: cleanReplies[defaultStyle] }));
     } catch (err) {
-      console.warn('AI reply generation failed, using template:', err);
+      console.warn('AI reply generation failed, using diverse template:', err);
       setReplyReplies((prev) => ({ ...prev, [rId]: fallback }));
       setReplySelectedStyle((prev) => ({ ...prev, [rId]: 'warm' }));
       setReplyEditText((prev) => ({ ...prev, [rId]: fallback.warm }));
@@ -626,11 +652,8 @@ export function ReviewsRepliesPage() {
   const handleGenerateManual = async () => {
     setIsManualGenerating(true);
     const recipient = manualCustomerName.trim() || 'Valued Customer';
-    const fallback: AiReplyResult = {
-      warm: `Dear ${recipient},\n\nThank you so much for visiting ${bizName} and taking the time to share your review! We are thrilled to hear you had such a wonderful experience with us. Providing welcoming hospitality and top quality is always our priority. We truly appreciate your support and look forward to serving you again soon!\n\nWarm regards,\nThe Team at ${bizName}`,
-      professional: `Dear ${recipient},\n\nThank you for reviewing your experience at ${bizName}. We are pleased that our service and standards met your expectations. We appreciate your valuable feedback and patronage, and we remain committed to maintaining the highest level of service on every visit.\n\nSincerely,\nManagement, ${bizName}`,
-      concise: `Hi ${recipient}, thank you for the wonderful review of ${bizName}! We really appreciate your kind words and support. Looking forward to welcoming you back again soon!`
-    };
+    const runSeed = Date.now() + Math.floor(Math.random() * 10000);
+    const fallback: AiReplyResult = getClientFallbackReplies(recipient, bizName, runSeed);
 
     try {
       const data = await apiFetch<{ success: boolean; replies: AiReplyResult }>(
@@ -645,7 +668,8 @@ export function ReviewsRepliesPage() {
             rating: manualRating,
             city: activeBusiness?.city,
             category: activeBusiness?.category,
-            brandVoice: activeBusiness?.brandVoice || 'warm_grateful'
+            brandVoice: activeBusiness?.brandVoice || 'warm_grateful',
+            seed: runSeed
           })
         }
       );

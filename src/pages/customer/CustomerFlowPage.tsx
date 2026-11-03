@@ -192,6 +192,7 @@ export function CustomerFlowPage() {
   // Generate 3 Review Options
   const handleGenerateDrafts = async () => {
     setIsGenerating(true);
+    const randomSeed = Date.now() + Math.floor(Math.random() * 10000);
 
     // Call funnel analytics event
     if (code) {
@@ -216,7 +217,8 @@ export function CustomerFlowPage() {
           chips: selectedChips,
           freeText: freeText.trim(),
           language: draftLanguage,
-          tone: draftTone
+          tone: draftTone,
+          seed: randomSeed
         })
       });
 
@@ -240,7 +242,8 @@ export function CustomerFlowPage() {
       freeText.trim(),
       draftLanguage,
       bizData.category,
-      bizData.city
+      bizData.city,
+      randomSeed
     );
 
     setReviewOptions(fallbacks);
@@ -541,7 +544,7 @@ export function CustomerFlowPage() {
         {/* STEP 2: 3 REVIEW OPTIONS SELECTION (Requested Feature) */}
         {step === 2 && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
                   {draftLanguage === 'gu'
@@ -556,13 +559,32 @@ export function CustomerFlowPage() {
                     : 'Pick any 1 review, copy it, and paste on Google'}
                 </p>
               </div>
-              <button
-                onClick={() => setStep(1)}
-                className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-0.5"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>ફરીથી</span>
-              </button>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => handleGenerateDrafts()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all cursor-pointer shadow-2xs disabled:opacity-60"
+                  title="Generate 3 fresh unique review variations"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+                  <span>
+                    {draftLanguage === 'gu'
+                      ? 'નવા ૩ વિકલ્પો'
+                      : draftLanguage === 'hi'
+                      ? '३ नए विकल्प'
+                      : '3 Fresh Ideas'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 cursor-pointer font-medium"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span>{draftLanguage === 'gu' ? 'બદલો' : draftLanguage === 'hi' ? 'बदलें' : 'Edit'}</span>
+                </button>
+              </div>
             </div>
 
             {/* 3 Review Options Cards List */}

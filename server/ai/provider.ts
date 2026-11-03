@@ -12,14 +12,15 @@ export interface GenerateReviewDraftParams {
   freeText: string;
   language: 'en' | 'hi' | 'gu' | 'hinglish';
   tone: 'warm' | 'concise' | 'formal';
+  seed?: number;
 }
 
 export async function generateCustomerReviewDraft(
   aiBinding: any,
   params: GenerateReviewDraftParams
 ): Promise<{ drafts: Array<{ id: string; title: string; text: string; wordCount: number }>; usedFallback: boolean; debug?: any }> {
-  const { businessName, category, address, city, chips, freeText, language } = params;
-  const fallbacks = getFallbackTemplates(businessName, chips, freeText, language, category, city);
+  const { businessName, category, address, city, chips, freeText, language, seed } = params;
+  const fallbacks = getFallbackTemplates(businessName, chips, freeText, language, category, city, seed);
 
   if (!aiBinding) {
     return { drafts: fallbacks, usedFallback: true };
@@ -33,11 +34,23 @@ export async function generateCustomerReviewDraft(
 
   const selectedKeywordsText = chips.length > 0 ? chips.map((c) => `"${c}"`).join(', ') : '"great service", "positive experience"';
 
+  const perspectivePool = [
+    'Focus on prompt turnaround, courteous staff, and overall customer satisfaction.',
+    'Highlight attention to detail, high reliability, and great value for money.',
+    'Emphasize peace of mind, clean/hygienic setup, and polite, attentive service.',
+    'Focus on seamless communication, trustworthy recommendations, and exceeding expectations.',
+    'Express genuine delight as a repeat or first-time customer having a wonderful 5-star experience.'
+  ];
+  const chosenPerspective = perspectivePool[(seed ? Math.abs(seed) : Math.floor(Math.random() * 1000)) % perspectivePool.length];
+
   const systemPrompt = `You are an expert Google Review assistant for genuine customers visiting "${businessName}".${placeContext}
 TASK: Write THREE DISTINCT, NATURAL, 5-STAR Google reviews for this business.
-CRITICAL INSTRUCTION:
-You MUST naturally incorporate the customer's chosen highlights: [${selectedKeywordsText}] into each review option.
-Do NOT just list the keywords with commas. Weave them grammatically and naturally into complete sentences that sound authentic, human, and conversational!
+CRITICAL INSTRUCTIONS FOR HIGH VARIETY & NATURAL WRITING:
+1. You MUST naturally incorporate the customer's chosen highlights: [${selectedKeywordsText}] into each review option.
+2. Do NOT just list the keywords with commas. Weave them grammatically and naturally into complete sentences that sound authentic, human, and conversational!
+3. HIGH VARIETY RULE: Every generation must be fresh and unique! Never reuse the same formulaic sentence starters like "I recently visited...". Vary openings creatively (e.g., "Really impressed with...", "Can't say enough good things about...", "Stopped by and...", "Super happy with...", "Top notch experience with...", etc.).
+4. Customer Angle/Emphasis for this run: ${chosenPerspective}
+5. Unique Variation Jitter ID: #${seed || Math.floor(Math.random() * 1000000)}
 
 REVIEW VARIATIONS:
 - Option 1 (Short & Crisp): 1-2 punchy sentences focusing directly on the key highlights (${selectedKeywordsText}) and great experience.
@@ -53,7 +66,8 @@ RULES:
   const userPrompt = `Business: ${businessName}${category ? ` (${category})` : ''}${city ? ` in ${city}` : ''}
 Selected Customer Highlights: ${selectedKeywordsText}
 ${freeText ? `Customer Personal Note: "${freeText}"` : ''}
-Generate 3 distinct 5-star reviews naturally weaving in these customer highlights.`;
+Creative Angle: ${chosenPerspective}
+Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these customer highlights.`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
@@ -62,7 +76,7 @@ Generate 3 distinct 5-star reviews naturally weaving in these customer highlight
         { role: 'user', content: userPrompt }
       ],
       max_tokens: 750,
-      temperature: 0.6
+      temperature: 0.88
     });
 
     // Check if Cloudflare AI already parsed the response into an object
@@ -159,6 +173,7 @@ export interface GenerateOwnerRepliesParams {
   city?: string;
   brandVoice?: string;
   resolutionContact?: string;
+  seed?: number;
 }
 
 export function sanitizeOwnerReply(text: string, businessName: string): string {
@@ -175,35 +190,117 @@ export function sanitizeOwnerReply(text: string, businessName: string): string {
     .trim();
 }
 
+export function getOwnerReplyFallbacks(
+  businessName: string,
+  customerName?: string,
+  reviewText?: string,
+  rating = 5,
+  category?: string,
+  city?: string,
+  resolutionContact?: string,
+  seed?: number
+): { warm: string; professional: string; concise: string } {
+  const cName = customerName && customerName.trim() ? customerName.trim() : 'Valued Customer';
+  const locInfo = city ? ` (${city})` : '';
+  const s = seed ? Math.abs(seed) : Math.floor(Math.random() * 1000);
+  const isNegative = typeof rating === 'number' && rating > 0 && rating <= 2;
+  const contactText = resolutionContact && resolutionContact !== 'our management'
+    ? ` directly at ${resolutionContact}`
+    : '';
+
+  if (isNegative) {
+    const warmNeg = [
+      `Dear ${cName},\n\nThank you for bringing this to our attention. We are genuinely sorry to hear that your experience with ${businessName}${locInfo} didn't meet your expectations. Your satisfaction matters deeply to us, and we would love the opportunity to understand what happened and make things right. Please connect with our management team${contactText}.\n\nSincerely,\nTeam ${businessName}`,
+      `Hi ${cName},\n\nWe appreciate your honest feedback, though we are heartbroken to hear that your visit fell short. At ${businessName}, we hold ourselves to high standards and apologize for the disappointment. We'd appreciate the chance to speak with you${contactText} so we can resolve this personally.\n\nWarm regards,\nManagement, ${businessName}`
+    ];
+    const profNeg = [
+      `Dear ${cName},\n\nThank you for sharing your feedback. At ${businessName}${locInfo}, we hold customer satisfaction as our highest priority, and we regret that your recent experience was unsatisfactory. We take your comments seriously and invite you to contact us${contactText} so we can investigate and properly address your concerns.\n\nRespectfully,\nTeam ${businessName}`,
+      `Hello ${cName},\n\nWe acknowledge your review regarding ${businessName}. We apologize for not meeting your expectations on this occasion. Our team is committed to continuous improvement, and we would welcome the opportunity to discuss this further with you${contactText}.\n\nSincerely,\nManagement, ${businessName}`
+    ];
+    const conciseNeg = [
+      `Dear ${cName}, we sincerely apologize for falling short during your visit. Please reach out to us${contactText} so our team can personally assist and make this right.\n\n— Team ${businessName}`,
+      `Hi ${cName}, we are truly sorry your experience wasn't up to mark. Please contact us${contactText} so we can look into this immediately.\n\n— Team ${businessName}`
+    ];
+    return {
+      warm: warmNeg[s % warmNeg.length],
+      professional: profNeg[s % profNeg.length],
+      concise: conciseNeg[s % conciseNeg.length]
+    };
+  }
+
+  // Positive / neutral reviews - 4 distinct variations per tone
+  const warmVariations = [
+    `Hi ${cName},\n\nYour wonderful review truly made our day! Thank you so much for choosing ${businessName}${locInfo} and sharing such kind words. We are thrilled to know our team delivered such a positive experience. We look forward to welcoming you back soon!\n\nWarm regards,\nTeam ${businessName}`,
+    `Dear ${cName},\n\nThank you so much for taking the time to share this incredible review! Having you visit ${businessName}${locInfo} was an absolute pleasure, and knowing our commitment to excellence resonated with you means the world to our team. See you again soon!\n\nWith gratitude,\nThe ${businessName} Team`,
+    `Hello ${cName}!\n\nHuge thanks from everyone at ${businessName}${locInfo} for the stellar feedback! We work hard to ensure every customer receives top-tier service, and reviews like yours inspire us even more. We can't wait to serve you again!\n\nBest wishes,\nTeam ${businessName}`,
+    `Hi ${cName},\n\nThank you for the wonderful 5-star review! Our entire team at ${businessName} is overjoyed to hear your feedback. Customer happiness is always our top priority, and we truly appreciate your trust and recommendation!\n\nWarmly,\nTeam ${businessName}`
+  ];
+
+  const profVariations = [
+    `Dear ${cName},\n\nThank you for sharing your thoughtful review of ${businessName}${locInfo}. We take immense pride in upholding the highest standards of service, and we are delighted that our team met your expectations. We look forward to continuing to serve you.\n\nSincerely,\nTeam ${businessName}`,
+    `Hello ${cName},\n\nThank you for reviewing ${businessName}${locInfo}. Your feedback is invaluable to us, and we are pleased that you had a seamless, professional experience. Rest assured, our dedication to exceptional quality remains our highest commitment.\n\nBest regards,\nThe ${businessName} Management Team`,
+    `Dear ${cName},\n\nWe sincerely appreciate you taking the time to review your experience with ${businessName}. Delivering reliable, high-grade results is at the core of everything we do, and we are honored by your trust and patronage.\n\nKind regards,\nTeam ${businessName}`,
+    `Greetings ${cName},\n\nThank you for your review. We are delighted that ${businessName} delivered the level of professionalism and quality you deserve. We appreciate your valuable partnership and look forward to assisting you again in the future.\n\nRespectfully,\nTeam ${businessName}`
+  ];
+
+  const conciseVariations = [
+    `Hi ${cName}, thank you for the fantastic review of ${businessName}! We truly appreciate your support and look forward to serving you again.\n\n— Team ${businessName}`,
+    `Thanks so much for the 5 stars, ${cName}! Really glad you had a great experience with ${businessName}. See you next time!\n\n— Team ${businessName}`,
+    `Hi ${cName}, huge thanks for your kind words! We're thrilled you had a top-notch experience at ${businessName}.\n\n— The ${businessName} Team`,
+    `Thank you ${cName}! Your support of ${businessName} means a lot to our team. Looking forward to your next visit!\n\n— Team ${businessName}`
+  ];
+
+  return {
+    warm: warmVariations[s % warmVariations.length],
+    professional: profVariations[s % profVariations.length],
+    concise: conciseVariations[s % conciseVariations.length]
+  };
+}
+
 export async function generateOwnerReplies(
   aiBinding: any,
   params: GenerateOwnerRepliesParams
 ) {
-  const { businessName, customerName, reviewText, rating, category, city, brandVoice, resolutionContact } = params;
-
-  const locInfo = city ? ` (${city})` : '';
-  const fallbackWarm = `Dear ${customerName || 'Guest'},\n\nThank you so much for visiting ${businessName}${locInfo} and sharing your feedback! We truly appreciate your patronage and hope to welcome you back again soon.\n\nWarm regards,\nThe ${businessName} Team`;
-  const fallbackProf = `Dear ${customerName || 'Customer'},\n\nThank you for taking the time to review ${businessName}${locInfo}. Your feedback is valuable to our team. ${resolutionContact ? `If you have further suggestions, please contact us at ${resolutionContact}.` : ''}\n\nSincerely,\nTeam ${businessName}`;
-  const fallbackConcise = `Hi ${customerName || 'there'}, thanks for the great review of ${businessName}! We look forward to serving you again.\n\n— Team ${businessName}`;
+  const { businessName, customerName, reviewText, rating, category, city, brandVoice, resolutionContact, seed } = params;
+  const fallbacks = getOwnerReplyFallbacks(businessName, customerName, reviewText, rating, category, city, resolutionContact, seed);
 
   if (!aiBinding) {
-    return { warm: fallbackWarm, professional: fallbackProf, concise: fallbackConcise };
+    return fallbacks;
   }
 
-  const prompt = `You are the owner of "${businessName}"${locInfo}${category ? ` (${category})` : ''}. Generate 3 review reply options for this Google review:
-Review text: "${reviewText}"
-Customer name: "${customerName || 'Customer'}"
-Rating: ${rating ? `${rating} stars` : 'Not specified'}
-${resolutionContact && resolutionContact !== 'our management' ? `Resolution contact: "${resolutionContact}"` : ''}
+  const locInfo = city ? ` (${city})` : '';
+  const ownerReplyAngles = [
+    'Express vibrant gratitude, specifically echoing the customer\'s favorite aspects with heartfelt appreciation.',
+    'Emphasize our team\'s dedication to high quality, punctuality, and ongoing customer happiness.',
+    'Highlight our local commitment and passion for delivering standout results for every client.',
+    'Celebrate their feedback as a morale boost for the entire staff, warmly inviting them back soon.',
+    'Provide a polished, confident executive response affirming our long-term commitment to client success.'
+  ];
+  const chosenAngle = ownerReplyAngles[(seed ? Math.abs(seed) : Math.floor(Math.random() * 1000)) % ownerReplyAngles.length];
 
+  const prompt = `You are the owner of "${businessName}"${locInfo}${category ? ` (${category})` : ''}.
+TASK: Generate THREE COMPLETELY DISTINCT, FRESH, AUTHENTIC review reply options for this Google review:
+CUSTOMER REVIEW DETAILS:
+- Review text: "${reviewText}"
+- Customer name: "${customerName || 'Customer'}"
+- Rating: ${rating ? `${rating} stars` : '5 stars'}
+${resolutionContact && resolutionContact !== 'our management' ? `- Resolution contact: "${resolutionContact}"` : ''}
+- Reply creative angle: ${chosenAngle}
+- Variation jitter seed: #${seed || Math.floor(Math.random() * 1000000)}
+
+OUTPUT REQUIREMENTS:
 Return valid JSON with exactly three keys: "warm", "professional", and "concise".
-RULES:
-1. Acknowledge specific points mentioned in the review.
-2. Sign off naturally as "The ${businessName} Team" or "Team ${businessName}".
-3. STRICT CRITICAL RULE: NEVER use brackets or placeholder text like "[Your Name]", "[Name]", "[Owner]", "[Business Name]", or "(our management)". Everything must be 100% complete text ready to publish on Google Maps.
-4. For negative points, apologize sincerely and offer offline resolution without arguing or making excuses.
-5. Keep "concise" under 40 words.
-6. Never promise cash refunds unless asked.`;
+
+CRITICAL DIVERSITY & HUMAN QUALITY RULES:
+1. NEVER USE CANNED CLICHÉ OPENINGS on every reply! Do NOT always start with "Thank you, [Name], for your kind words about...".
+   Vary greetings naturally (e.g. "Hi [Name], we're thrilled to read this!", "Hello [Name], thank you so much for the wonderful review!", "Dear [Name], your feedback truly made our day!", "Hey [Name], huge thanks from all of us at ${businessName}!").
+2. SPECIFIC CONTEXT: Naturally reference 1 or 2 specific details or services mentioned in their review (e.g. from "${reviewText.slice(0, 120)}...") so it feels genuinely written by a human business owner who actually read their review.
+3. THREE DISTINCT STYLES:
+   - "warm": Heartfelt, friendly, enthusiastic, community-spirited (2-3 sentences).
+   - "professional": Polished, courteous, service & quality-oriented, refined tone (2-3 sentences).
+   - "concise": Punchy, direct, upbeat, under 30 words.
+4. STRICT CRITICAL RULE: NEVER use brackets or placeholders like "[Your Name]", "[Name]", "[Owner]", "[Business Name]", or "(our management)". Everything must be 100% complete text ready to publish immediately on Google Maps. Sign off naturally as "The ${businessName} Team" or "Team ${businessName}".
+5. For negative reviews, apologize sincerely and offer offline resolution without arguing or making excuses.`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
@@ -211,8 +308,8 @@ RULES:
         { role: 'system', content: 'You are an AI assistant helping business owners reply professionally to Google reviews. Respond strictly in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      max_tokens: 350,
-      temperature: 0.5
+      max_tokens: 500,
+      temperature: 0.85
     });
 
     const extractReplyString = (val: any, fallback: string): string => {
@@ -239,9 +336,9 @@ RULES:
     if (response && typeof response === 'object' && (response.warm || response.response?.warm)) {
       const src = response.warm ? response : response.response;
       return {
-        warm: extractReplyString(src.warm, fallbackWarm),
-        professional: extractReplyString(src.professional, fallbackProf),
-        concise: extractReplyString(src.concise, fallbackConcise)
+        warm: extractReplyString(src.warm, fallbacks.warm),
+        professional: extractReplyString(src.professional, fallbacks.professional),
+        concise: extractReplyString(src.concise, fallbacks.concise)
       };
     }
 
@@ -249,16 +346,16 @@ RULES:
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       return {
-        warm: extractReplyString(parsed.warm, fallbackWarm),
-        professional: extractReplyString(parsed.professional, fallbackProf),
-        concise: extractReplyString(parsed.concise, fallbackConcise)
+        warm: extractReplyString(parsed.warm, fallbacks.warm),
+        professional: extractReplyString(parsed.professional, fallbacks.professional),
+        concise: extractReplyString(parsed.concise, fallbacks.concise)
       };
     }
   } catch (err) {
-    console.warn('AI reply generation failed, using defaults:', err);
+    console.warn('AI reply generation failed, using diverse fallbacks:', err);
   }
 
-  return { warm: fallbackWarm, professional: fallbackProf, concise: fallbackConcise };
+  return fallbacks;
 }
 
 export interface GenerateBusinessKeywordsParams {

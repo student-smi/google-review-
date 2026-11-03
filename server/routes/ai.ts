@@ -28,7 +28,8 @@ aiRoutes.post('/review-draft', async (c) => {
     freeText = '',
     language = 'en',
     tone = 'warm',
-    turnstileToken
+    turnstileToken,
+    seed
   } = body;
 
   const today = new Date().toISOString().split('T')[0];
@@ -82,7 +83,8 @@ aiRoutes.post('/review-draft', async (c) => {
         chips,
         freeText,
         language,
-        tone
+        tone,
+        seed: typeof seed === 'number' ? seed : Date.now()
       });
       return c.json({ ...fallback, draft: fallback.drafts[0]?.text || '', rateLimited: true });
     }
@@ -133,7 +135,8 @@ aiRoutes.post('/review-draft', async (c) => {
     chips,
     freeText,
     language,
-    tone
+    tone,
+    seed: typeof seed === 'number' ? seed : Date.now()
   });
 
   // 4. Log Anonymized Event & Increment Usage
@@ -205,7 +208,8 @@ const handleReplyDraft = async (c: any) => {
     brandVoice,
     resolutionContact,
     city,
-    category
+    category,
+    seed
   } = body;
 
   if (!reviewText) {
@@ -220,7 +224,8 @@ const handleReplyDraft = async (c: any) => {
     city,
     category,
     brandVoice,
-    resolutionContact
+    resolutionContact,
+    seed: typeof seed === 'number' ? seed : Date.now()
   });
 
   return c.json({ success: true, replies });
