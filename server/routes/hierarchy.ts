@@ -136,10 +136,16 @@ hierarchyRoutes.get('/', async (c) => {
       }
     }
 
+    const hasPrimaryBiz = userBusinesses.some((b: any) => b.isPrimary);
+    const finalBusinesses = userBusinesses.map((b: any, idx: number) => ({
+      ...b,
+      isPrimary: hasPrimaryBiz ? Boolean(b.isPrimary) : idx === (userBusinesses.length - 1)
+    }));
+
     return c.json({
       success: true,
       brands: userBrands,
-      businesses: userBusinesses,
+      businesses: finalBusinesses,
       branches: allBranches,
       memberships: userMemberships,
       roles: {

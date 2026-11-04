@@ -300,6 +300,35 @@ businessRoutes.post('/:id/unarchive', async (c) => {
   }
 });
 
+// Set Business as Main Branch (Head Office / Flagship)
+businessRoutes.post('/:id/set-primary', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const target = await scoped.getBusiness(businessId);
+    if (!target) return c.json({ error: 'Business not found' }, 404);
+
+    // Unset primary on sibling businesses
+    if (target.brandId) {
+      await db.update(businesses).set({ isPrimary: false }).where(eq(businesses.brandId, target.brandId));
+    } else {
+      await db.update(businesses).set({ isPrimary: false }).where(eq(businesses.ownerId, ownerId));
+    }
+
+    // Set target business as primary Main Branch
+    await db.update(businesses).set({ isPrimary: true }).where(eq(businesses.id, businessId));
+
+    const updated = await scoped.getBusiness(businessId);
+    return c.json({ success: true, message: 'Designated as Main Branch successfully', business: updated });
+  } catch (err: any) {
+    console.error('Failed to set primary business:', err);
+    return c.json({ error: err.message }, 403);
+  }
+});
+
 // ──────────────────────────────────────────────
 // Multiple Google Locations Manager Endpoints
 // ──────────────────────────────────────────────
@@ -377,6 +406,26 @@ businessRoutes.delete('/:id/locations/:locId', async (c) => {
   try {
     await scoped.deleteLocation(businessId, locId);
     return c.json({ success: true, message: 'Location deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+businessRoutes.post('/:id/locations/:locId/set-primary', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const locId = c.req.param('locId');
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const target = await scoped.getBusiness(businessId);
+    if (!target) return c.json({ error: 'Business not found' }, 404);
+
+    await db.update(locations).set({ isPrimary: false }).where(eq(locations.businessId, businessId));
+    await db.update(locations).set({ isPrimary: true }).where(and(eq(locations.businessId, businessId), eq(locations.id, locId)));
+
+    return c.json({ success: true, message: 'Primary branch location updated successfully' });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }

@@ -21,6 +21,7 @@ export interface BusinessItem {
   businessType?: 'company_owned' | 'franchise' | 'independent';
   name: string;
   slug: string;
+  isPrimary?: boolean;
   category?: string | null;
   address?: string | null;
   city?: string | null;

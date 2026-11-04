@@ -140,8 +140,11 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         contactEmail: string;
         assignedManager: string;
         isArchived: boolean;
+        isPrimary: boolean;
         status: string;
         chipsJson: string | null;
+        brandId: string | null;
+        businessType: string;
       }>
     ) {
       // Must verify ownership or allowed access first

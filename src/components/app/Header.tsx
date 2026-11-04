@@ -16,7 +16,8 @@ import {
   Network,
   Building2,
   Store,
-  StoreIcon
+  StoreIcon,
+  Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -321,52 +322,79 @@ export function Header({
                       ))}
 
                     {currentLevel === 'business' &&
-                      businesses.map((bz) => (
-                        <button
-                          key={bz.id}
-                          onClick={() => {
-                            selectBusiness(bz.id);
-                            setDropdownOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
-                            bz.id === activeBusiness?.id
-                              ? 'bg-blue-50 text-blue-700 font-bold'
-                              : 'hover:bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          <div className="flex flex-col min-w-0 pr-2">
-                            <span className="truncate">{bz.name}</span>
-                            <span className="text-[10px] text-slate-400 truncate">
-                              {bz.businessType === 'franchise' ? 'Franchise' : 'Company-Owned'} • {bz.city || 'India'}
-                            </span>
-                          </div>
-                          {bz.id === activeBusiness?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
-                        </button>
-                      ))}
+                      businesses.map((bz) => {
+                        const isMain = Boolean(bz.isPrimary || (businesses.length > 0 && bz.id === businesses[businesses.length - 1]?.id));
+                        return (
+                          <button
+                            key={bz.id}
+                            onClick={() => {
+                              selectBusiness(bz.id);
+                              setDropdownOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
+                              bz.id === activeBusiness?.id
+                                ? 'bg-blue-50 text-blue-700 font-bold'
+                                : 'hover:bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex flex-col min-w-0 pr-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate">{bz.name}</span>
+                                {isMain ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-black shrink-0">
+                                    👑 Main HQ
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[9px] font-bold shrink-0">
+                                    🏪 Outlet
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                {bz.businessType === 'franchise' ? 'Franchise' : 'Company-Owned'} • {bz.city || 'India'}
+                              </span>
+                            </div>
+                            {bz.id === activeBusiness?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
 
                     {currentLevel === 'branch' &&
-                      branches.map((br) => (
-                        <button
-                          key={br.id}
-                          onClick={() => {
-                            selectBranch(br.id);
-                            setDropdownOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
-                            br.id === activeBranch?.id
-                              ? 'bg-blue-50 text-blue-700 font-bold'
-                              : 'hover:bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          <div className="flex flex-col min-w-0 pr-2">
-                            <span className="truncate">{br.name}</span>
-                            <span className="text-[10px] text-slate-400 truncate">
-                              {br.address || br.city || 'Location Outlet'}
-                            </span>
-                          </div>
-                          {br.id === activeBranch?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
-                        </button>
-                      ))}
+                      branches.map((br) => {
+                        return (
+                          <button
+                            key={br.id}
+                            onClick={() => {
+                              selectBranch(br.id);
+                              setDropdownOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs text-left transition-colors cursor-pointer ${
+                              br.id === activeBranch?.id
+                                ? 'bg-blue-50 text-blue-700 font-bold'
+                                : 'hover:bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex flex-col min-w-0 pr-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate">{br.name}</span>
+                                {br.isPrimary ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 bg-amber-100 text-amber-800 text-[9px] font-black shrink-0">
+                                    👑 Main HQ
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[9px] font-bold shrink-0">
+                                    🏪 Outlet
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                {br.address || br.city || 'Location Outlet'}
+                              </span>
+                            </div>
+                            {br.id === activeBranch?.id && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })}
                   </div>
 
                   <div className="pt-2 mt-1.5 border-t border-slate-100">

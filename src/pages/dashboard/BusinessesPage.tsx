@@ -29,7 +29,8 @@ import {
   X,
   Layers,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Crown
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { apiFetch, saveStoredBusinesses, saveActiveBusinessId } from '@/lib/api';
@@ -55,7 +56,7 @@ export function BusinessesPage() {
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'connection_error' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'main_branch' | 'sub_branch' | 'active' | 'connection_error' | 'archived'>('all');
 
   // Business Add / Edit Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -213,6 +214,30 @@ export function BusinessesPage() {
     }
   };
 
+  // Set Business as Main Branch (Head Office / Flagship)
+  const handleSetPrimaryBusiness = async (biz: BusinessItem) => {
+    if (!confirm(`Set "${biz.name}" as your Main Branch (Head Office)? Other locations will report as sub-branches.`)) return;
+    try {
+      await apiFetch(`/api/businesses/${biz.id}/set-primary`, { method: 'POST' });
+      await refreshBusinesses();
+    } catch (err: any) {
+      alert('Failed to set Main Branch: ' + (err.message || 'Server error'));
+    }
+  };
+
+  // Set Location as Primary within a business
+  const handleSetPrimaryLocation = async (locId: string) => {
+    if (!locationModalBiz) return;
+    try {
+      await apiFetch(`/api/businesses/${locationModalBiz.id}/locations/${locId}/set-primary`, { method: 'POST' });
+      const res = await apiFetch<{ success: boolean; locations: LocationItem[] }>(`/api/businesses/${locationModalBiz.id}/locations`);
+      if (res?.locations) setBizLocations(res.locations);
+      await refreshBusinesses();
+    } catch (err: any) {
+      alert('Failed to set primary branch location: ' + (err.message || 'Server error'));
+    }
+  };
+
   // Manage Locations for a Business
   const handleOpenLocationsModal = async (biz: BusinessItem) => {
     setLocationModalBiz(biz);
@@ -286,6 +311,17 @@ export function BusinessesPage() {
     }
   };
 
+  // Identify Primary Main Branch
+  const primaryBiz = useMemo(() => {
+    return businesses.find((b) => b.isPrimary) || (businesses.length > 0 ? businesses[businesses.length - 1] : null);
+  }, [businesses]);
+
+  const mainCount = useMemo(() => {
+    return businesses.filter((b) => b.isPrimary || (primaryBiz && b.id === primaryBiz.id)).length;
+  }, [businesses, primaryBiz]);
+
+  const subCount = Math.max(0, businesses.length - mainCount);
+
   // Filter & Search Logic
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((biz) => {
@@ -300,12 +336,15 @@ export function BusinessesPage() {
 
       if (!matchesSearch) return false;
 
+      const isMain = Boolean(biz.isPrimary || (primaryBiz && biz.id === primaryBiz.id));
+      if (statusFilter === 'main_branch') return isMain;
+      if (statusFilter === 'sub_branch') return !isMain;
       if (statusFilter === 'active') return !biz.isArchived && biz.status !== 'connection_error';
       if (statusFilter === 'connection_error') return biz.status === 'connection_error';
       if (statusFilter === 'archived') return biz.isArchived;
       return true;
     });
-  }, [businesses, searchQuery, statusFilter]);
+  }, [businesses, searchQuery, statusFilter, primaryBiz]);
 
   // Aggregate KPI metrics
   const activeCount = businesses.filter((b) => !b.isArchived && b.status !== 'connection_error').length;
@@ -420,6 +459,8 @@ export function BusinessesPage() {
           {(
             [
               { id: 'all', label: `All (${businesses.length})` },
+              { id: 'main_branch', label: `👑 Main Branch (${mainCount})` },
+              { id: 'sub_branch', label: `🏪 Sub-Branches (${subCount})` },
               { id: 'active', label: `Active (${activeCount})` },
               { id: 'connection_error', label: `Connection Alert (${errorCount})` },
               { id: 'archived', label: `Archived (${archivedCount})` }
@@ -454,6 +495,7 @@ export function BusinessesPage() {
           </div>
         ) : (
           filteredBusinesses.map((biz) => {
+            const isMainBranch = Boolean(biz.isPrimary || (primaryBiz && biz.id === primaryBiz.id));
             const isActiveWorkspace = biz.id === activeBusiness?.id;
             const isConnectionError = biz.status === 'connection_error';
             const isArchived = Boolean(biz.isArchived);
@@ -463,7 +505,9 @@ export function BusinessesPage() {
               <Card
                 key={biz.id}
                 className={`rounded-3xl border transition-all p-5 space-y-4 ${
-                  isActiveWorkspace
+                  isMainBranch
+                    ? 'border-amber-300 ring-2 ring-amber-400/25 bg-linear-to-br from-amber-50/20 via-white to-white shadow-xs'
+                    : isActiveWorkspace
                     ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 shadow-md'
                     : isArchived
                     ? 'border-slate-200 bg-slate-50/60 opacity-75'
@@ -474,16 +518,34 @@ export function BusinessesPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className="h-11 w-11 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0"
-                      style={{ backgroundColor: biz.brandColor || '#2563EB' }}
+                      className={`h-11 w-11 rounded-2xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 ${
+                        isMainBranch
+                          ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white ring-2 ring-amber-400/40'
+                          : 'text-white'
+                      }`}
+                      style={{ backgroundColor: !isMainBranch ? biz.brandColor || '#2563EB' : undefined }}
                     >
-                      <Store className="h-5 w-5" />
+                      {isMainBranch ? <Crown className="h-5 w-5" /> : <Store className="h-5 w-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-base text-slate-900 tracking-tight">
                           {biz.name}
                         </h3>
+
+                        {/* Distinct Main Branch vs Sub-Branch Badges */}
+                        {isMainBranch ? (
+                          <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[10px] flex items-center gap-1 shadow-2xs">
+                            <Crown className="w-3 h-3 text-amber-600 fill-amber-500" />
+                            <span>👑 Main Branch (HQ)</span>
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-slate-100 text-slate-700 border border-slate-300/80 font-bold text-[10px] flex items-center gap-1">
+                            <Store className="w-3 h-3 text-slate-500" />
+                            <span>🏪 Sub-Branch Outlet</span>
+                          </Badge>
+                        )}
+
                         {isActiveWorkspace && (
                           <Badge className="bg-blue-600 text-white text-[10px] uppercase font-bold tracking-wider">
                             Active Workspace
@@ -503,6 +565,7 @@ export function BusinessesPage() {
                           </Badge>
                         )}
                       </div>
+
                       <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3" />
                         <span>{biz.address || biz.city || 'India'}</span>
@@ -513,6 +576,13 @@ export function BusinessesPage() {
                           </>
                         )}
                       </span>
+
+                      {!isMainBranch && primaryBiz && (
+                        <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 mt-1">
+                          <span className="text-slate-400">↳ Linked Outlet of:</span>
+                          <span className="text-amber-800 font-bold">{primaryBiz.name} (Main HQ)</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -588,6 +658,19 @@ export function BusinessesPage() {
                       <Edit2 className="w-3 h-3 text-slate-400" />
                       <span>Edit</span>
                     </Button>
+
+                    {!isMainBranch && !isArchived && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSetPrimaryBusiness(biz)}
+                        className="h-8 px-2.5 text-xs text-amber-800 border-amber-300/80 bg-amber-50 hover:bg-amber-100 font-bold gap-1 cursor-pointer"
+                        title="Promote this store to Main Branch (Head Office)"
+                      >
+                        <Crown className="w-3 h-3 text-amber-600" />
+                        <span>Set as Main</span>
+                      </Button>
+                    )}
 
                     <Button
                       size="sm"
@@ -939,10 +1022,24 @@ export function BusinessesPage() {
                         <div className="space-y-0.5 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900 truncate">{loc.name}</span>
-                            {loc.isPrimary && (
-                              <Badge className="bg-blue-100 text-blue-800 text-[9px] font-bold">
-                                Head Office
+                            {loc.isPrimary ? (
+                              <Badge className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-extrabold flex items-center gap-1 shadow-2xs">
+                                <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                                <span>Main Branch (HQ)</span>
                               </Badge>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <Badge className="bg-slate-100 text-slate-700 text-[9px] font-bold">
+                                  Sub-Outlet
+                                </Badge>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryLocation(loc.id)}
+                                  className="text-[10px] text-amber-700 hover:text-amber-900 font-bold underline cursor-pointer"
+                                >
+                                  Set as Main
+                                </button>
+                              </div>
                             )}
                             <Badge
                               className={`text-[9px] font-bold ${

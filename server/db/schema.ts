@@ -90,6 +90,7 @@ export const businesses = sqliteTable('businesses', {
   assignedManager: text('assigned_manager'), // Assigned review executive / manager
   isArchived: integer('is_archived', { mode: 'boolean' }).default(false).notNull(),
   status: text('status').default('active').notNull(), // 'active' | 'inactive' | 'connection_error'
+  isPrimary: integer('is_primary', { mode: 'boolean' }).default(false).notNull(), // Main Branch / Headquarter
   chipsJson: text('chips_json'), // Custom keywords / highlights chosen by shopkeeper
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull()
