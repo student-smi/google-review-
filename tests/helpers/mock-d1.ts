@@ -34,7 +34,9 @@ export function createTestD1Database() {
 
   // Ensure latest added columns exist in test database
   try { sqlite.exec('ALTER TABLE `businesses` ADD `is_primary` integer DEFAULT 0 NOT NULL'); } catch {}
+  try { sqlite.exec('ALTER TABLE `locations` ADD `slug` text'); } catch {}
   try { sqlite.exec('ALTER TABLE `locations` ADD `city` text'); } catch {}
+  try { sqlite.exec('ALTER TABLE `locations` ADD `chips_json` text'); } catch {}
 
   function createPreparedStatement(query: string, boundValues: any[] = []): any {
     return {

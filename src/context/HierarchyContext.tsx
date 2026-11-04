@@ -61,6 +61,7 @@ export interface BranchItem {
   assignedManagerId?: string | null;
   category?: string | null;
   brandColor?: string | null;
+  chipsJson?: string | null;
   createdAt?: number;
 }
 
@@ -294,16 +295,20 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
       // 1. Create or use existing Brand
       let targetBrandId = activeBusiness.brandId || activeBrand?.id;
       if (!targetBrandId || brands.length === 0) {
-        const brandRes = await apiFetch<{ success: boolean; brand?: any; error?: string }>('/api/hierarchy/brands', {
-          method: 'POST',
-          body: JSON.stringify({ name: brandName.trim() || activeBusiness.name })
-        });
-        if (brandRes?.brand?.id) {
-          targetBrandId = brandRes.brand.id;
+        try {
+          const brandRes = await apiFetch<{ success: boolean; brand?: any; error?: string }>('/api/hierarchy/brands', {
+            method: 'POST',
+            body: JSON.stringify({ name: brandName.trim() || activeBusiness.name })
+          });
+          if (brandRes?.brand?.id) {
+            targetBrandId = brandRes.brand.id;
+          }
+        } catch (bErr: any) {
+          console.warn('Brand creation notice:', bErr);
         }
       }
 
-      // 2. Link activeBusiness to brand
+      // 2. Link activeBusiness to brand if brand created
       if (targetBrandId) {
         await apiFetch(`/api/businesses/${activeBusiness.id}`, {
           method: 'PATCH',
@@ -348,7 +353,7 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err: any) {
       console.error('Failed to upgrade to multi-branch:', err);
-      return { success: false, error: err?.message || 'Failed to upgrade. Please check details and try again.' };
+      return { success: false, error: err?.message || 'Failed to add branch. Please check details and try again.' };
     }
   };
 

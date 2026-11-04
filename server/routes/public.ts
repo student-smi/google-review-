@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, or, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews } from '../db/schema';
+import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews, locations } from '../db/schema';
 
 export interface Env {
   DB: any;
@@ -84,13 +84,72 @@ publicRoutes.get('/r/:code', async (c) => {
 
     if (!results.length) {
       const cleanCode = code.toLowerCase().trim();
-      
-      // Fetch businesses ordered by latest created
-      const allBiz = await db
-        .select()
-        .from(businesses)
-        .orderBy(desc(businesses.createdAt))
-        .limit(20);
+
+      // Check if code or slug matches a specific branch location first
+      try {
+        const branchMatches = await db
+          .select({
+            locId: locations.id,
+            locName: locations.name,
+            locSlug: locations.slug,
+            locAddress: locations.address,
+            locCity: locations.city,
+            locPlaceId: locations.googlePlaceId,
+            locReviewUrl: locations.googleReviewUrl,
+            locChipsJson: locations.chipsJson,
+            businessId: businesses.id,
+            businessName: businesses.name,
+            category: businesses.category,
+            chipsJson: businesses.chipsJson,
+            logoUrl: businesses.logoUrl,
+            brandColor: businesses.brandColor,
+            brandColorSecondary: businesses.brandColorSecondary
+          })
+          .from(locations)
+          .innerJoin(businesses, eq(locations.businessId, businesses.id))
+          .limit(50);
+
+        const matchedLoc = branchMatches.find((l) => {
+          const locSlug = (l.locSlug || '').toLowerCase();
+          const cleanParam = cleanCode.replace(/^qr_/, '');
+          return (
+            l.locId === cleanCode ||
+            locSlug === cleanCode ||
+            locSlug === cleanParam ||
+            (locSlug && cleanParam.startsWith(locSlug))
+          );
+        });
+
+        if (matchedLoc) {
+          qrData = {
+            id: `qr_${matchedLoc.locId}`,
+            code,
+            label: matchedLoc.locName,
+            businessId: matchedLoc.businessId,
+            businessName: matchedLoc.locName || matchedLoc.businessName,
+            category: matchedLoc.category,
+            address: matchedLoc.locAddress || '',
+            city: matchedLoc.locCity || '',
+            googlePlaceId: matchedLoc.locPlaceId || '',
+            chipsJson: matchedLoc.locChipsJson || matchedLoc.chipsJson,
+            googleReviewUrl: matchedLoc.locReviewUrl || (matchedLoc.locPlaceId ? `https://search.google.com/local/writereview?placeid=${matchedLoc.locPlaceId}` : ''),
+            logoUrl: matchedLoc.logoUrl,
+            brandColor: matchedLoc.brandColor,
+            brandColorSecondary: matchedLoc.brandColorSecondary,
+            styleJson: '{}'
+          };
+        }
+      } catch (locErr) {
+        console.warn('Branch location public check warning:', locErr);
+      }
+
+      if (!qrData) {
+        // Fetch businesses ordered by latest created
+        const allBiz = await db
+          .select()
+          .from(businesses)
+          .orderBy(desc(businesses.createdAt))
+          .limit(20);
 
       // Match best business:
       // a) exact or prefix match on slug
@@ -135,8 +194,9 @@ publicRoutes.get('/r/:code', async (c) => {
       } else {
         return c.json({ error: 'QR Code not found or inactive' }, 404);
       }
-    } else {
-      qrData = {
+    }
+  } else {
+    qrData = {
         ...results[0],
         googleReviewUrl: results[0].googleReviewUrl.startsWith('http')
           ? results[0].googleReviewUrl

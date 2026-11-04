@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useOutletContext, Link, useNavigate } from 'react-router-dom';
+import { useOutletContext, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -83,13 +83,17 @@ export function BusinessesPage() {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [newLocName, setNewLocName] = useState('');
   const [newLocAddress, setNewLocAddress] = useState('');
+  const [newLocCity, setNewLocCity] = useState('');
   const [newLocPhone, setNewLocPhone] = useState('');
   const [newLocPlaceId, setNewLocPlaceId] = useState('');
   const [newLocReviewUrl, setNewLocReviewUrl] = useState('');
   const [newLocManager, setNewLocManager] = useState('');
+  const [newLocKeywords, setNewLocKeywords] = useState('');
   const [isAddingLocation, setIsAddingLocation] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const isBranchesView = location.pathname.includes('/branches');
 
   // Open Create Business Modal
   const handleOpenCreateModal = () => {
@@ -109,6 +113,16 @@ export function BusinessesPage() {
     setBrandColor('#2563EB');
     setError(null);
     setIsModalOpen(true);
+  };
+
+  // Open Add Branch Modal directly
+  const handleOpenAddBranch = () => {
+    const target = activeBusiness || businesses[0];
+    if (target) {
+      handleOpenLocationsModal(target);
+    } else {
+      handleOpenCreateModal();
+    }
   };
 
   // Open Edit Business Modal
@@ -267,6 +281,11 @@ export function BusinessesPage() {
 
     setIsAddingLocation(true);
     try {
+      const keywordList = newLocKeywords
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean);
+
       const res = await apiFetch<{ success: boolean; location: LocationItem }>(
         `/api/businesses/${locationModalBiz.id}/locations`,
         {
@@ -274,10 +293,12 @@ export function BusinessesPage() {
           body: JSON.stringify({
             name: newLocName.trim(),
             address: newLocAddress.trim() || undefined,
+            city: newLocCity.trim() || undefined,
             phone: newLocPhone.trim() || undefined,
             googlePlaceId: newLocPlaceId.trim() || undefined,
             googleReviewUrl: newLocReviewUrl.trim() || locationModalBiz.googleReviewUrl,
             assignedManager: newLocManager.trim() || undefined,
+            chipsJson: keywordList.length > 0 ? JSON.stringify(keywordList) : null,
             status: 'active'
           })
         }
@@ -286,10 +307,12 @@ export function BusinessesPage() {
         setBizLocations((prev) => [res.location, ...prev]);
         setNewLocName('');
         setNewLocAddress('');
+        setNewLocCity('');
         setNewLocPhone('');
         setNewLocPlaceId('');
         setNewLocReviewUrl('');
         setNewLocManager('');
+        setNewLocKeywords('');
       }
       await refreshBusinesses();
     } catch (err: any) {
@@ -358,23 +381,34 @@ export function BusinessesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 mb-2">
-            <Building2 className="h-3.5 w-3.5 text-blue-600" />
-            <span>Business & Location Manager</span>
+            {isBranchesView ? (
+              <>
+                <Layers className="h-3.5 w-3.5 text-blue-600" />
+                <span>Branch & Outlet Network</span>
+              </>
+            ) : (
+              <>
+                <Building2 className="h-3.5 w-3.5 text-blue-600" />
+                <span>Business & Location Manager</span>
+              </>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-            Businesses & Google Locations
+            {isBranchesView ? 'All Branches & Outlets' : 'Businesses & Google Locations'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Store business profiles, contact info, assigned manager, multiple Google locations & sync health status.
+            {isBranchesView
+              ? 'Manage all branch outlets, head office, Place IDs, dedicated standee QR codes & local keywords.'
+              : 'Store business profiles, contact info, assigned manager, multiple Google locations & sync health status.'}
           </p>
         </div>
 
         <Button
-          onClick={handleOpenCreateModal}
+          onClick={isBranchesView ? handleOpenAddBranch : handleOpenCreateModal}
           className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs rounded-xl shadow-sm gap-2 h-11 px-4 cursor-pointer shrink-0 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>Add New Business</span>
+          <span>{isBranchesView ? 'Add New Branch' : 'Add New Business'}</span>
         </Button>
       </div>
 
@@ -945,11 +979,31 @@ export function BusinessesPage() {
                   <span>Add Branch / Outlet Location</span>
                 </div>
 
+                {/* Google Places Autocomplete */}
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-bold text-slate-700">Search Branch on Google Maps (Auto-Detect Place ID)</Label>
+                  <GooglePlacesAutocomplete
+                    placeholder="Search branch outlet on Google Maps (e.g. Upmark Vadodara)..."
+                    onSelect={(place) => {
+                      if (!newLocName) setNewLocName(place.name);
+                      setNewLocPlaceId(place.placeId);
+                      setNewLocReviewUrl(place.googleReviewUrl);
+                      if (place.address) {
+                        setNewLocAddress(place.address);
+                        const parts = place.address.split(',').map((p) => p.trim());
+                        if (parts.length >= 2) {
+                          setNewLocCity(parts[parts.length - 2]);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <Input
                     value={newLocName}
                     onChange={(e) => setNewLocName(e.target.value)}
-                    placeholder="Location Name (e.g. Navrangpura Branch)"
+                    placeholder="Location Name (e.g. Navrangpura Branch) *"
                     required
                     className="text-xs h-8 bg-white"
                   />
@@ -960,15 +1014,15 @@ export function BusinessesPage() {
                     className="text-xs h-8 bg-white"
                   />
                   <Input
-                    value={newLocPhone}
-                    onChange={(e) => setNewLocPhone(e.target.value)}
-                    placeholder="Branch Phone"
+                    value={newLocCity}
+                    onChange={(e) => setNewLocCity(e.target.value)}
+                    placeholder="City (e.g. Vadodara, Ahmedabad)"
                     className="text-xs h-8 bg-white"
                   />
                   <Input
-                    value={newLocManager}
-                    onChange={(e) => setNewLocManager(e.target.value)}
-                    placeholder="Assigned Branch Manager"
+                    value={newLocPhone}
+                    onChange={(e) => setNewLocPhone(e.target.value)}
+                    placeholder="Branch Phone"
                     className="text-xs h-8 bg-white"
                   />
                 </div>
@@ -977,7 +1031,7 @@ export function BusinessesPage() {
                   <Input
                     value={newLocPlaceId}
                     onChange={(e) => setNewLocPlaceId(e.target.value)}
-                    placeholder="Google Place ID (optional)"
+                    placeholder="Google Place ID (auto-filled or paste)"
                     className="text-xs h-8 bg-white font-mono"
                   />
                   <Input
@@ -988,12 +1042,27 @@ export function BusinessesPage() {
                   />
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <Input
+                    value={newLocManager}
+                    onChange={(e) => setNewLocManager(e.target.value)}
+                    placeholder="Assigned Branch Manager"
+                    className="text-xs h-8 bg-white"
+                  />
+                  <Input
+                    value={newLocKeywords}
+                    onChange={(e) => setNewLocKeywords(e.target.value)}
+                    placeholder="Branch Keywords (e.g. Vadodara cafe, great vibe)"
+                    className="text-xs h-8 bg-white"
+                  />
+                </div>
+
                 <div className="flex justify-end pt-1">
                   <Button
                     type="submit"
                     size="sm"
                     disabled={isAddingLocation || !newLocName.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 cursor-pointer"
                   >
                     {isAddingLocation ? 'Adding Location...' : 'Save Branch Location'}
                   </Button>
@@ -1051,11 +1120,24 @@ export function BusinessesPage() {
                               {loc.status || 'active'}
                             </Badge>
                           </div>
-                          <div className="text-[11px] text-slate-500 truncate flex items-center gap-2">
+                          <div className="text-[11px] text-slate-500 truncate flex items-center gap-2 flex-wrap">
                             {loc.address && <span>{loc.address}</span>}
+                            {loc.city && <span className="font-semibold text-slate-700">({loc.city})</span>}
+                            {loc.googlePlaceId && (
+                              <span className="font-mono text-[10px] text-slate-400">ID: {loc.googlePlaceId.slice(0, 14)}...</span>
+                            )}
                             {loc.assignedManager && (
                               <span>• Manager: <strong>{loc.assignedManager}</strong></span>
                             )}
+                            <a
+                              href={`/r/${loc.slug || loc.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline shrink-0"
+                            >
+                              <span>Branch QR Funnel</span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
                           </div>
                         </div>
 

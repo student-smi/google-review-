@@ -358,11 +358,14 @@ businessRoutes.post('/:id/locations', async (c) => {
   }
 
   const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const rawSlug = (body.name || 'branch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'branch';
+  const slug = `${rawSlug}-${Math.random().toString(36).substring(2, 6)}`;
 
   try {
     const created = await scoped.createLocation(businessId, {
       id: locId,
       name: body.name.trim(),
+      slug: slug,
       address: body.address?.trim() || null,
       city: body.city?.trim() || null,
       phone: body.phone?.trim() || null,
@@ -370,8 +373,30 @@ businessRoutes.post('/:id/locations', async (c) => {
       googleReviewUrl: body.googleReviewUrl?.trim() || null,
       status: body.status || 'active',
       isPrimary: Boolean(body.isPrimary),
-      assignedManager: body.assignedManager?.trim() || null
+      assignedManager: body.assignedManager?.trim() || null,
+      chipsJson: body.chipsJson || (Array.isArray(body.chips) ? JSON.stringify(body.chips) : null)
     });
+
+    // Auto-create dedicated QR code for this specific branch outlet
+    try {
+      const qrId = `qr_${locId}`;
+      const qrCodeValue = `qr_${slug}`;
+      const now = Math.floor(Date.now() / 1000);
+      await db.insert(qrCodes).values({
+        id: qrId,
+        businessId: businessId,
+        branchId: locId,
+        code: qrCodeValue,
+        label: `${body.name.trim()} Standee QR`,
+        destinationUrl: `/r/${slug}`,
+        styleJson: JSON.stringify({ dots: 'rounded', color: '#2563EB' }),
+        isActive: 1,
+        createdAt: now,
+        updatedAt: now
+      }).onConflictDoNothing();
+    } catch (qrErr) {
+      console.warn('Branch QR auto-creation notice:', qrErr);
+    }
 
     return c.json({ success: true, location: created }, 201);
   } catch (err: any) {
@@ -426,6 +451,47 @@ businessRoutes.post('/:id/locations/:locId/set-primary', async (c) => {
     await db.update(locations).set({ isPrimary: true }).where(and(eq(locations.businessId, businessId), eq(locations.id, locId)));
 
     return c.json({ success: true, message: 'Primary branch location updated successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// Dedicated fast endpoint to save custom review keywords / chips for a specific branch
+businessRoutes.post('/:id/locations/:locId/keywords', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const locId = c.req.param('locId');
+  const body = await c.req.json();
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  let chipsList: string[] = [];
+  if (Array.isArray(body.chips)) {
+    chipsList = body.chips;
+  } else if (typeof body.chipsJson === 'string') {
+    try {
+      chipsList = JSON.parse(body.chipsJson);
+    } catch {}
+  } else if (Array.isArray(body.keywords)) {
+    chipsList = body.keywords;
+  }
+
+  const chipsJson = JSON.stringify(chipsList);
+
+  try {
+    const updated = await scoped.updateLocation(businessId, locId, {
+      chipsJson
+    });
+
+    if (c.env.KV) {
+      try {
+        if (updated?.slug) await c.env.KV.delete(`qr:${updated.slug}`);
+      } catch (kvErr) {
+        console.warn('KV invalidate error:', kvErr);
+      }
+    }
+
+    return c.json({ success: true, location: updated, chips: chipsList });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }

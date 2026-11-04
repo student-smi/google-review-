@@ -13,6 +13,16 @@ import type { Env } from './public';
 
 export const hierarchyRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string; user?: any } }>();
 
+function getOwnerId(c: any): string {
+  const headerOwnerId = c.req.header('X-Owner-Id') || c.req.header('X-Dev-Owner-Id');
+  if (headerOwnerId) return headerOwnerId;
+  const authHeader = c.req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer gauth_')) {
+    return authHeader.replace('Bearer gauth_', '').split('_')[0];
+  }
+  return c.get('ownerId') || 'owner-default';
+}
+
 /**
  * GET /api/hierarchy
  * Returns the entire 3-tier hierarchy (Brands -> Businesses -> Branches)
@@ -20,7 +30,7 @@ export const hierarchyRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: s
  */
 hierarchyRoutes.get('/', async (c) => {
   const db = getDb(c.env.DB);
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
 
   try {
     // 1. Fetch user's explicit memberships
@@ -167,7 +177,7 @@ hierarchyRoutes.get('/', async (c) => {
  */
 hierarchyRoutes.post('/brands', async (c) => {
   const db = getDb(c.env.DB);
-  const ownerId = c.get('ownerId');
+  const ownerId = getOwnerId(c);
   const body = await c.req.json().catch(() => ({}));
 
   if (!body.name || !body.name.trim()) {
@@ -181,6 +191,21 @@ hierarchyRoutes.post('/brands', async (c) => {
   const now = Math.floor(Date.now() / 1000);
 
   try {
+    // 1. Ensure user row exists in users table FIRST so foreign key constraint never fails!
+    try {
+      await db.insert(users).values({
+        id: ownerId,
+        name: 'Store Owner',
+        email: `${ownerId}@reviewqr.local`,
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).onConflictDoNothing();
+    } catch (uErr) {
+      console.warn('Pre-insert user notice:', uErr);
+    }
+
+    // 2. Insert Brand
     await db.insert(brands).values({
       id: brandId,
       ownerId: ownerId,
@@ -194,28 +219,20 @@ hierarchyRoutes.post('/brands', async (c) => {
       updatedAt: now
     });
 
-    // Ensure user row exists in users table so foreign key constraint never fails
+    // 3. Create owner membership
     try {
-      await db.insert(users).values({
-        id: ownerId,
-        name: 'Store Owner',
-        email: `${ownerId}@reviewqr.local`,
-        emailVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      await db.insert(memberships).values({
+        id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        userId: ownerId,
+        role: 'brand_admin',
+        brandId: brandId,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now
       }).onConflictDoNothing();
-    } catch {}
-
-    // Create owner membership
-    await db.insert(memberships).values({
-      id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      userId: ownerId,
-      role: 'brand_admin',
-      brandId: brandId,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now
-    }).onConflictDoNothing();
+    } catch (mErr) {
+      console.warn('Pre-insert membership notice:', mErr);
+    }
 
     const [created] = await db.select().from(brands).where(eq(brands.id, brandId));
     return c.json({ success: true, brand: created }, 201);

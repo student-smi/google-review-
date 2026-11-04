@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 interface RealQrItem {
   id: string;
@@ -38,6 +39,7 @@ interface RealQrItem {
 
 export function OverviewPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
+  const { currentLevel, activeBranch } = useHierarchy();
   const navigate = useNavigate();
 
   const [qrList, setQrList] = useState<RealQrItem[]>([]);
@@ -188,6 +190,45 @@ export function OverviewPage() {
             <Sparkles className="h-3.5 w-3.5 text-pink-400" />
             <span>AI Reply Copilot</span>
           </NavLink>
+        </div>
+      </div>
+
+      {/* Prominent Active Outlet Banner */}
+      <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-blue-500 text-white shadow-xs">
+              {currentLevel === 'branch' && activeBranch ? (activeBranch.isPrimary ? '👑 MAIN BRANCH (HQ)' : '🏪 BRANCH OUTLET') : '🏢 ACTIVE BUSINESS'}
+            </span>
+            {(activeBranch?.city || activeBusiness?.city) && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-slate-300 border border-white/10">
+                📍 {activeBranch?.city || activeBusiness?.city}
+              </span>
+            )}
+          </div>
+
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+            {currentLevel === 'branch' && activeBranch ? activeBranch.name : (activeBusiness?.name || 'My Store')}
+          </h2>
+
+          <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+            <span>{activeBranch?.address || activeBusiness?.address || 'Verified Google Maps Location'}</span>
+            {activeBranch?.googlePlaceId && (
+              <span className="font-mono text-[10px] text-slate-500">Place ID: {activeBranch.googlePlaceId.slice(0, 16)}...</span>
+            )}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={`/r/${activeBranch?.slug || activeBusiness?.slug || 'demo'}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer no-underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            <span>Open Branch Funnel</span>
+          </a>
         </div>
       </div>
 

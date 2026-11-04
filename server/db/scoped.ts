@@ -195,6 +195,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       data: {
         id: string;
         name: string;
+        slug?: string;
         address?: string;
         city?: string;
         phone?: string;
@@ -203,6 +204,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         status?: string;
         isPrimary?: boolean;
         assignedManager?: string;
+        chipsJson?: string | null;
       }
     ) {
       const business = await this.getBusiness(businessId);
@@ -239,6 +241,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         status: string;
         isPrimary: boolean;
         assignedManager: string;
+        chipsJson: string | null;
       }>
     ) {
       const business = await this.getBusiness(businessId);
@@ -261,6 +264,11 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       if (!business) {
         throw new ScopedAuthorizationError('Cannot delete location: Business unauthorized or not found');
       }
+
+      // Delete any associated QR codes first to avoid foreign key blocks
+      try {
+        await db.delete(qrCodes).where(eq(qrCodes.branchId, locationId));
+      } catch {}
 
       return db
         .delete(locations)

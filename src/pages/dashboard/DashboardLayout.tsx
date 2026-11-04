@@ -30,13 +30,16 @@ export interface LocationItem {
   id: string;
   businessId: string;
   name: string;
+  slug?: string | null;
   address?: string | null;
+  city?: string | null;
   phone?: string | null;
   googlePlaceId?: string | null;
   googleReviewUrl?: string | null;
   status?: 'active' | 'inactive' | 'connection_error';
   isPrimary?: boolean;
   assignedManager?: string | null;
+  chipsJson?: string | null;
   createdAt?: number;
 }
 

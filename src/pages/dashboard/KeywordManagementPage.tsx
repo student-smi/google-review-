@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,11 +19,14 @@ import {
   Layers,
   TrendingUp,
   HelpCircle,
-  RotateCcw
+  RotateCcw,
+  Crown,
+  Store
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
-import { useHierarchy } from '@/context/HierarchyContext';
+import { useHierarchy, type BranchItem } from '@/context/HierarchyContext';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_CHIPS: string[] = [];
 
@@ -32,9 +35,38 @@ export function KeywordManagementPage() {
     activeBusiness: BusinessItem | null;
     refreshBusinesses?: () => Promise<void>;
   }>();
-  const { currentLevel, activeBranch } = useHierarchy();
+  const { currentLevel, activeBranch, branches, refreshHierarchy } = useHierarchy();
+
+  // Filter branches for this business
+  const currentBranches = useMemo(() => {
+    return branches.filter((b: BranchItem) => b.businessId === activeBusiness?.id);
+  }, [branches, activeBusiness?.id]);
+
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(() => {
+    return activeBranch?.id || currentBranches.find((b: BranchItem) => b.isPrimary)?.id || currentBranches[0]?.id || '';
+  });
+
+  // Keep selected branch synced
+  useEffect(() => {
+    if (activeBranch?.id && currentBranches.some((b: BranchItem) => b.id === activeBranch.id)) {
+      setSelectedBranchId(activeBranch.id);
+    } else if (currentBranches.length > 0 && (!selectedBranchId || !currentBranches.some((b: BranchItem) => b.id === selectedBranchId))) {
+      const primary = currentBranches.find((b: BranchItem) => b.isPrimary) || currentBranches[0];
+      setSelectedBranchId(primary.id);
+    }
+  }, [activeBranch?.id, currentBranches]);
+
+  const selectedBranch = useMemo(() => {
+    return currentBranches.find((b: BranchItem) => b.id === selectedBranchId) || null;
+  }, [currentBranches, selectedBranchId]);
 
   const [chips, setChips] = useState<string[]>(() => {
+    if (selectedBranch?.chipsJson) {
+      try {
+        const parsed = JSON.parse(selectedBranch.chipsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
     if (activeBusiness?.chipsJson) {
       try {
         const parsed = JSON.parse(activeBusiness.chipsJson);
@@ -67,8 +99,18 @@ export function KeywordManagementPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [previewSelectedChip, setPreviewSelectedChip] = useState<number>(0);
 
-  // Sync when activeBusiness changes
+  // Sync when selected branch or activeBusiness changes
   useEffect(() => {
+    if (selectedBranch?.chipsJson) {
+      try {
+        const parsed = JSON.parse(selectedBranch.chipsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setChips(parsed);
+          return;
+        }
+      } catch {}
+    }
+
     if (activeBusiness) {
       setSelectedIndustry(getCleanCategory(activeBusiness.category));
       if (activeBusiness.chipsJson) {
@@ -82,7 +124,7 @@ export function KeywordManagementPage() {
       }
       setChips([]);
     }
-  }, [activeBusiness?.id, activeBusiness?.chipsJson, activeBusiness?.category]);
+  }, [selectedBranchId, selectedBranch?.chipsJson, activeBusiness?.id, activeBusiness?.chipsJson, activeBusiness?.category]);
 
   const handleAddChip = (text?: string) => {
     const chipToAdd = (text || newChipInput).trim();
@@ -175,6 +217,15 @@ export function KeywordManagementPage() {
     setSaveSuccess(false);
 
     try {
+      // 1. If branch selected, save directly to that branch location
+      if (selectedBranch?.id) {
+        await apiFetch(`/api/businesses/${activeBusiness.id}/locations/${selectedBranch.id}/keywords`, {
+          method: 'POST',
+          body: JSON.stringify({ chips })
+        });
+      }
+
+      // 2. Also save to business as parent fallback
       const catToSave = (selectedIndustry || '').trim();
       await apiFetch(`/api/businesses/${activeBusiness.id}`, {
         method: 'PATCH',
@@ -185,6 +236,7 @@ export function KeywordManagementPage() {
       });
 
       refreshBusinesses?.();
+      refreshHierarchy();
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err) {
@@ -212,29 +264,25 @@ export function KeywordManagementPage() {
             Customize the service & product keywords customers tap when they scan your standee. The AI incorporates these into authentic Google reviews.
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs font-semibold text-slate-500">Target Entity:</span>
+            <span className="text-xs font-semibold text-slate-500">Target Outlet:</span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
               <Layers className="h-3 w-3 text-blue-600" />
-              {currentLevel === 'branch' && activeBranch
-                ? `${activeBranch.name} (Branch)`
-                : activeBusiness?.name || 'Active Business'}
+              {selectedBranch ? `${selectedBranch.name} (${selectedBranch.isPrimary ? 'HQ' : 'Branch'})` : activeBusiness?.name || 'Active Business'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
-          {activeBusiness?.slug && (
-            <a href={`/r/${activeBusiness.slug}`} target="_blank" rel="noopener noreferrer">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs gap-1.5 shadow-xs cursor-pointer"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span>Test Live QR Flow</span>
-              </Button>
-            </a>
-          )}
+          <a href={`/r/${selectedBranch?.slug || activeBusiness?.slug || 'demo'}`} target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs gap-1.5 shadow-xs cursor-pointer"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Test Branch QR Flow</span>
+            </Button>
+          </a>
 
           <Button
             onClick={handleSaveKeywords}
@@ -260,6 +308,67 @@ export function KeywordManagementPage() {
           </Button>
         </div>
       </div>
+
+      {/* Branch Outlet Specificity Card */}
+      {currentBranches.length > 0 && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-purple-50/40 border border-blue-200/80 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+              <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                Select Branch Outlet for Dedicated Keywords
+              </span>
+            </div>
+            <span className="text-[11px] font-medium text-slate-500">
+              Each branch has separate keywords (e.g. Ahmedabad local SEO vs Vadodara local SEO)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {currentBranches.map((b: BranchItem) => {
+              const isSelected = b.id === selectedBranchId;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setSelectedBranchId(b.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-2xs',
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-300'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                  )}
+                >
+                  {b.isPrimary ? (
+                    <Crown className={cn('h-3.5 w-3.5', isSelected ? 'text-amber-300' : 'text-amber-500')} />
+                  ) : (
+                    <Store className={cn('h-3.5 w-3.5', isSelected ? 'text-white' : 'text-blue-500')} />
+                  )}
+                  <span>{b.name}</span>
+                  {b.city && <span className={cn('text-[10px] font-normal opacity-80', isSelected ? 'text-blue-100' : 'text-slate-400')}>({b.city})</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedBranch && (
+            <div className="flex items-center justify-between pt-1 border-t border-blue-100 text-[11px] text-slate-600">
+              <span>
+                Active Outlet: <strong>{selectedBranch.name}</strong> {selectedBranch.address ? `• ${selectedBranch.address}` : ''}
+              </span>
+              <a
+                href={`/r/${selectedBranch.slug || activeBusiness?.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-blue-600 hover:underline flex items-center gap-1"
+              >
+                <span>Branch Live Standee Preview</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Save Notification Banner */}
       {saveSuccess && (

@@ -117,6 +117,7 @@ export const locations = sqliteTable('locations', {
   assignedManagerId: text('assigned_manager_id').references(() => users.id, { onDelete: 'set null' }),
   category: text('category'),
   brandColor: text('brand_color'),
+  chipsJson: text('chips_json'), // Branch-specific local keywords / chips
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at')
 }, (t) => [
