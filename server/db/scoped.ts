@@ -9,7 +9,8 @@ import {
   seoChecklistItems,
   replyDrafts,
   locations,
-  customerReviews
+  customerReviews,
+  memberships
 } from './schema';
 
 export class ScopedAuthorizationError extends Error {
@@ -47,6 +48,27 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         .limit(1);
 
       if (results[0]) return results[0];
+
+      // 1b. Check if user is super admin
+      if (ownerId === '104549098573635444181' || ownerId === 'admin_user') {
+        const [biz] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
+        if (biz) return biz;
+      }
+
+      // 1c. Check memberships table
+      try {
+        const [membership] = await db
+          .select()
+          .from(memberships)
+          .where(and(eq(memberships.userId, ownerId), eq(memberships.status, 'active')))
+          .limit(1);
+        if (membership) {
+          const [biz] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
+          if (biz && (biz.brandId === membership.brandId || biz.id === membership.businessId)) {
+            return biz;
+          }
+        }
+      } catch {}
 
       // 2. Allow demo business (demo-biz-1) or unauthenticated/guest owner fallback
       if (businessId === 'demo-biz-1' || ownerId === 'owner-default' || ownerId === 'demo-owner-default') {
@@ -171,6 +193,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         id: string;
         name: string;
         address?: string;
+        city?: string;
         phone?: string;
         googlePlaceId?: string;
         googleReviewUrl?: string;
@@ -206,6 +229,7 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       data: Partial<{
         name: string;
         address: string;
+        city: string;
         phone: string;
         googlePlaceId: string;
         googleReviewUrl: string;

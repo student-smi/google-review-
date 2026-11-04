@@ -169,7 +169,8 @@ hierarchyRoutes.post('/brands', async (c) => {
   }
 
   const brandName = body.name.trim();
-  const slug = (body.slug || brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-')).replace(/^-|-$/g, '');
+  const rawSlug = (body.slug || brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-')).replace(/^-|-$/g, '') || 'brand';
+  const slug = `${rawSlug}-${Math.random().toString(36).substring(2, 6)}`;
   const brandId = `brand_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = Math.floor(Date.now() / 1000);
 
@@ -187,6 +188,18 @@ hierarchyRoutes.post('/brands', async (c) => {
       updatedAt: now
     });
 
+    // Ensure user row exists in users table so foreign key constraint never fails
+    try {
+      await db.insert(users).values({
+        id: ownerId,
+        name: 'Store Owner',
+        email: `${ownerId}@reviewqr.local`,
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).onConflictDoNothing();
+    } catch {}
+
     // Create owner membership
     await db.insert(memberships).values({
       id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -196,7 +209,7 @@ hierarchyRoutes.post('/brands', async (c) => {
       status: 'active',
       createdAt: now,
       updatedAt: now
-    });
+    }).onConflictDoNothing();
 
     const [created] = await db.select().from(brands).where(eq(brands.id, brandId));
     return c.json({ success: true, brand: created }, 201);

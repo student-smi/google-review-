@@ -110,7 +110,7 @@ interface HierarchyContextValue {
       googlePlaceId?: string;
       googleReviewUrl?: string;
     }
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const HierarchyContext = createContext<HierarchyContextValue | null>(null);
@@ -284,14 +284,16 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
       googlePlaceId?: string;
       googleReviewUrl?: string;
     }
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
-      if (!activeBusiness?.id) return false;
+      if (!activeBusiness?.id) {
+        return { success: false, error: 'No active store selected to upgrade.' };
+      }
 
-      // 1. Create Brand if not present
-      let targetBrandId = activeBrand?.id;
+      // 1. Create or use existing Brand
+      let targetBrandId = activeBusiness.brandId || activeBrand?.id;
       if (!targetBrandId || brands.length === 0) {
-        const brandRes = await apiFetch<{ success: boolean; brand: any }>('/api/hierarchy/brands', {
+        const brandRes = await apiFetch<{ success: boolean; brand?: any; error?: string }>('/api/hierarchy/brands', {
           method: 'POST',
           body: JSON.stringify({ name: brandName.trim() || activeBusiness.name })
         });
@@ -305,10 +307,27 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
         await apiFetch(`/api/businesses/${activeBusiness.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ brandId: targetBrandId, businessType: 'company_owned' })
-        });
+        }).catch((err) => console.warn('Brand link notice:', err));
       }
 
-      // 3. Add 2nd branch location
+      // 3. Ensure Primary (Main Branch) location exists for activeBusiness
+      const existingLocs = branches.filter((b) => b.businessId === activeBusiness.id);
+      if (existingLocs.length === 0) {
+        await apiFetch(`/api/businesses/${activeBusiness.id}/locations`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: `${activeBusiness.name} (Main Branch)`,
+            address: activeBusiness.address || null,
+            city: activeBusiness.city || 'India',
+            phone: activeBusiness.phone || null,
+            googlePlaceId: activeBusiness.googlePlaceId || null,
+            googleReviewUrl: activeBusiness.googleReviewUrl || null,
+            isPrimary: true
+          })
+        }).catch((locErr) => console.warn('Auto primary branch note:', locErr));
+      }
+
+      // 4. Add 2nd branch location
       await apiFetch(`/api/businesses/${activeBusiness.id}/locations`, {
         method: 'POST',
         body: JSON.stringify({
@@ -322,13 +341,13 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
         })
       });
 
-      // 4. Update mode to multi and refresh
+      // 5. Update mode to multi and refresh hierarchy
       setEntityMode('multi');
       await refreshHierarchy();
-      return true;
-    } catch (err) {
+      return { success: true };
+    } catch (err: any) {
       console.error('Failed to upgrade to multi-branch:', err);
-      return false;
+      return { success: false, error: err?.message || 'Failed to upgrade. Please check details and try again.' };
     }
   };
 

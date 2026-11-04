@@ -335,6 +335,7 @@ businessRoutes.post('/:id/locations', async (c) => {
       id: locId,
       name: body.name.trim(),
       address: body.address?.trim() || null,
+      city: body.city?.trim() || null,
       phone: body.phone?.trim() || null,
       googlePlaceId: body.googlePlaceId?.trim() || null,
       googleReviewUrl: body.googleReviewUrl?.trim() || null,
@@ -345,6 +346,7 @@ businessRoutes.post('/:id/locations', async (c) => {
 
     return c.json({ success: true, location: created }, 201);
   } catch (err: any) {
+    console.error('Failed to create location:', err);
     return c.json({ error: err.message }, 403);
   }
 });

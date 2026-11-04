@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import {
@@ -35,6 +35,15 @@ export function UpgradeMultiBranchModal({ isOpen, onClose }: UpgradeMultiBranchM
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      if (activeBusiness?.name && (!brandName || brandName === 'My Brand')) {
+        setBrandName(activeBusiness.name);
+      }
+      setError(null);
+    }
+  }, [isOpen, activeBusiness]);
+
   if (!isOpen) return null;
 
   const handlePlaceSelect = (place: GooglePlaceDetails) => {
@@ -62,7 +71,7 @@ export function UpgradeMultiBranchModal({ isOpen, onClose }: UpgradeMultiBranchM
 
     setIsSubmitting(true);
     try {
-      const ok = await upgradeToMultiBranch(brandName.trim() || activeBusiness?.name || 'My Brand', {
+      const res = await upgradeToMultiBranch(brandName.trim() || activeBusiness?.name || 'My Brand', {
         name: branchName.trim(),
         address: address.trim() || verifiedPlace?.address,
         city: city.trim() || 'India',
@@ -71,14 +80,14 @@ export function UpgradeMultiBranchModal({ isOpen, onClose }: UpgradeMultiBranchM
         googleReviewUrl: googleReviewUrl.trim() || undefined
       });
 
-      if (ok) {
+      if (res.success) {
         setSuccess(true);
         setTimeout(() => {
           onClose();
           setSuccess(false);
         }, 1800);
       } else {
-        setError('Failed to upgrade. Please check details and try again.');
+        setError(res.error || 'Failed to upgrade. Please check details and try again.');
       }
     } catch (err: any) {
       setError(err?.message || 'Upgrade failed. Please try again.');
