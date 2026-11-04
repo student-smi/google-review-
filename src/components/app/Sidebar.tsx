@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
-  const { currentLevel, activeBrand, activeBusiness, activeBranch } = useHierarchy();
+  const { currentLevel, activeBrand, activeBusiness, activeBranch, isSingleMode } = useHierarchy();
 
   const handleSignOut = async () => {
     onCloseMobile?.();
@@ -48,6 +48,17 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
   const handleNavClick = () => {
     onCloseMobile?.();
   };
+
+  // 0. Single Store Nav Items (Clean, simple, unified for a single shop/clinic/salon)
+  const singleNavItems = [
+    { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
+    { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
+    { label: 'AI Reply Copilot', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Review QR & Standees', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
+    { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
+    { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
+    { label: 'Store Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+  ];
 
   // 1. Brand Level Items (Image 2)
   const brandNavItems = [
@@ -92,34 +103,41 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branch Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
-  const currentNavItems =
-    currentLevel === 'brand'
-      ? brandNavItems
-      : currentLevel === 'business'
-      ? businessNavItems
-      : branchNavItems;
+  const currentNavItems = isSingleMode
+    ? singleNavItems
+    : currentLevel === 'brand'
+    ? brandNavItems
+    : currentLevel === 'business'
+    ? businessNavItems
+    : branchNavItems;
 
-  const currentContextTitle =
-    currentLevel === 'brand'
-      ? {
-          title: activeBrand?.name || 'Brand Group',
-          subtitle: 'Consolidated management',
-          icon: Network,
-          badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200'
-        }
-      : currentLevel === 'business'
-      ? {
-          title: activeBusiness?.name || 'Business operations',
-          subtitle: activeBusiness?.businessType === 'franchise' ? 'Franchise entity' : 'Company-owned operations',
-          icon: Building2,
-          badgeColor: 'bg-blue-50 text-blue-700 border-blue-200'
-        }
-      : {
-          title: activeBranch?.name || activeBusiness?.name || 'Branch operations',
-          subtitle: 'Location-specific operations',
-          icon: Store,
-          badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        };
+  const currentContextTitle = isSingleMode
+    ? {
+        title: activeBusiness?.name || 'My Store',
+        subtitle: activeBusiness?.city ? `${activeBusiness.city} • Single Store` : 'Single Store Operations',
+        icon: Store,
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      }
+    : currentLevel === 'brand'
+    ? {
+        title: activeBrand?.name || 'Brand Group',
+        subtitle: 'Consolidated management',
+        icon: Network,
+        badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      }
+    : currentLevel === 'business'
+    ? {
+        title: activeBusiness?.name || 'Business operations',
+        subtitle: activeBusiness?.businessType === 'franchise' ? 'Franchise entity' : 'Company-owned operations',
+        icon: Building2,
+        badgeColor: 'bg-blue-50 text-blue-700 border-blue-200'
+      }
+    : {
+        title: activeBranch?.name || activeBusiness?.name || 'Branch operations',
+        subtitle: 'Location-specific operations',
+        icon: Store,
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      };
 
   return (
     <aside
@@ -142,7 +160,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
                 ReviewBoost <span className="text-[#2563EB] bg-blue-50 px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider border border-blue-200">AI</span>
               </span>
               <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
-                3-Tier Hierarchy
+                {isSingleMode ? 'Single Store' : '3-Tier Hierarchy'}
               </span>
             </div>
           )}
@@ -196,7 +214,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
               collapsed && !mobileOpen && 'text-center'
             )}
           >
-            {collapsed && !mobileOpen ? '•' : `${currentLevel.toUpperCase()} NAVIGATION`}
+            {collapsed && !mobileOpen ? '•' : isSingleMode ? 'STORE MENU' : `${currentLevel.toUpperCase()} NAVIGATION`}
           </div>
 
           {currentNavItems.map((item) => (

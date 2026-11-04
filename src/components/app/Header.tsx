@@ -23,6 +23,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { HeaderQrModal } from './HeaderQrModal';
 import { HeaderStandeeModal } from './HeaderStandeeModal';
+import { UpgradeMultiBranchModal } from './UpgradeMultiBranchModal';
 import {
   fetchGmbStatus,
   connectGmb,
@@ -69,8 +70,11 @@ export function Header({
     branches,
     selectBrand,
     selectBusiness,
-    selectBranch
+    selectBranch,
+    isSingleMode
   } = useHierarchy();
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [gmbMenuOpen, setGmbMenuOpen] = useState(false);
@@ -197,45 +201,70 @@ export function Header({
             </button>
           )}
 
-          {/* 3-Level Segmented Switcher (Image 2, 3, 4) */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/90 shadow-2xs shrink-0">
-            <button
-              type="button"
-              onClick={() => setLevel('brand')}
-              className={cn(
-                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
-                currentLevel === 'brand'
-                  ? 'bg-white text-blue-600 shadow-2xs font-black'
-                  : 'text-slate-500 hover:text-slate-800'
-              )}
-            >
-              Brand
-            </button>
-            <button
-              type="button"
-              onClick={() => setLevel('business')}
-              className={cn(
-                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
-                currentLevel === 'business'
-                  ? 'bg-white text-blue-600 shadow-2xs font-black'
-                  : 'text-slate-500 hover:text-slate-800'
-              )}
-            >
-              Business
-            </button>
-            <button
-              type="button"
-              onClick={() => setLevel('branch')}
-              className={cn(
-                'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
-                currentLevel === 'branch'
-                  ? 'bg-white text-blue-600 shadow-2xs font-black'
-                  : 'text-slate-500 hover:text-slate-800'
-              )}
-            >
-              Branch
-            </button>
-          </div>
+          {/* Single Store vs Multi-Branch Header Navigation */}
+          {isSingleMode ? (
+            /* Single Store Header: Clean Store Name & 1-Click Expansion */
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs">
+                <Store className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="text-xs font-black text-slate-800 truncate max-w-[120px] xs:max-w-[170px] sm:max-w-[220px]">
+                  {activeBusiness?.name || 'My Store'}
+                </span>
+                <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Single Store
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(true)}
+                className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors cursor-pointer"
+                title="Opening a second store? Upgrade to multi-branch."
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add 2nd Branch</span>
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* 3-Level Segmented Switcher (Image 2, 3, 4) */}
+              <div className="flex items-center rounded-xl bg-slate-100 p-0.5 border border-slate-200/90 shadow-2xs shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setLevel('brand')}
+                  className={cn(
+                    'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                    currentLevel === 'brand'
+                      ? 'bg-white text-blue-600 shadow-2xs font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  Brand
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLevel('business')}
+                  className={cn(
+                    'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                    currentLevel === 'business'
+                      ? 'bg-white text-blue-600 shadow-2xs font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  Business
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLevel('branch')}
+                  className={cn(
+                    'px-2 sm:px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer',
+                    currentLevel === 'branch'
+                      ? 'bg-white text-blue-600 shadow-2xs font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  Branch
+                </button>
+              </div>
 
           {/* Context Entity Switcher Dropdown */}
           <div className="relative">
@@ -356,7 +385,9 @@ export function Header({
               </>
             )}
           </div>
-        </div>
+        </>
+      )}
+    </div>
 
         {/* Right: Quick Action Controls */}
         <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
@@ -563,6 +594,12 @@ export function Header({
         isOpen={standeeModalOpen}
         onClose={() => setStandeeModalOpen(false)}
         business={activeBusiness}
+      />
+
+      {/* Upgrade to Multi-Branch Expansion Modal */}
+      <UpgradeMultiBranchModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
       />
     </>
   );

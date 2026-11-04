@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { apiFetch } from '@/lib/api';
 
 export type HierarchyLevel = 'brand' | 'business' | 'branch';
+export type EntityMode = 'single' | 'multi';
 
 export interface BrandItem {
   id: string;
@@ -78,6 +79,9 @@ export interface MembershipItem {
 interface HierarchyContextValue {
   currentLevel: HierarchyLevel;
   setLevel: (level: HierarchyLevel) => void;
+  entityMode: EntityMode;
+  isSingleMode: boolean;
+  setEntityMode: (mode: EntityMode) => void;
   activeBrand: BrandItem | null;
   activeBusiness: BusinessItem | null;
   activeBranch: BranchItem | null;
@@ -96,11 +100,23 @@ interface HierarchyContextValue {
   selectBusiness: (id: string) => void;
   selectBranch: (id: string) => void;
   refreshHierarchy: () => Promise<void>;
+  upgradeToMultiBranch: (
+    brandName: string,
+    secondBranch: {
+      name: string;
+      address?: string;
+      city?: string;
+      phone?: string;
+      googlePlaceId?: string;
+      googleReviewUrl?: string;
+    }
+  ) => Promise<boolean>;
 }
 
 const HierarchyContext = createContext<HierarchyContextValue | null>(null);
 
 const STORAGE_LEVEL_KEY = 'reviewqr_hierarchy_level';
+const STORAGE_ENTITY_MODE = 'reviewqr_entity_mode';
 const STORAGE_BRAND_ID = 'reviewqr_active_brand_id';
 const STORAGE_BIZ_ID = 'reviewqr_active_business_id';
 const STORAGE_BRANCH_ID = 'reviewqr_active_branch_id';
@@ -110,6 +126,14 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return 'branch';
     const saved = localStorage.getItem(STORAGE_LEVEL_KEY);
     return (saved === 'brand' || saved === 'business' || saved === 'branch') ? saved : 'branch';
+  });
+
+  const [entityMode, setEntityModeState] = useState<EntityMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_ENTITY_MODE) as EntityMode;
+      if (saved === 'single' || saved === 'multi') return saved;
+    }
+    return 'single';
   });
 
   const [brands, setBrands] = useState<BrandItem[]>([]);
@@ -123,6 +147,13 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
     hasBranchAccess: true
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  const setEntityMode = (mode: EntityMode) => {
+    setEntityModeState(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_ENTITY_MODE, mode);
+    }
+  };
 
   const [activeBrandId, setActiveBrandId] = useState<string>(() => {
     return (typeof window !== 'undefined' && localStorage.getItem(STORAGE_BRAND_ID)) || '';
@@ -240,11 +271,75 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
   const activeBusiness = businesses.find((b) => b.id === activeBusinessId) || businesses[0] || null;
   const activeBranch = branches.find((b) => b.id === activeBranchId) || branches[0] || null;
 
+  // Single Mode is active if entityMode is 'single' and user does not have multiple branches/brands
+  const isSingleMode = entityMode === 'single' && branches.length <= 1 && brands.length <= 1;
+
+  const upgradeToMultiBranch = async (
+    brandName: string,
+    secondBranch: {
+      name: string;
+      address?: string;
+      city?: string;
+      phone?: string;
+      googlePlaceId?: string;
+      googleReviewUrl?: string;
+    }
+  ): Promise<boolean> => {
+    try {
+      if (!activeBusiness?.id) return false;
+
+      // 1. Create Brand if not present
+      let targetBrandId = activeBrand?.id;
+      if (!targetBrandId || brands.length === 0) {
+        const brandRes = await apiFetch<{ success: boolean; brand: any }>('/api/hierarchy/brands', {
+          method: 'POST',
+          body: JSON.stringify({ name: brandName.trim() || activeBusiness.name })
+        });
+        if (brandRes?.brand?.id) {
+          targetBrandId = brandRes.brand.id;
+        }
+      }
+
+      // 2. Link activeBusiness to brand
+      if (targetBrandId) {
+        await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ brandId: targetBrandId, businessType: 'company_owned' })
+        });
+      }
+
+      // 3. Add 2nd branch location
+      await apiFetch(`/api/businesses/${activeBusiness.id}/locations`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: secondBranch.name.trim(),
+          address: secondBranch.address?.trim() || null,
+          city: secondBranch.city?.trim() || activeBusiness.city || 'India',
+          phone: secondBranch.phone?.trim() || null,
+          googlePlaceId: secondBranch.googlePlaceId?.trim() || null,
+          googleReviewUrl: secondBranch.googleReviewUrl?.trim() || activeBusiness.googleReviewUrl,
+          isPrimary: false
+        })
+      });
+
+      // 4. Update mode to multi and refresh
+      setEntityMode('multi');
+      await refreshHierarchy();
+      return true;
+    } catch (err) {
+      console.error('Failed to upgrade to multi-branch:', err);
+      return false;
+    }
+  };
+
   return (
     <HierarchyContext.Provider
       value={{
         currentLevel,
         setLevel,
+        entityMode,
+        isSingleMode,
+        setEntityMode,
         activeBrand,
         activeBusiness,
         activeBranch,
@@ -257,7 +352,8 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
         selectBrand,
         selectBusiness,
         selectBranch,
-        refreshHierarchy
+        refreshHierarchy,
+        upgradeToMultiBranch
       }}
     >
       {children}

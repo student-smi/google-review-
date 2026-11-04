@@ -29,7 +29,8 @@ import {
   Check,
   ShieldCheck,
   Globe2,
-  Layers
+  Layers,
+  MapPin
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
@@ -38,6 +39,15 @@ import { cn } from '@/lib/utils';
 
 interface OnboardingPageProps {
   onComplete?: (business: any) => void;
+}
+
+export interface SubBranchEntry {
+  name: string;
+  city?: string;
+  address?: string;
+  phone?: string;
+  googlePlaceId?: string;
+  googleReviewUrl?: string;
 }
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
@@ -50,7 +60,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('restaurant');
 
-  // Step 2: Google Maps & Branch Details
+  // Step 2: Google Maps & Main Branch Details
   const [branchName, setBranchName] = useState('Main Branch');
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
@@ -59,7 +69,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [phone, setPhone] = useState('');
   const [urlTested, setUrlTested] = useState(false);
 
-  // Step 3: AI Languages & Brand Voice
+  // Step 3 (Multi-Branch only): Sub-Branches list
+  const [subBranches, setSubBranches] = useState<SubBranchEntry[]>([]);
+  const [subBranchInputName, setSubBranchInputName] = useState('');
+  const [subBranchInputCity, setSubBranchInputCity] = useState('');
+  const [subBranchInputAddress, setSubBranchInputAddress] = useState('');
+  const [subBranchInputPlaceId, setSubBranchInputPlaceId] = useState<string | null>(null);
+  const [subBranchInputReviewUrl, setSubBranchInputReviewUrl] = useState('');
+
+  // Step 3 (Single Store) / Step 4 (Multi): AI Languages & Brand Voice
   const [brandVoice, setBrandVoice] = useState('warm_grateful');
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['en', 'hi', 'gu', 'hinglish']);
   const [chips, setChips] = useState<string[]>([
@@ -140,33 +158,56 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     );
   };
 
-  const handleAddChip = (e: React.KeyboardEvent | React.MouseEvent) => {
-    if ('key' in e && e.key !== 'Enter') return;
-    e.preventDefault();
-    if (newChipInput.trim() && !chips.includes(newChipInput.trim())) {
-      setChips([...chips, newChipInput.trim()]);
-      setNewChipInput('');
-    }
+  const handleAddChip = (e?: any) => {
+    if (e && e.key && e.key !== 'Enter') return;
+    const trimmed = newChipInput.trim();
+    if (!trimmed || chips.includes(trimmed)) return;
+    setChips((prev) => [...prev, trimmed]);
+    setNewChipInput('');
   };
 
   const handleRemoveChip = (chipToRemove: string) => {
-    setChips(chips.filter((c) => c !== chipToRemove));
+    setChips((prev) => prev.filter((c) => c !== chipToRemove));
+  };
+
+  const handleAddSubBranch = () => {
+    if (!subBranchInputName.trim()) return;
+    setSubBranches((prev) => [
+      ...prev,
+      {
+        name: subBranchInputName.trim(),
+        city: subBranchInputCity.trim() || city || 'India',
+        address: subBranchInputAddress.trim() || undefined,
+        googlePlaceId: subBranchInputPlaceId || undefined,
+        googleReviewUrl: subBranchInputReviewUrl.trim() || undefined
+      }
+    ]);
+    setSubBranchInputName('');
+    setSubBranchInputCity('');
+    setSubBranchInputAddress('');
+    setSubBranchInputPlaceId(null);
+    setSubBranchInputReviewUrl('');
+  };
+
+  const handleRemoveSubBranch = (index: number) => {
+    setSubBranches((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDownloadStandee = async () => {
     if (!standeeRef.current) return;
     setIsDownloadingStandee(true);
     try {
-      const dataUrl = await toPng(standeeRef.current, { pixelRatio: 3, backgroundColor: '#ffffff' });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      const safe = (name || 'standee').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      a.download = `${safe}-acrylic-standee.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const dataUrl = await toPng(standeeRef.current, {
+        quality: 0.95,
+        pixelRatio: 3
+      });
+      const link = document.createElement('a');
+      link.download = `${slug}-acrylic-countertop-standee.png`;
+      link.href = dataUrl;
+      link.click();
     } catch (err) {
-      console.warn('Failed to export standee image:', err);
+      console.error('Standee download failed:', err);
+      alert('Could not export image. Please try again.');
     } finally {
       setIsDownloadingStandee(false);
     }
@@ -237,12 +278,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       };
     }
 
-    // 3. Register First Branch Outlet with Place ID
+    // 3. Register First Branch Outlet (Main Branch)
+    const mainBranchLabel =
+      branchName.trim() || (entityType === 'multi' ? `${finalBusinessName} (Main Branch)` : `${finalBusinessName}`);
+
     try {
       await apiFetch(`/api/businesses/${business.id}/locations`, {
         method: 'POST',
         body: JSON.stringify({
-          name: branchName.trim() || `${business.name} (Main Branch)`,
+          name: mainBranchLabel,
           address: verifiedPlace?.address || bizPayload.address || 'Main Location',
           city: bizPayload.city,
           phone: bizPayload.phone,
@@ -255,7 +299,31 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       console.warn('Initial branch creation note:', locErr);
     }
 
-    // 4. Create Standee QR Code
+    // 4. If Multi-Branch, register all sub-branches
+    if (entityType === 'multi' && subBranches.length > 0) {
+      for (let i = 0; i < subBranches.length; i++) {
+        const sub = subBranches[i];
+        if (!sub.name.trim()) continue;
+        try {
+          await apiFetch(`/api/businesses/${business.id}/locations`, {
+            method: 'POST',
+            body: JSON.stringify({
+              name: sub.name.trim(),
+              address: sub.address || 'Secondary Location',
+              city: sub.city || bizPayload.city,
+              phone: sub.phone,
+              googlePlaceId: sub.googlePlaceId || undefined,
+              googleReviewUrl: sub.googleReviewUrl || bizPayload.googleReviewUrl,
+              isPrimary: false
+            })
+          });
+        } catch (subErr) {
+          console.warn('Sub-branch creation note:', subErr);
+        }
+      }
+    }
+
+    // 5. Create Standee QR Code for Main Store
     try {
       await apiFetch(`/api/qr/business/${business.id}`, {
         method: 'POST',
@@ -274,7 +342,18 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       console.warn('Standee QR code creation note:', qrErr);
     }
 
-    // 5. Persist client session
+    // 6. Persist mode to localStorage
+    if (typeof window !== 'undefined') {
+      if (entityType === 'single') {
+        localStorage.setItem('reviewqr_entity_mode', 'single');
+        localStorage.setItem('reviewqr_hierarchy_level', 'branch');
+      } else {
+        localStorage.setItem('reviewqr_entity_mode', 'multi');
+        localStorage.setItem('reviewqr_hierarchy_level', 'brand');
+      }
+    }
+
+    // 7. Persist client session
     const existing = getStoredBusinesses();
     const updated = [business, ...existing.filter((b) => b.id !== business.id)];
     saveStoredBusinesses(updated);
@@ -297,16 +376,32 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
             {step === 1 && 'Entity Type & Organization'}
-            {step === 2 && 'Google Maps Search & Auto-Fill'}
-            {step === 3 && 'AI Review Copilot & Languages'}
+            {step === 2 &&
+              (entityType === 'multi'
+                ? 'Main Branch (Headquarter / Flagship)'
+                : 'Google Maps Search & Auto-Fill')}
+            {step === 3 &&
+              (entityType === 'multi'
+                ? 'Sub-Branches & Locations Setup'
+                : 'AI Review Copilot & Languages')}
             {step === 4 && 'Live Acrylic Standee Preview'}
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-            {step === 1 && 'Choose whether you are setting up a single store or a multi-branch enterprise brand.'}
-            {step === 2 && 'Search your store on Google Maps to automatically connect Place ID, rating, and address.'}
-            {step === 3 && 'Configure AI brand tone and customer review languages (English, Hindi, Gujarati).'}
-            {step === 4 && 'Preview your physical countertop acrylic standee and test scan with your phone.'}
+            {step === 1 &&
+              'Choose whether you are setting up a single store or a multi-branch enterprise brand.'}
+            {step === 2 &&
+              (entityType === 'multi'
+                ? 'Connect your primary flagship location where main operations originated.'
+                : 'Search your store on Google Maps to automatically connect Place ID, rating, and address.')}
+            {step === 3 &&
+              (entityType === 'multi'
+                ? 'Add your secondary branch outlets now, or skip and add anytime from the dashboard.'
+                : 'Configure AI brand tone and customer review languages (English, Hindi, Gujarati).')}
+            {step === 4 &&
+              (entityType === 'multi'
+                ? 'Preview your physical countertop standee styling applied across all branches.'
+                : 'Preview your physical countertop acrylic standee and test scan with your phone.')}
           </p>
         </div>
 
@@ -344,11 +439,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setEntityType('single')}
+                    onClick={() => {
+                      setEntityType('single');
+                      if (branchName === 'Main Branch / Head Office') setBranchName('Main Store');
+                    }}
                     className={cn(
                       'p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1',
                       entityType === 'single'
-                        ? 'border-blue-600 bg-blue-50/50 shadow-xs'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-xs ring-1 ring-blue-600'
                         : 'border-slate-200 hover:border-slate-300'
                     )}
                   >
@@ -357,16 +455,19 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                       {entityType === 'single' && <CheckCircle2 className="h-4 w-4 text-blue-600" />}
                     </div>
                     <p className="text-xs font-black text-slate-900 mt-1">Single Store</p>
-                    <p className="text-[10px] text-slate-500">Standalone shop, clinic or restaurant</p>
+                    <p className="text-[10px] text-slate-500">1 Standalone shop, clinic or restaurant (Simple clean view)</p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setEntityType('multi')}
+                    onClick={() => {
+                      setEntityType('multi');
+                      if (branchName === 'Main Store' || branchName === 'Main Branch') setBranchName('Main Branch / Head Office');
+                    }}
                     className={cn(
                       'p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-1',
                       entityType === 'multi'
-                        ? 'border-blue-600 bg-blue-50/50 shadow-xs'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-xs ring-1 ring-blue-600'
                         : 'border-slate-200 hover:border-slate-300'
                     )}
                   >
@@ -375,7 +476,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                       {entityType === 'multi' && <CheckCircle2 className="h-4 w-4 text-blue-600" />}
                     </div>
                     <p className="text-xs font-black text-slate-900 mt-1">Multi-Branch Brand</p>
-                    <p className="text-[10px] text-slate-500">Franchise or enterprise chain with multiple outlets</p>
+                    <p className="text-[10px] text-slate-500">Main Flagship Branch + Multiple Outlets / Franchises</p>
                   </button>
                 </div>
               </div>
@@ -387,21 +488,24 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   <Input
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
-                    placeholder="e.g. ABC Wellness Group"
+                    placeholder="e.g. Ramesh Sweets Group / ABC Wellness Chain"
                     className="rounded-xl border-slate-200 text-xs font-semibold"
                   />
+                  <p className="text-[10px] text-slate-400">
+                    This brand groups all your branches and franchise locations under one consolidated dashboard.
+                  </p>
                 </div>
               )}
 
               {/* Business Name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">
-                  {entityType === 'multi' ? 'Primary Business / Entity Name *' : 'Business Name *'}
+                  {entityType === 'multi' ? 'Primary Business / Operating Entity Name *' : 'Store / Business Name *'}
                 </Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. J.C. Panchal & Co."
+                  placeholder={entityType === 'multi' ? 'e.g. Ramesh Sweets Pvt. Ltd.' : 'e.g. Ramesh Sweet Mart'}
                   className="rounded-xl border-slate-200 text-xs font-semibold"
                 />
               </div>
@@ -440,7 +544,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 disabled={!name.trim() && (entityType === 'single' || !brandName.trim())}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs py-2.5 gap-2 cursor-pointer"
               >
-                <span>Continue to Google Maps Search</span>
+                <span>
+                  {entityType === 'multi'
+                    ? 'Continue to Main Branch Google Maps'
+                    : 'Continue to Google Maps Search'}
+                </span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </CardContent>
@@ -456,7 +564,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-slate-700">
-                    Search on Google Maps (Auto-fill Place ID & Rating)
+                    {entityType === 'multi'
+                      ? 'Search Main Branch on Google Maps (Auto-Detect Place ID)'
+                      : 'Search Store on Google Maps (Auto-Detect Place ID & Rating)'}
                   </Label>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     Live Place ID Link
@@ -479,7 +589,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                       }
                     }
                   }}
-                  placeholder="Search store name or locality on Google Maps..."
+                  placeholder={
+                    entityType === 'multi'
+                      ? 'Search your flagship store or headquarter on Google Maps...'
+                      : 'Search store name or locality on Google Maps...'
+                  }
                 />
               </div>
 
@@ -490,7 +604,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
                       <span className="text-xs font-black text-blue-950">
-                        Verified Google Business Profile
+                        {entityType === 'multi' ? 'Verified Main Branch Profile' : 'Verified Google Business Profile'}
                       </span>
                     </div>
                     {verifiedPlace.rating && (
@@ -506,11 +620,13 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
               {/* Branch / Outlet Name */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">Branch Outlet Name</Label>
+                <Label className="text-xs font-bold text-slate-700">
+                  {entityType === 'multi' ? 'Main Branch / Outlet Title *' : 'Outlet Label'}
+                </Label>
                 <Input
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
-                  placeholder="e.g. Navrangpura Branch / Head Office"
+                  placeholder={entityType === 'multi' ? 'e.g. Navrangpura Head Office' : 'e.g. Main Store'}
                   className="rounded-xl border-slate-200 text-xs font-semibold"
                 />
               </div>
@@ -564,7 +680,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   disabled={!googleReviewUrl.trim()}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs py-2.5 gap-2 cursor-pointer"
                 >
-                  <span>Continue to AI Copilot</span>
+                  <span>
+                    {entityType === 'multi'
+                      ? 'Continue to Sub-Branches Setup'
+                      : 'Continue to AI Copilot'}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -573,9 +693,145 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         )}
 
         {/* ────────────────────────────────────────────────────────── */}
-        {/* STEP 3: AI Review Copilot & Multilingual Preferences */}
+        {/* STEP 3 (Multi-Branch): Sub-Branches Setup */}
         {/* ────────────────────────────────────────────────────────── */}
-        {step === 3 && (
+        {step === 3 && entityType === 'multi' && (
+          <Card className="rounded-3xl border-slate-200/90 bg-white shadow-xl animate-in fade-in duration-150">
+            <CardContent className="p-6 space-y-5">
+              {/* Main Branch Summary Banner */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                    <Store className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-slate-900">{branchName || name}</span>
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase bg-blue-600 text-white">
+                        Main Branch
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">{verifiedPlace?.address || city || 'Headquarter Location'}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  Configured
+                </span>
+              </div>
+
+              {/* Add Secondary Sub-Branch Box */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-800">
+                    Add Sub-Branches / Secondary Outlets (Optional)
+                  </Label>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {subBranches.length} Added
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <Input
+                    value={subBranchInputName}
+                    onChange={(e) => setSubBranchInputName(e.target.value)}
+                    placeholder="Sub-Branch Name (e.g. Vastrapur Outlet, Nikol Branch)"
+                    className="rounded-xl border-slate-200 text-xs font-semibold bg-white"
+                  />
+
+                  <GooglePlacesAutocomplete
+                    placeholder="Search sub-branch on Google Maps..."
+                    onSelect={(place) => {
+                      if (!subBranchInputName) setSubBranchInputName(place.name);
+                      setSubBranchInputPlaceId(place.placeId);
+                      setSubBranchInputReviewUrl(place.googleReviewUrl);
+                      if (place.address) {
+                        setSubBranchInputAddress(place.address);
+                        const parts = place.address.split(',').map((p) => p.trim());
+                        if (parts.length >= 2) {
+                          setSubBranchInputCity(parts[parts.length - 2]);
+                        }
+                      }
+                    }}
+                  />
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddSubBranch}
+                      disabled={!subBranchInputName.trim()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add This Sub-Branch</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* List of Added Sub-Branches */}
+              {subBranches.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-700">Configured Sub-Branches</Label>
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                    {subBranches.map((sub, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Store className="h-4 w-4 text-blue-600 shrink-0" />
+                          <div className="truncate">
+                            <p className="text-xs font-bold text-slate-900 truncate">{sub.name}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{sub.address || sub.city}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubBranch(idx)}
+                          className="h-6 w-6 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep(2)}
+                  className="rounded-xl text-xs font-bold gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to Main Branch</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={() => setStep(4)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs py-2.5 gap-2 cursor-pointer"
+                >
+                  <span>
+                    {subBranches.length === 0
+                      ? 'Skip & Continue to Standee'
+                      : `Continue with ${subBranches.length} Sub-Branch${subBranches.length > 1 ? 'es' : ''}`}
+                  </span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ────────────────────────────────────────────────────────── */}
+        {/* STEP 3 (Single Store): AI Review Copilot & Languages */}
+        {/* ────────────────────────────────────────────────────────── */}
+        {step === 3 && entityType === 'single' && (
           <Card className="rounded-3xl border-slate-200/90 bg-white shadow-xl animate-in fade-in duration-150">
             <CardContent className="p-6 space-y-5">
               {/* Allowed Customer Languages */}
@@ -714,6 +970,19 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         {step === 4 && (
           <Card className="rounded-3xl border-slate-200/90 bg-white shadow-xl animate-in fade-in duration-150">
             <CardContent className="p-6 space-y-5">
+              {/* Multi-Branch Badge */}
+              {entityType === 'multi' && (
+                <div className="p-3 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-between text-xs text-indigo-900 font-bold">
+                  <div className="flex items-center gap-2">
+                    <Network className="h-4 w-4 text-indigo-600 shrink-0" />
+                    <span>Multi-Branch Setup: Main Branch + {subBranches.length} Sub-Branch{subBranches.length === 1 ? '' : 'es'}</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-indigo-200 text-[10px]">
+                    Auto-Configured
+                  </span>
+                </div>
+              )}
+
               {/* Placement & Color Palette Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100">
                 <div className="space-y-1.5">
@@ -746,7 +1015,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 </div>
               </div>
 
-              {/* 3D Acrylic Standee Preview */}
+              {/* 3D Acrylic Countertop Card Mockup */}
               <div className="flex flex-col items-center justify-center p-4 bg-radial from-slate-50 to-slate-100 rounded-2xl">
                 <div
                   ref={standeeRef}
@@ -780,7 +1049,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
                   {/* Business Name & City */}
                   <h4 className="text-sm font-black text-slate-900 leading-tight truncate max-w-[200px] mt-1">
-                    {name || 'Your Business'}
+                    {branchName || name || 'Your Business'}
                   </h4>
                   <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{city || 'India'}</p>
 
@@ -830,7 +1099,13 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   disabled={isSubmitting}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs py-2.5 gap-2 cursor-pointer"
                 >
-                  <span>{isSubmitting ? 'Launching...' : 'Launch Dashboard 🚀'}</span>
+                  <span>
+                    {isSubmitting
+                      ? 'Launching...'
+                      : entityType === 'single'
+                      ? 'Launch Store Dashboard 🚀'
+                      : 'Launch Brand Dashboard 🚀'}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
