@@ -2,6 +2,7 @@ name = "reviewqr"
 main = "server/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 routes = [
   { pattern = "reviews.tapbez.in", custom_domain = true }
