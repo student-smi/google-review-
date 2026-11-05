@@ -243,6 +243,61 @@ hierarchyRoutes.post('/brands', async (c) => {
 });
 
 /**
+ * PATCH /api/hierarchy/brands/:brandId
+ * Update Brand Profile (name, logoUrl, description, plan)
+ */
+hierarchyRoutes.patch('/brands/:brandId', async (c) => {
+  const db = getDb(c.env.DB);
+  const ownerId = getOwnerId(c);
+  const brandId = c.req.param('brandId');
+  const body = await c.req.json().catch(() => ({}));
+
+  try {
+    const [existing] = await db
+      .select()
+      .from(brands)
+      .where(and(eq(brands.id, brandId), eq(brands.ownerId, ownerId)))
+      .limit(1);
+
+    if (!existing) {
+      return c.json({ error: 'Brand not found or unauthorized' }, 404);
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const updatePayload: Record<string, any> = { updatedAt: now };
+
+    if (body.name !== undefined && body.name.trim()) {
+      updatePayload.name = body.name.trim();
+    }
+    if (body.logoUrl !== undefined) {
+      updatePayload.logoUrl = body.logoUrl ? body.logoUrl.trim() : null;
+    }
+    if (body.description !== undefined) {
+      updatePayload.description = body.description ? body.description.trim() : null;
+    }
+    if (body.plan !== undefined && body.plan.trim()) {
+      updatePayload.plan = body.plan.trim();
+    }
+
+    await db
+      .update(brands)
+      .set(updatePayload)
+      .where(eq(brands.id, brandId));
+
+    const [updated] = await db
+      .select()
+      .from(brands)
+      .where(eq(brands.id, brandId))
+      .limit(1);
+
+    return c.json({ success: true, brand: updated });
+  } catch (err: any) {
+    console.error('Failed to update brand:', err);
+    return c.json({ error: err.message || 'Failed to update brand' }, 500);
+  }
+});
+
+/**
  * GET /api/brands/:brandId/summary
  * Consolidated statistics across all businesses and branches in a Brand
  */

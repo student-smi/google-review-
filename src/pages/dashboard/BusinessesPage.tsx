@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { GooglePlacesAutocomplete, type GooglePlaceDetails } from '@/components/google/GooglePlacesAutocomplete';
 import { apiFetch, saveStoredBusinesses, saveActiveBusinessId } from '@/lib/api';
+import { useHierarchy } from '@/context/HierarchyContext';
 import type { BusinessItem, LocationItem } from './DashboardLayout';
 
 const CATEGORY_OPTIONS = [
@@ -53,6 +54,10 @@ export function BusinessesPage() {
     refreshBusinesses: () => Promise<void>;
     onSelectBusiness: (id: string) => void;
   }>();
+
+  const { refreshHierarchy } = useHierarchy();
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [locationSuccessMsg, setLocationSuccessMsg] = useState<string | null>(null);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,13 +260,16 @@ export function BusinessesPage() {
   // Manage Locations for a Business
   const handleOpenLocationsModal = async (biz: BusinessItem) => {
     setLocationModalBiz(biz);
+    setEditingLocationId(null);
     setIsLoadingLocations(true);
     setNewLocName('');
     setNewLocAddress('');
+    setNewLocCity('');
     setNewLocPhone('');
     setNewLocPlaceId('');
     setNewLocReviewUrl('');
     setNewLocManager('');
+    setNewLocKeywords('');
     try {
       const res = await apiFetch<{ success: boolean; locations: LocationItem[] }>(`/api/businesses/${biz.id}/locations`);
       if (res?.locations) {
@@ -274,7 +282,25 @@ export function BusinessesPage() {
     }
   };
 
-  // Add new location to business
+  // Start editing an existing location
+  const handleStartEditLocation = (loc: LocationItem) => {
+    setEditingLocationId(loc.id);
+    setNewLocName(loc.name);
+    setNewLocAddress(loc.address || '');
+    setNewLocCity(loc.city || '');
+    setNewLocPhone(loc.phone || '');
+    setNewLocPlaceId(loc.googlePlaceId || '');
+    setNewLocReviewUrl(loc.googleReviewUrl || '');
+    setNewLocManager(loc.assignedManager || '');
+    try {
+      const kw = loc.chipsJson ? JSON.parse(loc.chipsJson) : [];
+      setNewLocKeywords(Array.isArray(kw) ? kw.join(', ') : (loc.chipsJson || ''));
+    } catch {
+      setNewLocKeywords(loc.chipsJson || '');
+    }
+  };
+
+  // Add or update location to business
   const handleAddLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!locationModalBiz || !newLocName.trim()) return;
@@ -286,37 +312,72 @@ export function BusinessesPage() {
         .map((k) => k.trim())
         .filter(Boolean);
 
-      const res = await apiFetch<{ success: boolean; location: LocationItem }>(
-        `/api/businesses/${locationModalBiz.id}/locations`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            name: newLocName.trim(),
-            address: newLocAddress.trim() || undefined,
-            city: newLocCity.trim() || undefined,
-            phone: newLocPhone.trim() || undefined,
-            googlePlaceId: newLocPlaceId.trim() || undefined,
-            googleReviewUrl: newLocReviewUrl.trim() || locationModalBiz.googleReviewUrl,
-            assignedManager: newLocManager.trim() || undefined,
-            chipsJson: keywordList.length > 0 ? JSON.stringify(keywordList) : null,
-            status: 'active'
-          })
+      if (editingLocationId) {
+        // UPDATE EXISTING LOCATION
+        const res = await apiFetch<{ success: boolean; location: LocationItem }>(
+          `/api/businesses/${locationModalBiz.id}/locations/${editingLocationId}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: newLocName.trim(),
+              address: newLocAddress.trim() || undefined,
+              city: newLocCity.trim() || undefined,
+              phone: newLocPhone.trim() || undefined,
+              googlePlaceId: newLocPlaceId.trim() || undefined,
+              googleReviewUrl: newLocReviewUrl.trim() || locationModalBiz.googleReviewUrl,
+              assignedManager: newLocManager.trim() || undefined,
+              chipsJson: keywordList.length > 0 ? JSON.stringify(keywordList) : null,
+              status: 'active'
+            })
+          }
+        );
+        if (res?.location) {
+          setBizLocations((prev) => prev.map((l) => (l.id === editingLocationId ? res.location : l)));
         }
-      );
-      if (res?.location) {
-        setBizLocations((prev) => [res.location, ...prev]);
-        setNewLocName('');
-        setNewLocAddress('');
-        setNewLocCity('');
-        setNewLocPhone('');
-        setNewLocPlaceId('');
-        setNewLocReviewUrl('');
-        setNewLocManager('');
-        setNewLocKeywords('');
+      } else {
+        // CREATE NEW LOCATION
+        const res = await apiFetch<{ success: boolean; location: LocationItem }>(
+          `/api/businesses/${locationModalBiz.id}/locations`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              name: newLocName.trim(),
+              address: newLocAddress.trim() || undefined,
+              city: newLocCity.trim() || undefined,
+              phone: newLocPhone.trim() || undefined,
+              googlePlaceId: newLocPlaceId.trim() || undefined,
+              googleReviewUrl: newLocReviewUrl.trim() || locationModalBiz.googleReviewUrl,
+              assignedManager: newLocManager.trim() || undefined,
+              chipsJson: keywordList.length > 0 ? JSON.stringify(keywordList) : null,
+              status: 'active'
+            })
+          }
+        );
+        if (res?.location) {
+          setBizLocations((prev) => [res.location, ...prev]);
+        }
       }
+
+      // Reset form fields
+      setNewLocName('');
+      setNewLocAddress('');
+      setNewLocCity('');
+      setNewLocPhone('');
+      setNewLocPlaceId('');
+      setNewLocReviewUrl('');
+      setNewLocManager('');
+      setNewLocKeywords('');
+      setEditingLocationId(null);
+
+      // AUTO-CLOSE MODAL WINDOW (Problem 3 resolved!)
+      setLocationModalBiz(null);
+
       await refreshBusinesses();
+      if (refreshHierarchy) {
+        await refreshHierarchy();
+      }
     } catch (err: any) {
-      alert('Failed to add location: ' + (err.message || 'Unknown error'));
+      alert('Failed to save location: ' + (err.message || 'Unknown error'));
     } finally {
       setIsAddingLocation(false);
     }
@@ -974,9 +1035,30 @@ export function BusinessesPage() {
 
               {/* Form to Add New Branch Location */}
               <form onSubmit={handleAddLocation} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
-                  <Plus className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Add Branch / Outlet Location</span>
+                <div className="flex items-center justify-between font-bold text-xs text-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    {editingLocationId ? <Edit2 className="w-3.5 h-3.5 text-indigo-600" /> : <Plus className="w-3.5 h-3.5 text-indigo-600" />}
+                    <span>{editingLocationId ? 'Edit Branch / Outlet Location' : 'Add Branch / Outlet Location'}</span>
+                  </div>
+                  {editingLocationId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLocationId(null);
+                        setNewLocName('');
+                        setNewLocAddress('');
+                        setNewLocCity('');
+                        setNewLocPhone('');
+                        setNewLocPlaceId('');
+                        setNewLocReviewUrl('');
+                        setNewLocManager('');
+                        setNewLocKeywords('');
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 underline font-normal cursor-pointer"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
                 </div>
 
                 {/* Google Places Autocomplete */}
@@ -1064,7 +1146,9 @@ export function BusinessesPage() {
                     disabled={isAddingLocation || !newLocName.trim()}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 cursor-pointer"
                   >
-                    {isAddingLocation ? 'Adding Location...' : 'Save Branch Location'}
+                    {isAddingLocation
+                      ? (editingLocationId ? 'Updating Branch...' : 'Adding Location...')
+                      : (editingLocationId ? 'Update & Close' : 'Save Branch Location')}
                   </Button>
                 </div>
               </form>
@@ -1141,16 +1225,29 @@ export function BusinessesPage() {
                           </div>
                         </div>
 
-                        {!loc.isPrimary && (
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDeleteLocation(loc.id)}
-                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600"
+                            onClick={() => handleStartEditLocation(loc)}
+                            className="h-7 px-2 text-slate-500 hover:text-indigo-600 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                            title="Edit this branch location"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3 h-3 text-indigo-500" />
+                            <span className="hidden sm:inline">Edit</span>
                           </Button>
-                        )}
+                          {!loc.isPrimary && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteLocation(loc.id)}
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 cursor-pointer"
+                              title="Delete location"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

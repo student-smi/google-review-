@@ -165,8 +165,14 @@ export function Header({
 
   // 4. Open Customer Review Funnel Preview
   const handleOpenPreview = () => {
-    if (!activeBusiness) return;
-    const path = `/r/${activeBusiness.slug || activeBusiness.id}`;
+    // If on Branch level or activeBranch has a dedicated slug, route to branch funnel!
+    const targetSlug =
+      currentLevel === 'branch' && activeBranch?.slug
+        ? activeBranch.slug
+        : activeBranch?.slug || activeBusiness?.slug || activeBusiness?.id;
+
+    if (!targetSlug) return;
+    const path = `/r/${targetSlug}`;
     window.open(path, '_blank');
   };
 
@@ -614,14 +620,32 @@ export function Header({
       <HeaderQrModal
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
-        business={activeBusiness}
+        business={
+          currentLevel === 'branch' && activeBranch && activeBusiness
+            ? {
+                ...activeBusiness,
+                name: `${activeBusiness.name} (${activeBranch.name})`,
+                slug: activeBranch.slug || activeBusiness.slug,
+                city: activeBranch.city || activeBusiness.city
+              }
+            : activeBusiness
+        }
       />
 
       {/* Standee Preview Modal */}
       <HeaderStandeeModal
         isOpen={standeeModalOpen}
         onClose={() => setStandeeModalOpen(false)}
-        business={activeBusiness}
+        business={
+          currentLevel === 'branch' && activeBranch && activeBusiness
+            ? {
+                ...activeBusiness,
+                name: `${activeBusiness.name} (${activeBranch.name})`,
+                slug: activeBranch.slug || activeBusiness.slug,
+                city: activeBranch.city || activeBusiness.city
+              }
+            : activeBusiness
+        }
       />
 
       {/* Upgrade to Multi-Branch Expansion Modal */}
