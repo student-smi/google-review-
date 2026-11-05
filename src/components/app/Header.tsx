@@ -72,7 +72,8 @@ export function Header({
     selectBrand,
     selectBusiness,
     selectBranch,
-    isSingleMode
+    isSingleMode,
+    roles
   } = useHierarchy();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -230,6 +231,16 @@ export function Header({
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add 2nd Branch</span>
               </button>
+            </div>
+          ) : roles.isExecutive ? (
+            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-1.5 border border-emerald-200/80 shadow-2xs shrink-0">
+              <Store className="h-4 w-4 text-emerald-600" />
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700 font-mono">Assigned Branch Outlet</span>
+                <span className="text-xs font-black text-slate-900 truncate max-w-[160px] sm:max-w-xs">
+                  {activeBranch?.name || activeBusiness?.name || 'Branch Outlet'}
+                </span>
+              </div>
             </div>
           ) : (
             <>

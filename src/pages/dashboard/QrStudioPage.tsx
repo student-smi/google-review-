@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 /**
  * Bulletproof Canvas QR + Logo compositor.
@@ -186,18 +187,21 @@ export function QrStudioPage() {
     activeBusiness: BusinessItem | null;
     refreshBusinesses?: () => Promise<void>;
   }>();
+  const { activeBranch, roles } = useHierarchy();
 
-  // QR Customization State - Dynamic based on active business
-  const defaultShortCode = activeBusiness?.slug
+  // QR Customization State - Dynamic based on active branch / business
+  const defaultShortCode = activeBranch?.slug
+    ? activeBranch.slug
+    : activeBusiness?.slug
     ? `${activeBusiness.slug}-counter`
     : activeBusiness?.id
     ? `qr-${activeBusiness.id.slice(-6)}`
     : 'counter';
 
   const [shortCode, setShortCode] = useState(defaultShortCode);
-  const [headline, setHeadline] = useState('Share Your Real Experience On Google');
+  const [headline, setHeadline] = useState(activeBranch ? `Review ${activeBranch.name}` : 'Share Your Real Experience On Google');
   const [subheadline, setSubheadline] = useState('Scan with your phone camera or Google Lens');
-  const [dotColor, setDotColor] = useState(activeBusiness?.brandColor || '#4338CA');
+  const [dotColor, setDotColor] = useState(activeBranch?.brandColor || activeBusiness?.brandColor || '#4338CA');
   const [dotType, setDotType] = useState<'rounded' | 'dots' | 'classy' | 'square'>('rounded');
   const [cornerSquareType, setCornerSquareType] = useState<'extra-rounded' | 'square' | 'dot'>('extra-rounded');
   const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4' | 'round-sticker'>('table-tent');
@@ -217,15 +221,22 @@ export function QrStudioPage() {
 
   useEffect(() => {
     if (activeBusiness?.id) {
-      if (activeBusiness.brandColor) {
-        setDotColor(activeBusiness.brandColor);
+      const color = activeBranch?.brandColor || activeBusiness?.brandColor;
+      if (color) {
+        setDotColor(color);
       }
       if (activeBusiness.logoUrl) {
         setLogoUrl(activeBusiness.logoUrl);
       }
-      // Check existing QR codes for this business
+      if (activeBranch?.name) {
+        setHeadline(`Review ${activeBranch.name}`);
+      }
+
+      const branchQuery = activeBranch?.id ? `?branchId=${encodeURIComponent(activeBranch.id)}` : '';
+
+      // Check existing QR codes for this business / branch
       apiFetch<{ qrCodes: Array<{ id: string; code: string; label: string; styleJson?: any }> }>(
-        `/api/qr/business/${activeBusiness.id}`
+        `/api/qr/business/${activeBusiness.id}${branchQuery}`
       )
         .then((res) => {
           if (res?.qrCodes && res.qrCodes.length > 0) {
@@ -248,17 +259,21 @@ export function QrStudioPage() {
                 if (parsed.format) setPosterFormat(parsed.format);
               } catch {}
             }
+          } else if (activeBranch?.slug) {
+            setShortCode(activeBranch.slug);
           } else if (activeBusiness.slug) {
             setShortCode(`${activeBusiness.slug}-counter`);
           }
         })
         .catch(() => {
-          if (activeBusiness.slug) {
+          if (activeBranch?.slug) {
+            setShortCode(activeBranch.slug);
+          } else if (activeBusiness.slug) {
             setShortCode(`${activeBusiness.slug}-counter`);
           }
         });
     }
-  }, [activeBusiness]);
+  }, [activeBusiness, activeBranch?.id]);
 
   const qrRef = useRef<HTMLDivElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);

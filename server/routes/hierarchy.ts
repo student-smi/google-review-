@@ -74,8 +74,15 @@ hierarchyRoutes.get('/', async (c) => {
       )
       .orderBy(desc(businesses.createdAt));
 
+    // Check caller role & permissions
+    const isOwner = userBrands.some((b: any) => b.ownerId === ownerId) || userBusinesses.some((b: any) => b.ownerId === ownerId);
+    const isBrandAdmin = userMemberships.some((m: any) => m.role === 'super_admin' || m.role === 'brand_admin');
+    const isBusinessAdmin = userMemberships.some((m: any) => m.role === 'business_admin');
+    const isExecutive = !isOwner && !isBrandAdmin && !isBusinessAdmin && userMemberships.some((m: any) => m.role === 'review_executive' || m.role === 'branch_manager');
+
     // Backward-compatibility: If user has businesses but no brand yet, auto-generate a primary brand
-    if (userBrands.length === 0 && userBusinesses.length > 0) {
+    // ONLY for true owners, NEVER for executives or staff members!
+    if (!isExecutive && userBrands.length === 0 && userBusinesses.length > 0 && userBusinesses.some((b: any) => b.ownerId === ownerId)) {
       const primaryBiz = userBusinesses[0];
       const defaultBrandId = `brand_${primaryBiz.id.replace('biz_', '')}`;
       const defaultBrandName = primaryBiz.name.includes('Group')
@@ -124,6 +131,19 @@ hierarchyRoutes.get('/', async (c) => {
         .orderBy(desc(locations.createdAt));
     }
 
+    // STRICT ISOLATION FOR EXECUTIVES & BRANCH MANAGERS:
+    if (isExecutive && branchIdsFromMembership.length > 0) {
+      // 1. Only show the exact branch(es) this executive was assigned to
+      allBranches = allBranches.filter((br: any) => branchIdsFromMembership.includes(br.id));
+
+      // 2. Only show the parent business of their branch
+      const assignedBizIds = Array.from(new Set(allBranches.map((br: any) => br.businessId)));
+      userBusinesses = userBusinesses.filter((b: any) => assignedBizIds.includes(b.id));
+
+      // 3. Executives do not have brand organization permissions
+      userBrands = [];
+    }
+
     // 5. Ensure each business has at least 1 primary branch (auto-map from business Google details if empty)
     for (const biz of userBusinesses) {
       const bizBranches = allBranches.filter((br: any) => br.businessId === biz.id);
@@ -169,9 +189,12 @@ hierarchyRoutes.get('/', async (c) => {
       memberships: userMemberships,
       roles: {
         isSuperAdmin: (c.get('user') as any)?.role === 'admin' || ownerId === 'admin_user',
-        hasBrandAccess: userBrands.length > 0,
-        hasBusinessAccess: userBusinesses.length > 0,
-        hasBranchAccess: allBranches.length > 0
+        hasBrandAccess: isOwner || isBrandAdmin,
+        hasBusinessAccess: isOwner || isBrandAdmin || isBusinessAdmin,
+        hasBranchAccess: allBranches.length > 0,
+        isExecutive: Boolean(isExecutive),
+        assignedRole: userMemberships[0]?.role || (isOwner ? 'owner' : 'member'),
+        assignedBranchId: userMemberships[0]?.branchId || (allBranches[0]?.id ?? null)
       }
     });
   } catch (err: any) {

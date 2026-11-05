@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Crown,
   CheckCircle2,
@@ -8,13 +9,33 @@ import {
   Calendar,
   Sparkles,
   ArrowUpRight,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useHierarchy } from '@/context/HierarchyContext';
 
 export function PackageBillingPage() {
-  const { currentLevel, activeBrand, activeBusiness, businesses, branches } = useHierarchy();
+  const navigate = useNavigate();
+  const { currentLevel, activeBrand, activeBusiness, activeBranch, businesses, branches, roles } = useHierarchy();
+
+  // Guard: Executive cannot access organizational billing
+  if (roles.isExecutive) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-white border border-slate-200 rounded-3xl shadow-xl text-center space-y-4 font-sans">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Restricted Access</h2>
+        <p className="text-xs text-slate-500">
+          You are signed in as an Executive for <strong className="text-slate-800">{activeBranch?.name || 'your assigned branch'}</strong>. Package & billing management is restricted to organization owners.
+        </p>
+        <Button onClick={() => navigate('/dashboard')} className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer">
+          Return to Branch Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   const totalBranchesCount = branches.length;
   const totalBusinessesCount = businesses.length;

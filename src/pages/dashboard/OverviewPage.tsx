@@ -53,7 +53,9 @@ export function OverviewPage() {
     if (!activeBusiness?.id) return;
     setIsLoading(true);
 
-    apiFetch<{ qrCodes: any[] }>(`/api/qr/business/${activeBusiness.id}`)
+    const branchParam = activeBranch?.id ? `?branchId=${encodeURIComponent(activeBranch.id)}` : '';
+
+    apiFetch<{ qrCodes: any[] }>(`/api/qr/business/${activeBusiness.id}${branchParam}`)
       .then((data) => {
         if (data?.qrCodes) {
           const list = data.qrCodes.map((q) => ({
@@ -101,7 +103,7 @@ export function OverviewPage() {
       })
       .catch(() => {});
 
-    apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews`)
+    apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews${branchParam}`)
       .then((res) => {
         if (res?.reviews) setReviews(res.reviews);
       })
@@ -114,7 +116,7 @@ export function OverviewPage() {
           if (res?.data) setPlacesStats(res.data);
         })
         .catch(() => {});
-      apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews`)
+      apiFetch<{ reviews: any[] }>(`/api/businesses/${activeBusiness.id}/reviews${branchParam}`)
         .then((res) => {
           if (res?.reviews) setReviews(res.reviews);
         })
@@ -125,7 +127,7 @@ export function OverviewPage() {
     return () => {
       window.removeEventListener('reviews-synced', handleSynced);
     };
-  }, [activeBusiness?.id]);
+  }, [activeBusiness?.id, activeBranch?.id]);
 
   // Real computed totals from actual QR codes & analytics
   const qrScans = qrList.reduce((acc, q) => acc + (q.scans || 0), 0);

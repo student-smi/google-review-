@@ -497,15 +497,27 @@ businessRoutes.post('/:id/locations/:locId/keywords', async (c) => {
   }
 });
 
-// Get customer reviews for a business
+// Get customer reviews for a business (scoped by branch if requested or if caller is an executive)
 businessRoutes.get('/:id/reviews', async (c) => {
   const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
+  const branchId = c.req.query('branchId');
   const db = getDb(c.env.DB);
   const scoped = createScopedDb(db, ownerId);
 
   try {
-    const reviews = await scoped.getCustomerReviews(businessId);
+    let effectiveBranchId = branchId;
+    const [mem] = await db
+      .select()
+      .from(memberships)
+      .where(and(eq(memberships.userId, ownerId), eq(memberships.status, 'active')))
+      .limit(1);
+
+    if (mem && (mem.role === 'review_executive' || mem.role === 'branch_manager') && mem.branchId) {
+      effectiveBranchId = mem.branchId;
+    }
+
+    const reviews = await scoped.getCustomerReviews(businessId, effectiveBranchId);
     return c.json({ reviews });
   } catch (err: any) {
     // Only permit Super Admin to view unowned business reviews

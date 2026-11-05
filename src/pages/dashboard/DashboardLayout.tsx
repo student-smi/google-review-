@@ -13,7 +13,8 @@ import {
   MessageSquareQuote,
   Menu,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -56,6 +57,7 @@ function DashboardContent() {
     activeBranch,
     businesses,
     branches,
+    roles,
     isLoading,
     refreshHierarchy,
     selectBusiness
@@ -151,18 +153,33 @@ function DashboardContent() {
             <span>Overview</span>
           </NavLink>
 
-          <NavLink
-            to="/dashboard/businesses"
-            className={({ isActive }) =>
-              cn(
-                'flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-semibold transition-colors',
-                isActive ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
-              )
-            }
-          >
-            <Building2 className="h-4.5 w-4.5" />
-            <span>Entities</span>
-          </NavLink>
+          {roles.isExecutive ? (
+            <NavLink
+              to="/dashboard/ai-replies"
+              className={({ isActive }) =>
+                cn(
+                  'flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-semibold transition-colors',
+                  isActive ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                )
+              }
+            >
+              <Sparkles className="h-4.5 w-4.5 text-pink-500" />
+              <span>AI Reply</span>
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/dashboard/businesses"
+              className={({ isActive }) =>
+                cn(
+                  'flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-[10px] font-semibold transition-colors',
+                  isActive ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                )
+              }
+            >
+              <Building2 className="h-4.5 w-4.5" />
+              <span>Entities</span>
+            </NavLink>
+          )}
 
           <NavLink
             to="/dashboard/qr"

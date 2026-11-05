@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
   UserPlus,
@@ -61,6 +62,7 @@ const roleLabels: Record<string, { title: string; color: string; desc: string }>
 };
 
 export function TeamPermissionsPage() {
+  const navigate = useNavigate();
   const {
     currentLevel,
     activeBrand,
@@ -70,8 +72,27 @@ export function TeamPermissionsPage() {
     businesses,
     branches,
     memberships,
+    roles,
     refreshHierarchy
   } = useHierarchy();
+
+  // Guard: Executive cannot manage organization team members
+  if (roles.isExecutive) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-white border border-slate-200 rounded-3xl shadow-xl text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Restricted Access</h2>
+        <p className="text-xs text-slate-500">
+          You are signed in as an Executive for <strong className="text-slate-800">{activeBranch?.name || 'your assigned branch'}</strong>. Team & permission settings are restricted to organization owners.
+        </p>
+        <Button onClick={() => navigate('/dashboard')} className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer">
+          Return to Branch Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   // Invite Modal State
   const [isInviteOpen, setIsInviteOpen] = useState(false);

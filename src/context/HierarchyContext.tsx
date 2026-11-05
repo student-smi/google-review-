@@ -96,6 +96,9 @@ interface HierarchyContextValue {
     hasBrandAccess: boolean;
     hasBusinessAccess: boolean;
     hasBranchAccess: boolean;
+    isExecutive?: boolean;
+    assignedRole?: string;
+    assignedBranchId?: string | null;
   };
   isLoading: boolean;
   selectBrand: (id: string) => void;
@@ -142,11 +145,20 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
   const [businesses, setBusinesses] = useState<BusinessItem[]>([]);
   const [branches, setBranches] = useState<BranchItem[]>([]);
   const [memberships, setMemberships] = useState<MembershipItem[]>([]);
-  const [roles, setRoles] = useState({
+  const [roles, setRoles] = useState<{
+    isSuperAdmin: boolean;
+    hasBrandAccess: boolean;
+    hasBusinessAccess: boolean;
+    hasBranchAccess: boolean;
+    isExecutive?: boolean;
+    assignedRole?: string;
+    assignedBranchId?: string | null;
+  }>({
     isSuperAdmin: false,
     hasBrandAccess: true,
     hasBusinessAccess: true,
-    hasBranchAccess: true
+    hasBranchAccess: true,
+    isExecutive: false
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -170,6 +182,9 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
   });
 
   const setLevel = (lvl: HierarchyLevel) => {
+    if (roles.isExecutive && lvl !== 'branch') {
+      return; // Locked to branch level for assigned staff
+    }
     setCurrentLevelState(lvl);
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_LEVEL_KEY, lvl);
@@ -226,7 +241,13 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
         setBusinesses(data.businesses || []);
         setBranches(data.branches || []);
         setMemberships(data.memberships || []);
-        if (data.roles) setRoles(data.roles);
+        if (data.roles) {
+          setRoles(data.roles);
+          if (data.roles.isExecutive) {
+            setCurrentLevelState('branch');
+            if (typeof window !== 'undefined') localStorage.setItem(STORAGE_LEVEL_KEY, 'branch');
+          }
+        }
 
         // Auto-select valid Brand
         if (data.brands?.length > 0) {
@@ -248,9 +269,16 @@ export function HierarchyProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        // Auto-select valid Branch
+        // Auto-select valid Branch (locks to assigned branch for executive)
         if (data.branches?.length > 0) {
           setActiveBranchId((curr) => {
+            if (data.roles?.isExecutive && data.roles?.assignedBranchId) {
+              const assigned = data.branches.find((b) => b.id === data.roles.assignedBranchId);
+              if (assigned) {
+                if (typeof window !== 'undefined') localStorage.setItem(STORAGE_BRANCH_ID, assigned.id);
+                return assigned.id;
+              }
+            }
             const exists = data.branches.some((b) => b.id === curr);
             const next = exists ? curr : data.branches[0].id;
             if (typeof window !== 'undefined') localStorage.setItem(STORAGE_BRANCH_ID, next);

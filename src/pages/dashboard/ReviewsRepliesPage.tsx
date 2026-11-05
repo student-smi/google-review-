@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
+import { useHierarchy } from '@/context/HierarchyContext';
 
 export interface CustomerReview {
   id: string;
@@ -70,6 +71,7 @@ export interface GmbStatus {
 
 export function ReviewsRepliesPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
+  const { activeBranch, roles } = useHierarchy();
   const bizName = activeBusiness?.name || 'Our Business';
 
   // Navigation tab: 'feed' (real customer reviews), 'sync' (Google Maps Sync & Importer) or 'tester' (manual sandbox)
@@ -129,12 +131,13 @@ export function ReviewsRepliesPage() {
     lastSyncedAt?: number;
   } | null>(null);
 
-  // Fetch reviews on mount and when activeBusiness changes
+  // Fetch reviews on mount and when activeBusiness or activeBranch changes
   const loadReviews = async (): Promise<CustomerReview[]> => {
     if (!activeBusiness?.id) return [];
     setIsLoadingReviews(true);
     try {
-      const data = await apiFetch<{ reviews: CustomerReview[] }>(`/api/businesses/${activeBusiness.id}/reviews`);
+      const branchQuery = activeBranch?.id ? `?branchId=${encodeURIComponent(activeBranch.id)}` : '';
+      const data = await apiFetch<{ reviews: CustomerReview[] }>(`/api/businesses/${activeBusiness.id}/reviews${branchQuery}`);
       if (data?.reviews) {
         setReviews(data.reviews);
         return data.reviews;
@@ -502,7 +505,7 @@ export function ReviewsRepliesPage() {
   useEffect(() => {
     loadReviews();
     loadGmbStatus();
-  }, [activeBusiness?.id]);
+  }, [activeBusiness?.id, activeBranch?.id]);
 
   const cleanReplyText = (text: string, storeName: string) => {
     if (!text) return '';
@@ -832,7 +835,7 @@ export function ReviewsRepliesPage() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
-            Real customer reviews for <span className="font-bold text-slate-800">{bizName}</span>. Generate calibrated, 100% policy-safe Google replies in 1 click.
+            Real customer reviews for <span className="font-bold text-slate-800">{activeBranch ? `${activeBranch.name} (${bizName})` : bizName}</span>. Generate calibrated, 100% policy-safe Google replies in 1 click.
           </p>
         </div>
 

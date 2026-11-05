@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile }: SidebarProps) {
   const navigate = useNavigate();
-  const { currentLevel, activeBrand, activeBusiness, activeBranch, isSingleMode } = useHierarchy();
+  const { currentLevel, activeBrand, activeBusiness, activeBranch, isSingleMode, roles } = useHierarchy();
 
   const handleSignOut = async () => {
     onCloseMobile?.();
@@ -58,6 +58,15 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Store Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+  ];
+
+  // 0b. Executive Scoped Nav Items (Restricted strictly to their assigned branch: Review, QR Score, QR Code & Reply)
+  const executiveNavItems = [
+    { label: 'Branch Overview', to: '/dashboard', icon: LayoutDashboard, badge: 'Live' },
+    { label: 'Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
+    { label: 'Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: '1-Click' },
+    { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
+    { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' }
   ];
 
   // 1. Brand Level Items (Image 2)
@@ -103,7 +112,9 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branch Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
-  const currentNavItems = isSingleMode
+  const currentNavItems = roles.isExecutive
+    ? executiveNavItems
+    : isSingleMode
     ? singleNavItems
     : currentLevel === 'brand'
     ? brandNavItems
@@ -111,7 +122,14 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     ? businessNavItems
     : branchNavItems;
 
-  const currentContextTitle = isSingleMode
+  const currentContextTitle = roles.isExecutive
+    ? {
+        title: activeBranch?.name || 'Assigned Branch',
+        subtitle: `${roles.assignedRole === 'branch_manager' ? 'Branch Manager' : 'Review Executive'} • Scoped Outlet`,
+        icon: Store,
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      }
+    : isSingleMode
     ? {
         title: activeBusiness?.name || 'My Store',
         subtitle: activeBusiness?.city ? `${activeBusiness.city} • Single Store` : 'Single Store Operations',

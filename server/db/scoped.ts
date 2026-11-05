@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, or, isNull } from 'drizzle-orm';
 import type { DbClient } from './client';
 import {
   businesses,
@@ -517,10 +517,24 @@ export function createScopedDb(db: DbClient, ownerId: string) {
     // ──────────────────────────────────────────────
     // Customer Reviews & AI Replies
     // ──────────────────────────────────────────────
-    async getCustomerReviews(businessId: string) {
+    async getCustomerReviews(businessId: string, branchId?: string | null) {
       const business = await this.getBusiness(businessId);
       if (!business) {
         throw new ScopedAuthorizationError('Cannot get customer reviews: Unauthorized business');
+      }
+
+      if (branchId) {
+        return db
+          .select()
+          .from(customerReviews)
+          .where(
+            and(
+              eq(customerReviews.businessId, businessId),
+              or(eq(customerReviews.branchId, branchId), isNull(customerReviews.branchId))
+            )
+          )
+          .orderBy(desc(customerReviews.createdAt))
+          .limit(100);
       }
 
       return db

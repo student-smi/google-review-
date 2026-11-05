@@ -28,6 +28,7 @@ import {
   HelpCircle,
   X,
   Layers,
+  ShieldAlert,
   ChevronRight,
   RefreshCw,
   Crown
@@ -55,7 +56,25 @@ export function BusinessesPage() {
     onSelectBusiness: (id: string) => void;
   }>();
 
-  const { refreshHierarchy } = useHierarchy();
+  const { refreshHierarchy, roles, activeBranch } = useHierarchy();
+
+  // Guard: Executive cannot manage entities / other branches
+  if (roles.isExecutive) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-white border border-slate-200 rounded-3xl shadow-xl text-center space-y-4 font-sans">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Restricted Access</h2>
+        <p className="text-xs text-slate-500">
+          You are signed in as an Executive for <strong className="text-slate-800">{activeBranch?.name || 'your assigned branch'}</strong>. Multi-outlet and entity setup is restricted to organization owners.
+        </p>
+        <Button onClick={() => navigate('/dashboard')} className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl cursor-pointer">
+          Return to Branch Dashboard
+        </Button>
+      </div>
+    );
+  }
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [locationSuccessMsg, setLocationSuccessMsg] = useState<string | null>(null);
 
