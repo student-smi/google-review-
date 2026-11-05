@@ -182,28 +182,9 @@ export function AuthPage() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold text-slate-700">
-                  Password
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[11px] font-bold text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 cursor-pointer select-none"
-                >
-                  {showPassword ? (
-                    <>
-                      <EyeOff className="h-3.5 w-3.5" />
-                      <span>Hide password</span>
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>See password</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <Label className="text-xs font-semibold text-slate-700">
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
@@ -216,8 +197,8 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-md"
-                  title={showPassword ? 'Hide password' : 'See password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer p-1 rounded-md"
+                  title={showPassword ? 'Hide password' : 'Show password'}
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
