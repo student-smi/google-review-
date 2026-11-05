@@ -7,11 +7,20 @@ import {
   locations,
   memberships,
   users,
+  accounts,
   customerReviews
 } from '../db/schema';
 import type { Env } from './public';
 
 export const hierarchyRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string; user?: any } }>();
+
+async function hashPassword(password: string): Promise<string> {
+  const enc = new TextEncoder();
+  const data = enc.encode(password + ':reviewboost_auth_salt_2026');
+  const hashBuf = await crypto.subtle.digest('SHA-256', data);
+  const hashArr = Array.from(new Uint8Array(hashBuf));
+  return hashArr.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 function getOwnerId(c: any): string {
   const headerOwnerId = c.req.header('X-Owner-Id') || c.req.header('X-Dev-Owner-Id');
@@ -399,7 +408,7 @@ hierarchyRoutes.get('/memberships', async (c) => {
 
 /**
  * POST /api/memberships
- * Invite / Assign a team member to a role
+ * Invite / Assign a team member to a role with Login Password
  */
 hierarchyRoutes.post('/memberships', async (c) => {
   const db = getDb(c.env.DB);
@@ -422,24 +431,64 @@ hierarchyRoutes.post('/memberships', async (c) => {
     return c.json({ error: `Invalid role. Allowed roles: ${validRoles.join(', ')}` }, 400);
   }
 
+  const cleanEmail = body.email.trim().toLowerCase();
+  const cleanName = (body.name || '').trim() || cleanEmail.split('@')[0];
+  const password = body.password ? String(body.password).trim() : '';
+
+  if (password && password.length < 6) {
+    return c.json({ error: 'Password must be at least 6 characters long' }, 400);
+  }
+
   try {
-    // Check if user already exists
-    let [targetUser] = await db.select().from(users).where(eq(users.email, body.email.trim())).limit(1);
+    // 1. Check if user already exists
+    let [targetUser] = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
     const now = Math.floor(Date.now() / 1000);
+    const nowDate = new Date();
 
     if (!targetUser) {
       const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       await db.insert(users).values({
         id: newUserId,
-        name: body.name || body.email.split('@')[0],
-        email: body.email.trim().toLowerCase(),
+        name: cleanName,
+        email: cleanEmail,
+        emailVerified: true,
         role: 'owner',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: nowDate,
+        updatedAt: nowDate
       });
       [targetUser] = await db.select().from(users).where(eq(users.id, newUserId));
+    } else if (body.name && body.name.trim()) {
+      await db.update(users).set({ name: cleanName, updatedAt: nowDate }).where(eq(users.id, targetUser.id));
     }
 
+    // 2. Set or Update Password in accounts table so this team member can log in separately!
+    if (password) {
+      const hashedPassword = await hashPassword(password);
+      const [existingAccount] = await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(and(eq(accounts.userId, targetUser.id), eq(accounts.providerId, 'credentials')))
+        .limit(1);
+
+      if (existingAccount) {
+        await db.update(accounts)
+          .set({ password: hashedPassword, updatedAt: nowDate })
+          .where(eq(accounts.id, existingAccount.id));
+      } else {
+        const accountId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        await db.insert(accounts).values({
+          id: accountId,
+          userId: targetUser.id,
+          accountId: cleanEmail,
+          providerId: 'credentials',
+          password: hashedPassword,
+          createdAt: nowDate,
+          updatedAt: nowDate
+        });
+      }
+    }
+
+    // 3. Create active membership scoped to Brand, Business, or Branch
     const membershipId = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     await db.insert(memberships).values({
       id: membershipId,
@@ -449,18 +498,94 @@ hierarchyRoutes.post('/memberships', async (c) => {
       businessId: body.businessId || null,
       branchId: body.branchId || null,
       status: 'active',
-      invitedEmail: body.email.trim(),
+      invitedEmail: cleanEmail,
       createdAt: now,
       updatedAt: now
     });
 
     return c.json({
       success: true,
-      message: `Role ${body.role} assigned to ${body.email}`,
-      memberId: membershipId
+      message: `Role ${body.role} assigned to ${cleanEmail}`,
+      memberId: membershipId,
+      email: cleanEmail,
+      name: cleanName
     }, 201);
   } catch (err: any) {
     console.error('Failed to assign membership:', err);
     return c.json({ error: err.message || 'Failed to assign role' }, 500);
+  }
+});
+
+/**
+ * POST /api/memberships/:id/reset-password
+ * Reset / Update a team member's login password
+ */
+hierarchyRoutes.post('/memberships/:id/reset-password', async (c) => {
+  const db = getDb(c.env.DB);
+  const membershipId = c.req.param('id');
+  const body = await c.req.json().catch(() => ({}));
+  const password = body.password ? String(body.password).trim() : '';
+
+  if (!password || password.length < 6) {
+    return c.json({ error: 'Password must be at least 6 characters long' }, 400);
+  }
+
+  try {
+    const [membership] = await db
+      .select({ id: memberships.id, userId: memberships.userId, invitedEmail: memberships.invitedEmail })
+      .from(memberships)
+      .where(eq(memberships.id, membershipId))
+      .limit(1);
+
+    if (!membership) {
+      return c.json({ error: 'Team member not found' }, 404);
+    }
+
+    const hashedPassword = await hashPassword(password);
+    const nowDate = new Date();
+
+    const [existingAccount] = await db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.userId, membership.userId), eq(accounts.providerId, 'credentials')))
+      .limit(1);
+
+    if (existingAccount) {
+      await db.update(accounts)
+        .set({ password: hashedPassword, updatedAt: nowDate })
+        .where(eq(accounts.id, existingAccount.id));
+    } else {
+      const accountId = `acc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      await db.insert(accounts).values({
+        id: accountId,
+        userId: membership.userId,
+        accountId: membership.invitedEmail || `user_${membership.userId}`,
+        providerId: 'credentials',
+        password: hashedPassword,
+        createdAt: nowDate,
+        updatedAt: nowDate
+      });
+    }
+
+    return c.json({ success: true, message: 'Password reset successfully' });
+  } catch (err: any) {
+    console.error('Failed to reset password:', err);
+    return c.json({ error: err.message || 'Failed to reset password' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/memberships/:id
+ * Revoke team member access
+ */
+hierarchyRoutes.delete('/memberships/:id', async (c) => {
+  const db = getDb(c.env.DB);
+  const membershipId = c.req.param('id');
+  try {
+    await db.delete(memberships).where(eq(memberships.id, membershipId));
+    return c.json({ success: true, message: 'Membership access revoked' });
+  } catch (err: any) {
+    console.error('Failed to revoke membership:', err);
+    return c.json({ error: err.message || 'Failed to revoke membership' }, 500);
   }
 });
