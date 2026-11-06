@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,8 @@ import {
   HelpCircle,
   RotateCcw,
   Crown,
-  Store
+  Store,
+  Radio
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
@@ -98,31 +99,36 @@ export function KeywordManagementPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [previewSelectedChip, setPreviewSelectedChip] = useState<number>(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedText, setLastSavedText] = useState<string>('');
+
+  const lastSavedJsonRef = useRef<string>(JSON.stringify(chips));
 
   // Sync when selected branch or activeBusiness changes
   useEffect(() => {
+    let loadedChips: string[] = [];
     if (selectedBranch?.chipsJson) {
       try {
         const parsed = JSON.parse(selectedBranch.chipsJson);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setChips(parsed);
-          return;
+          loadedChips = parsed;
+        }
+      } catch {}
+    } else if (activeBusiness?.chipsJson) {
+      try {
+        const parsed = JSON.parse(activeBusiness.chipsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          loadedChips = parsed;
         }
       } catch {}
     }
 
+    setChips(loadedChips);
+    lastSavedJsonRef.current = JSON.stringify(loadedChips);
+    setAutoSaveStatus('idle');
+
     if (activeBusiness) {
       setSelectedIndustry(getCleanCategory(activeBusiness.category));
-      if (activeBusiness.chipsJson) {
-        try {
-          const parsed = JSON.parse(activeBusiness.chipsJson);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setChips(parsed);
-            return;
-          }
-        } catch {}
-      }
-      setChips([]);
     }
   }, [selectedBranchId, selectedBranch?.chipsJson, activeBusiness?.id, activeBusiness?.chipsJson, activeBusiness?.category]);
 
@@ -211,40 +217,77 @@ export function KeywordManagementPage() {
     setChips((prev) => [...prev, ...toAdd]);
   };
 
-  const handleSaveKeywords = async () => {
-    if (!activeBusiness?.id) return;
-    setIsSaving(true);
-    setSaveSuccess(false);
+  const executeSave = useCallback(
+    async (chipsToSave: string[], industryToSave: string, isManual = false) => {
+      if (!activeBusiness?.id) return;
+      if (isManual) setIsSaving(true);
+      setAutoSaveStatus('saving');
+      setSaveSuccess(false);
 
-    try {
-      // 1. If branch selected, save directly to that branch location
-      if (selectedBranch?.id) {
-        await apiFetch(`/api/businesses/${activeBusiness.id}/locations/${selectedBranch.id}/keywords`, {
-          method: 'POST',
-          body: JSON.stringify({ chips })
+      try {
+        // 1. If branch selected, save directly to that branch location
+        if (selectedBranch?.id) {
+          await apiFetch(`/api/businesses/${activeBusiness.id}/locations/${selectedBranch.id}/keywords`, {
+            method: 'POST',
+            body: JSON.stringify({ chips: chipsToSave })
+          });
+        }
+
+        // 2. Also save to business as parent fallback
+        const catToSave = (industryToSave || '').trim();
+        await apiFetch(`/api/businesses/${activeBusiness.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            chipsJson: JSON.stringify(chipsToSave),
+            ...(catToSave ? { category: catToSave } : {})
+          })
         });
+
+        lastSavedJsonRef.current = JSON.stringify(chipsToSave);
+        setAutoSaveStatus('saved');
+        setSaveSuccess(true);
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setLastSavedText(`Saved at ${timeStr}`);
+
+        setTimeout(() => {
+          setSaveSuccess(false);
+          setAutoSaveStatus((curr) => (curr === 'saved' ? 'idle' : curr));
+        }, 3000);
+
+        refreshBusinesses?.();
+        refreshHierarchy();
+      } catch (err) {
+        console.warn('Failed to save keywords:', err);
+        setAutoSaveStatus('error');
+        if (isManual) {
+          alert('Could not save keywords. Please try again.');
+        }
+      } finally {
+        if (isManual) setIsSaving(false);
       }
+    },
+    [activeBusiness?.id, selectedBranch?.id, refreshBusinesses, refreshHierarchy]
+  );
 
-      // 2. Also save to business as parent fallback
-      const catToSave = (selectedIndustry || '').trim();
-      await apiFetch(`/api/businesses/${activeBusiness.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          chipsJson: JSON.stringify(chips),
-          ...(catToSave ? { category: catToSave } : {})
-        })
-      });
-
-      refreshBusinesses?.();
-      refreshHierarchy();
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3500);
-    } catch (err) {
-      console.warn('Failed to save keywords:', err);
-      alert('Could not save keywords. Please try again.');
-    } finally {
-      setIsSaving(false);
+  // Auto-Save Effect: Runs whenever `chips` changes, debounced by 600ms
+  useEffect(() => {
+    const currentJson = JSON.stringify(chips);
+    if (currentJson === lastSavedJsonRef.current) {
+      return;
     }
+    if (!activeBusiness?.id) return;
+
+    setAutoSaveStatus('saving');
+    const timer = setTimeout(() => {
+      executeSave(chips, selectedIndustry, false);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [chips, executeSave, selectedIndustry, activeBusiness?.id]);
+
+  const handleSaveKeywords = () => {
+    executeSave(chips, selectedIndustry, true);
   };
 
   return (
@@ -273,6 +316,33 @@ export function KeywordManagementPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+          {/* Live Auto-Save Pill */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-white shadow-2xs">
+            {autoSaveStatus === 'saving' || isSaving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 text-indigo-600 animate-spin" />
+                <span className="text-xs font-bold text-indigo-700">Auto-saving to Standees…</span>
+              </>
+            ) : autoSaveStatus === 'saved' || saveSuccess ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-xs font-bold text-emerald-700">
+                  {lastSavedText ? `Auto-saved (${lastSavedText})` : 'Auto-saved & Live ✨'}
+                </span>
+              </>
+            ) : autoSaveStatus === 'error' ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-rose-500" />
+                <span className="text-xs font-bold text-rose-600">Save failed (Click Save)</span>
+              </>
+            ) : (
+              <>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-semibold text-slate-600">Auto-save Enabled</span>
+              </>
+            )}
+          </div>
+
           <a href={`/r/${selectedBranch?.slug || activeBusiness?.slug || 'demo'}`} target="_blank" rel="noopener noreferrer">
             <Button
               variant="outline"
@@ -286,15 +356,15 @@ export function KeywordManagementPage() {
 
           <Button
             onClick={handleSaveKeywords}
-            disabled={isSaving}
+            disabled={isSaving || autoSaveStatus === 'saving'}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 px-4 cursor-pointer"
           >
-            {isSaving ? (
+            {isSaving || autoSaveStatus === 'saving' ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Saving to Standees…</span>
+                <span>Saving…</span>
               </>
-            ) : saveSuccess ? (
+            ) : autoSaveStatus === 'saved' || saveSuccess ? (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
                 <span>Saved & Live!</span>
@@ -302,7 +372,7 @@ export function KeywordManagementPage() {
             ) : (
               <>
                 <Save className="h-3.5 w-3.5" />
-                <span>Save Keywords ✨</span>
+                <span>Save Now</span>
               </>
             )}
           </Button>
@@ -395,9 +465,27 @@ export function KeywordManagementPage() {
                   <Tag className="h-4 w-4 text-purple-600" />
                   <span>Current Active Standee Keywords</span>
                 </CardTitle>
-                <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
-                  {chips.length} Keywords Active
-                </span>
+                <div className="flex items-center gap-2">
+                  {autoSaveStatus === 'saving' || isSaving ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200 animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin text-indigo-600" />
+                      Auto-saving…
+                    </span>
+                  ) : autoSaveStatus === 'saved' || saveSuccess ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <Check className="h-3 w-3 text-emerald-600" />
+                      Auto-saved
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Auto-save active
+                    </span>
+                  )}
+                  <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                    {chips.length} Keywords Active
+                  </span>
+                </div>
               </div>
               <CardDescription className="text-xs text-slate-500">
                 Customers can select multiple points on their phone to construct customized 5-star reviews.
@@ -466,7 +554,10 @@ export function KeywordManagementPage() {
 
               {/* Clear Tags Helper */}
               <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100">
-                <span>Tip: Keep keywords between 2 to 4 words for best mobile readability.</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Auto-saves instantly whenever you add, remove, or generate tags.
+                </span>
                 {chips.length > 0 && (
                   <button
                     type="button"
