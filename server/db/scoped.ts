@@ -572,6 +572,8 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       customerName?: string;
       rating?: number;
       reviewText?: string;
+      resolutionStatus?: string | null;
+      isPrivateFeedback?: boolean;
     }) {
       const business = await this.getBusiness(businessId);
       if (!business) {
@@ -582,6 +584,8 @@ export function createScopedDb(db: DbClient, ownerId: string) {
       if (typeof data.customerName === 'string') patchData.customerName = data.customerName.trim();
       if (typeof data.rating === 'number') patchData.rating = data.rating;
       if (typeof data.reviewText === 'string') patchData.reviewText = data.reviewText.trim();
+      if (typeof data.resolutionStatus === 'string' || data.resolutionStatus === null) patchData.resolutionStatus = data.resolutionStatus;
+      if (typeof data.isPrivateFeedback === 'boolean') patchData.isPrivateFeedback = data.isPrivateFeedback;
 
       const [updated] = await db
         .update(customerReviews)
@@ -590,6 +594,43 @@ export function createScopedDb(db: DbClient, ownerId: string) {
         .returning();
 
       return updated;
+    },
+
+    async createCustomerReview(businessId: string, data: {
+      customerName?: string;
+      customerPhone?: string | null;
+      rating?: number;
+      reviewText?: string;
+      isPrivateFeedback?: boolean;
+      resolutionStatus?: string | null;
+      branchId?: string | null;
+    }) {
+      const business = await this.getBusiness(businessId);
+      if (!business) {
+        throw new ScopedAuthorizationError('Cannot create review: Unauthorized business');
+      }
+
+      const id = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const now = Math.floor(Date.now() / 1000);
+
+      const [created] = await db
+        .insert(customerReviews)
+        .values({
+          id,
+          businessId,
+          branchId: data.branchId || null,
+          customerName: data.customerName?.trim() || 'Verified Customer',
+          customerPhone: data.customerPhone?.trim() || null,
+          rating: typeof data.rating === 'number' ? data.rating : 5,
+          reviewText: data.reviewText?.trim() || '',
+          language: 'en',
+          isPrivateFeedback: Boolean(data.isPrivateFeedback),
+          resolutionStatus: data.resolutionStatus || (data.isPrivateFeedback ? 'open' : null),
+          createdAt: now
+        })
+        .returning();
+
+      return created;
     },
 
     async deleteCustomerReview(businessId: string, reviewId: string) {

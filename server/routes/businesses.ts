@@ -565,7 +565,7 @@ businessRoutes.post('/:id/reviews/:reviewId/reply', async (c) => {
   }
 });
 
-// Update customer review (e.g. edit customer name, rating, or text)
+// Update customer review (e.g. edit customer name, rating, text, or resolution status)
 businessRoutes.patch('/:id/reviews/:reviewId', async (c) => {
   const ownerId = getOwnerId(c);
   const businessId = c.req.param('id');
@@ -579,9 +579,36 @@ businessRoutes.patch('/:id/reviews/:reviewId', async (c) => {
     const updated = await scoped.updateCustomerReview(businessId, reviewId, {
       customerName: body.customerName,
       rating: body.rating,
-      reviewText: body.reviewText
+      reviewText: body.reviewText,
+      resolutionStatus: body.resolutionStatus,
+      isPrivateFeedback: body.isPrivateFeedback
     });
     return c.json({ success: true, review: updated });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 403);
+  }
+});
+
+// Create customer review or private customer request
+businessRoutes.post('/:id/reviews', async (c) => {
+  const ownerId = getOwnerId(c);
+  const businessId = c.req.param('id');
+  const body = await c.req.json();
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+
+  try {
+    const created = await scoped.createCustomerReview(businessId, {
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
+      rating: body.rating,
+      reviewText: body.reviewText,
+      isPrivateFeedback: body.isPrivateFeedback,
+      resolutionStatus: body.resolutionStatus,
+      branchId: body.branchId
+    });
+    return c.json({ success: true, review: created });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
   }

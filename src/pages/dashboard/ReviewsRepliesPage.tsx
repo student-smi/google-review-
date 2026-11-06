@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea, Label } from '@/components/ui/input';
@@ -32,7 +32,11 @@ import {
   Edit2,
   Plus,
   X,
-  Trash2
+  Trash2,
+  Inbox,
+  Phone,
+  AlertCircle,
+  MessageCircle
 } from 'lucide-react';
 import type { BusinessItem } from './DashboardLayout';
 import { apiFetch } from '@/lib/api';
@@ -41,11 +45,15 @@ import { useHierarchy } from '@/context/HierarchyContext';
 export interface CustomerReview {
   id: string;
   businessId: string;
+  branchId?: string | null;
   customerName: string;
+  customerPhone?: string | null;
   rating: number;
   reviewText: string;
   chipsJson?: string | null;
   language: string;
+  isPrivateFeedback?: boolean | number;
+  resolutionStatus?: 'open' | 'in_progress' | 'resolved' | string | null;
   replyText?: string | null;
   replyStyle?: string | null;
   repliedAt?: number | null;
@@ -73,9 +81,47 @@ export function ReviewsRepliesPage() {
   const { activeBusiness } = useOutletContext<{ activeBusiness: BusinessItem | null }>();
   const { activeBranch, roles } = useHierarchy();
   const bizName = activeBusiness?.name || 'Our Business';
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Navigation tab: 'feed' (real customer reviews), 'sync' (Google Maps Sync & Importer) or 'tester' (manual sandbox)
-  const [activeTab, setActiveTab] = useState<'feed' | 'sync' | 'tester'>('feed');
+  // Determine active tab based on current pathname
+  const getTabFromPath = (path: string): 'feed' | 'sync' | 'tester' | 'requests' => {
+    if (path.includes('/dashboard/ai-replies')) return 'tester';
+    if (path.includes('/dashboard/customer-requests')) return 'requests';
+    return 'feed';
+  };
+
+  // Navigation tab: 'feed' (real customer reviews), 'sync' (Google Maps Sync & Importer), 'tester' (manual sandbox) or 'requests' (private requests)
+  const [activeTab, setActiveTab] = useState<'feed' | 'sync' | 'tester' | 'requests'>(() => {
+    return getTabFromPath(location.pathname);
+  });
+
+  // Sync tab with route changes when user clicks sidebar links
+  useEffect(() => {
+    const tabFromRoute = getTabFromPath(location.pathname);
+    setActiveTab(tabFromRoute);
+  }, [location.pathname]);
+
+  const handleTabSwitch = (tab: 'feed' | 'sync' | 'tester' | 'requests') => {
+    setActiveTab(tab);
+    if (tab === 'feed' && location.pathname !== '/dashboard/replies') {
+      navigate('/dashboard/replies');
+    } else if (tab === 'tester' && location.pathname !== '/dashboard/ai-replies') {
+      navigate('/dashboard/ai-replies');
+    } else if (tab === 'requests' && location.pathname !== '/dashboard/customer-requests') {
+      navigate('/dashboard/customer-requests');
+    }
+  };
+
+  // Customer Requests & Private Feedback state
+  const [requestsFilter, setRequestsFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved'>('all');
+  const [isCreateRequestModalOpen, setIsCreateRequestModalOpen] = useState(false);
+  const [newReqName, setNewReqName] = useState('');
+  const [newReqPhone, setNewReqPhone] = useState('');
+  const [newReqRating, setNewReqRating] = useState(2);
+  const [newReqText, setNewReqText] = useState('');
+  const [isCreatingRequest, setIsCreatingRequest] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{ [id: string]: boolean }>({});
 
   // Quick Target & Import Google Review state
   const [quickAuthorName, setQuickAuthorName] = useState('');
@@ -764,15 +810,89 @@ export function ReviewsRepliesPage() {
     }
   };
 
-  // Filter reviews
-  const filteredReviews = reviews.filter((r) => {
+  // Differentiate between Public Google Reviews and Private Intercepted Feedback
+  const privateRequests = reviews.filter(
+    (r) => Boolean(r.isPrivateFeedback) || r.id.startsWith('req_') || (typeof r.rating === 'number' && r.rating <= 3 && !r.id.startsWith('gmb_') && !r.id.startsWith('place_'))
+  );
+
+  const publicReviews = reviews.filter(
+    (r) => !Boolean(r.isPrivateFeedback) && !r.id.startsWith('req_')
+  );
+
+  // Filter public reviews
+  const filteredReviews = publicReviews.filter((r) => {
     if (filterMode === 'needs_reply') return !r.replyText;
     if (filterMode === 'replied') return !!r.replyText;
     return true;
   });
 
-  const awaitingCount = reviews.filter((r) => !r.replyText).length;
-  const repliedCount = reviews.filter((r) => !!r.replyText).length;
+  const awaitingCount = publicReviews.filter((r) => !r.replyText).length;
+  const repliedCount = publicReviews.filter((r) => !!r.replyText).length;
+
+  // Filter private customer requests
+  const filteredRequests = privateRequests.filter((r) => {
+    const status = r.resolutionStatus || 'open';
+    if (requestsFilter === 'all') return true;
+    return status === requestsFilter;
+  });
+
+  const openRequestsCount = privateRequests.filter((r) => (r.resolutionStatus || 'open') === 'open').length;
+  const inProgressRequestsCount = privateRequests.filter((r) => r.resolutionStatus === 'in_progress').length;
+  const resolvedRequestsCount = privateRequests.filter((r) => r.resolutionStatus === 'resolved').length;
+
+  const handleUpdateRequestStatus = async (reviewId: string, newStatus: 'open' | 'in_progress' | 'resolved') => {
+    if (!activeBusiness?.id) return;
+    setIsUpdatingStatus((prev) => ({ ...prev, [reviewId]: true }));
+    try {
+      await apiFetch(`/api/businesses/${activeBusiness.id}/reviews/${reviewId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolutionStatus: newStatus })
+      });
+      setReviews((prev) =>
+        prev.map((r) => (r.id === reviewId ? { ...r, resolutionStatus: newStatus } : r))
+      );
+    } catch (err: any) {
+      alert('Failed to update status: ' + (err?.message || 'Server error'));
+    } finally {
+      setIsUpdatingStatus((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  };
+
+  const handleCreateCustomerRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeBusiness?.id || !newReqText.trim()) return;
+    setIsCreatingRequest(true);
+    try {
+      const res = await apiFetch<{ success: boolean; review: CustomerReview }>(
+        `/api/businesses/${activeBusiness.id}/reviews`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            customerName: newReqName.trim() || 'Direct Customer',
+            customerPhone: newReqPhone.trim() || null,
+            rating: newReqRating,
+            reviewText: newReqText.trim(),
+            isPrivateFeedback: true,
+            resolutionStatus: 'open',
+            branchId: activeBranch?.id || null
+          })
+        }
+      );
+      if (res?.review) {
+        setReviews((prev) => [res.review, ...prev]);
+        setIsCreateRequestModalOpen(false);
+        setNewReqName('');
+        setNewReqPhone('');
+        setNewReqRating(2);
+        setNewReqText('');
+        alert('✓ Customer request recorded successfully! You can track resolution here.');
+      }
+    } catch (err: any) {
+      alert('Failed to create customer request: ' + (err?.message || 'Server error'));
+    } finally {
+      setIsCreatingRequest(false);
+    }
+  };
 
   // Pagination calculations
   const totalReviews = filteredReviews.length;
@@ -828,47 +948,88 @@ export function ReviewsRepliesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-              Customer Reviews & AI Reply Co-pilot
+              {activeTab === 'requests'
+                ? 'Customer Requests & Private Feedback'
+                : activeTab === 'tester'
+                ? 'AI Reply Assistant & Copilot'
+                : activeTab === 'sync'
+                ? 'Sync Google Maps & Quick Target'
+                : 'Customer Reviews Feed'}
             </h1>
-            <span className="rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs">
-              ⚡ Llama 3.2
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${
+                activeTab === 'requests'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600'
+                  : activeTab === 'tester'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600'
+                  : activeTab === 'sync'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+              }`}
+            >
+              {activeTab === 'requests'
+                ? '🛡️ Private Funnel'
+                : activeTab === 'tester'
+                ? '⚡ Llama 3.2 AI'
+                : activeTab === 'sync'
+                ? 'Google Places API'
+                : 'Google Maps Live'}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
-            Real customer reviews for <span className="font-bold text-slate-800">{activeBranch ? `${activeBranch.name} (${bizName})` : bizName}</span>. Generate calibrated, 100% policy-safe Google replies in 1 click.
+            {activeTab === 'requests'
+              ? `Direct customer complaints and private requests intercepted before reaching Google Maps for ${activeBranch ? `${activeBranch.name} (${bizName})` : bizName}. Resolve issues privately to protect your 5-star rating.`
+              : activeTab === 'tester'
+              ? `Draft, polish, and generate SEO-optimized, 100% policy-compliant Google replies in 1-click for ${activeBranch ? `${activeBranch.name} (${bizName})` : bizName}.`
+              : activeTab === 'sync'
+              ? `Synchronize Google Place details, connect GMB account, and import Google Maps reviews for ${bizName}.`
+              : `Real customer reviews for ${activeBranch ? `${activeBranch.name} (${bizName})` : bizName}. Generate calibrated, 100% policy-safe Google replies in 1 click.`}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-          {activeBusiness?.googleReviewUrl && (
-            <a href={activeBusiness.googleReviewUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-slate-200 hover:bg-slate-50 text-slate-700">
-                <span>View Google Maps Profile</span>
-                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-              </Button>
-            </a>
-          )}
-          {hasScannerDrafts && (
+          {activeTab === 'requests' ? (
             <Button
-              variant="outline"
               size="sm"
-              onClick={handleCleanScannerDrafts}
-              disabled={isCleaningDrafts}
-              className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 cursor-pointer"
-              title="Remove temporary scanner test reviews and keep only genuine Google Maps reviews"
+              onClick={() => setIsCreateRequestModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
             >
-              <Trash2 className="h-3.5 w-3.5 text-amber-600" />
-              <span>{isCleaningDrafts ? 'Clearing…' : 'Clear Scanner Drafts'}</span>
+              <Plus className="h-3.5 w-3.5" />
+              <span>+ Log Direct Customer Request</span>
             </Button>
+          ) : (
+            <>
+              {activeBusiness?.googleReviewUrl && (
+                <a href={activeBusiness.googleReviewUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-slate-200 hover:bg-slate-50 text-slate-700">
+                    <span>View Google Maps Profile</span>
+                    <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                  </Button>
+                </a>
+              )}
+              {hasScannerDrafts && activeTab === 'feed' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCleanScannerDrafts}
+                  disabled={isCleaningDrafts}
+                  className="gap-1.5 text-xs font-bold rounded-xl shadow-xs border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 cursor-pointer"
+                  title="Remove temporary scanner test reviews and keep only genuine Google Maps reviews"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-amber-600" />
+                  <span>{isCleaningDrafts ? 'Clearing…' : 'Clear Scanner Drafts'}</span>
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => setIsQuickImportModalOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>+ Import Google Review</span>
+              </Button>
+            </>
           )}
-          <Button
-            size="sm"
-            onClick={() => setIsQuickImportModalOpen(true)}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>+ Import Google Review</span>
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -882,144 +1043,186 @@ export function ReviewsRepliesPage() {
         </div>
       </div>
 
-      {/* Google Business Profile & Places API Live Sync Engine Card */}
-      <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-blue-50/40 p-5 shadow-xs transition-all">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-              <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
-              </div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
-                <span>Google Maps & Places Live Sync Engine</span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Google Places Active ({placesStats?.rating ?? 4.9} ★ | {placesStats?.userRatingCount ?? 127} Reviews)</span>
-                </span>
-              </h3>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Connected to Google Places for <span className="font-bold text-slate-800">{bizName}</span>. 
-              Verified Place ID: <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-mono text-indigo-700 dark:text-indigo-300">{placesStats?.googlePlaceId || activeBusiness?.googlePlaceId || 'ChIJ7zSUNEmFXjkRiNXfEEOmZgQ'}</code>. 
-              Every customer review captured via QR flow and Google Maps syncs directly into this dashboard in real-time.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-medium text-slate-500">
-              <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs font-semibold">
-                <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> Google Rating: {placesStats?.rating ?? 4.9} ★
-              </span>
-              <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs font-semibold">
-                <MessageSquare className="w-3 h-3 text-purple-600" /> Total Reviews: {placesStats?.userRatingCount ?? 127}
-              </span>
-              <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
-                <ShieldCheck className="w-3 h-3 text-blue-600" /> Places API (New) Verified
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-center shrink-0">
-            <Button
-              onClick={() => handleSyncGmb()}
-              disabled={isSyncingGmb}
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGmb ? 'animate-spin' : ''}`} />
-              <span>{isSyncingGmb ? 'Syncing Live Google Data…' : '🔄 Sync Live Google Rating & Reviews'}</span>
-            </Button>
-            {gmbStatus.isConnected ? (
-              <div className="flex flex-wrap items-center gap-2">
-                {gmbStatus.isExpired && (
-                  <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200/80 px-2.5 py-1 rounded-xl font-medium flex items-center gap-1 shadow-2xs">
-                    <Clock className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Session Expired (Click Sync to refresh)</span>
+      {/* Google Business Profile & Places API Live Sync Engine Card (Shown on Feed and Sync tabs) */}
+      {(activeTab === 'feed' || activeTab === 'sync') && (
+        <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 via-white to-blue-50/40 p-5 shadow-xs transition-all">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                <div className="w-8 h-8 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                  <span>Google Maps & Places Live Sync Engine</span>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Google Places Active ({placesStats?.rating ?? 4.9} ★ | {placesStats?.userRatingCount ?? 127} Reviews)</span>
                   </span>
-                )}
+                </h3>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Connected to Google Places for <span className="font-bold text-slate-800">{bizName}</span>. 
+                Verified Place ID: <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-mono text-indigo-700 dark:text-indigo-300">{placesStats?.googlePlaceId || activeBusiness?.googlePlaceId || 'ChIJ7zSUNEmFXjkRiNXfEEOmZgQ'}</code>. 
+                Every customer review captured via QR flow and Google Maps syncs directly into this dashboard in real-time.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-medium text-slate-500">
+                <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs font-semibold">
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> Google Rating: {placesStats?.rating ?? 4.9} ★
+                </span>
+                <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs font-semibold">
+                  <MessageSquare className="w-3 h-3 text-purple-600" /> Total Reviews: {placesStats?.userRatingCount ?? 127}
+                </span>
+                <span className="flex items-center gap-1 text-slate-700 bg-white/90 border border-slate-200/80 px-2 py-0.5 rounded-md shadow-2xs">
+                  <ShieldCheck className="w-3 h-3 text-blue-600" /> Places API (New) Verified
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-center shrink-0">
+              <Button
+                onClick={() => handleSyncGmb()}
+                disabled={isSyncingGmb}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGmb ? 'animate-spin' : ''}`} />
+                <span>{isSyncingGmb ? 'Syncing Live Google Data…' : '🔄 Sync Live Google Rating & Reviews'}</span>
+              </Button>
+              {gmbStatus.isConnected ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {gmbStatus.isExpired && (
+                    <span className="text-[11px] bg-amber-50 text-amber-700 border border-amber-200/80 px-2.5 py-1 rounded-xl font-medium flex items-center gap-1 shadow-2xs">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Session Expired (Click Sync to refresh)</span>
+                    </span>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={handleDisconnectGmb}
+                    size="sm"
+                    className="border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-600 text-xs font-semibold rounded-xl cursor-pointer"
+                  >
+                    <Unlink className="w-3.5 h-3.5 mr-1" />
+                    <span>Disconnect GMB</span>
+                  </Button>
+                </div>
+              ) : (
                 <Button
                   variant="outline"
-                  onClick={handleDisconnectGmb}
+                  onClick={handleConnectGmb}
+                  disabled={isConnectingGmb}
                   size="sm"
-                  className="border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-600 text-xs font-semibold rounded-xl cursor-pointer"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold rounded-xl cursor-pointer"
                 >
-                  <Unlink className="w-3.5 h-3.5 mr-1" />
-                  <span>Disconnect GMB</span>
+                  <Globe className="w-3.5 h-3.5 mr-1" />
+                  <span>Connect GMB Account</span>
                 </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={handleConnectGmb}
-                disabled={isConnectingGmb}
-                size="sm"
-                className="border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold rounded-xl cursor-pointer"
-              >
-                <Globe className="w-3.5 h-3.5 mr-1" />
-                <span>Connect GMB Account</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Metrics Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Total Reviews</span>
-            <MessageSquare className="h-4 w-4 text-purple-600" />
-          </div>
-          <div className="mt-2 text-2xl font-black text-slate-900">{reviews.length}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            {gmbStatus.isConnected ? 'Synced from Google Business Profile' : 'Verified Google Maps Reviews'}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-800">Awaiting Reply</span>
-            <Clock className="h-4 w-4 text-amber-600" />
-          </div>
-          <div className="mt-2 text-2xl font-black text-amber-700">{awaitingCount}</div>
-          <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Respond within 24h for best SEO</div>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 to-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-800">Replied</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </div>
-          <div className="mt-2 text-2xl font-black text-emerald-700">{repliedCount}</div>
-          <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">100% policy compliant</div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Average Rating</span>
-            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-          </div>
-          <div className="mt-2 text-2xl font-black text-slate-900 flex items-center gap-1.5">
-            <span>5.0</span>
-            <div className="flex text-amber-400">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star key={s} className="h-3.5 w-3.5 fill-amber-400" />
-              ))}
+              )}
             </div>
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Top-tier verified sentiment</div>
         </div>
-      </div>
+      )}
+
+      {/* Metrics Summary Strip */}
+      {activeTab === 'requests' ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Intercepted Issues</span>
+              <Inbox className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-slate-900">{privateRequests.length}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Direct private submissions</div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800">Awaiting Action</span>
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-amber-700">{openRequestsCount}</div>
+            <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Contact customer to resolve</div>
+          </div>
+
+          <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 to-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-800">In Progress</span>
+              <RefreshCw className="h-4 w-4 text-blue-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-blue-700">{inProgressRequestsCount}</div>
+            <div className="text-[11px] text-blue-600 mt-0.5 font-medium">Staff actively working</div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 to-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-800">Resolved Privately</span>
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-emerald-700">{resolvedRequestsCount}</div>
+            <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">100% saved from Google Maps</div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Total Reviews</span>
+              <MessageSquare className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-slate-900">{publicReviews.length}</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {gmbStatus.isConnected ? 'Synced from Google Business Profile' : 'Verified Google Maps Reviews'}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800">Awaiting Reply</span>
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-amber-700">{awaitingCount}</div>
+            <div className="text-[11px] text-amber-600 mt-0.5 font-medium">Respond within 24h for best SEO</div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 to-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-800">Replied</span>
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-emerald-700">{repliedCount}</div>
+            <div className="text-[11px] text-emerald-600 mt-0.5 font-medium">100% policy compliant</div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500">Average Rating</span>
+              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+            </div>
+            <div className="mt-2 text-2xl font-black text-slate-900 flex items-center gap-1.5">
+              <span>{placesStats?.rating ?? 4.9}</span>
+              <div className="flex text-amber-400">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} className="h-3.5 w-3.5 fill-amber-400" />
+                ))}
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Top-tier verified sentiment</div>
+          </div>
+        </div>
+      )}
 
       {/* Primary Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-2 gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setActiveTab('feed')}
+            onClick={() => handleTabSwitch('feed')}
             className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'feed'
                 ? 'bg-purple-600 text-white shadow-xs'
@@ -1027,28 +1230,16 @@ export function ReviewsRepliesPage() {
             }`}
           >
             <MessageSquare className="h-4 w-4" />
-            <span>Customer Reviews Feed</span>
+            <span>Reviews Feed</span>
             <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
               activeTab === 'feed' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
-              {reviews.length}
+              {publicReviews.length}
             </span>
           </button>
 
           <button
-            onClick={() => setActiveTab('sync')}
-            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'sync'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Zap className="h-4 w-4 text-amber-500" />
-            <span>Sync Google Maps & Quick Target</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('tester')}
+            onClick={() => handleTabSwitch('tester')}
             className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'tester'
                 ? 'bg-purple-600 text-white shadow-xs'
@@ -1056,12 +1247,46 @@ export function ReviewsRepliesPage() {
             }`}
           >
             <Sparkles className="h-4 w-4" />
-            <span>AI Sandbox</span>
+            <span>AI Reply Assistant</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+              activeTab === 'tester' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700 border border-purple-200'
+            }`}>
+              1-Click
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleTabSwitch('requests')}
+            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'requests'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Inbox className="h-4 w-4" />
+            <span>Customer Requests</span>
+            <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
+              activeTab === 'requests' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {privateRequests.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleTabSwitch('sync')}
+            className={`px-3.5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'sync'
+                ? 'bg-purple-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span>Sync Google Maps</span>
           </button>
         </div>
 
         {/* Filter Pills for Feed */}
-        {activeTab === 'feed' && reviews.length > 0 && (
+        {activeTab === 'feed' && publicReviews.length > 0 && (
           <div className="flex items-center flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100/70 p-1 text-xs">
             <button
               onClick={() => setFilterMode('all')}
@@ -1069,7 +1294,7 @@ export function ReviewsRepliesPage() {
                 filterMode === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              All ({reviews.length})
+              All ({publicReviews.length})
             </button>
             <button
               onClick={() => setFilterMode('needs_reply')}
@@ -2027,6 +2252,297 @@ export function ReviewsRepliesPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Quick Queue of Pending Reviews for AI Generation */}
+          {awaitingCount > 0 && (
+            <div className="lg:col-span-12 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50/50 via-white to-indigo-50/40 p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                    <span>Pending Reviews Awaiting AI Reply ({awaitingCount})</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Click "Draft AI Reply" on any customer review to load and generate responses instantly.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {publicReviews
+                  .filter((r) => !r.replyText)
+                  .slice(0, 4)
+                  .map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-purple-300 transition-all flex flex-col justify-between gap-2 shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-900">{rev.customerName}</span>
+                          <div className="flex text-amber-400">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`h-3 w-3 ${
+                                  s <= (rev.rating || 5) ? 'fill-amber-400' : 'text-slate-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 line-clamp-2 mt-1.5 font-normal">
+                          "{rev.reviewText}"
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span className="text-[10px] text-slate-400">{formatTimeAgo(rev.createdAt)}</span>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setManualCustomerName(rev.customerName);
+                            setManualRating(rev.rating || 5);
+                            setManualReviewInput(rev.reviewText);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="h-7 text-[11px] font-bold rounded-lg bg-purple-600 hover:bg-purple-700 text-white gap-1 cursor-pointer"
+                        >
+                          <Zap className="h-3 w-3" />
+                          <span>Draft AI Reply</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: CUSTOMER REQUESTS & PRIVATE FEEDBACK */}
+      {activeTab === 'requests' && (
+        <div className="space-y-6">
+          {/* Header Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+                <Filter className="h-3.5 w-3.5" /> Filter:
+              </span>
+              {(['all', 'open', 'in_progress', 'resolved'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setRequestsFilter(filter)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                    requestsFilter === filter
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {filter.replace('_', ' ')} (
+                  {filter === 'all'
+                    ? privateRequests.length
+                    : filter === 'open'
+                    ? openRequestsCount
+                    : filter === 'in_progress'
+                    ? inProgressRequestsCount
+                    : resolvedRequestsCount}
+                  )
+                </button>
+              ))}
+            </div>
+
+            <Button
+              size="sm"
+              onClick={() => setIsCreateRequestModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer self-start sm:self-auto"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>+ Log Direct Customer Request</span>
+            </Button>
+          </div>
+
+          {/* Requests Content */}
+          {filteredRequests.length === 0 ? (
+            <Card className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-xs mb-3">
+                <ShieldCheck className="h-7 w-7" />
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900">
+                {requestsFilter === 'all'
+                  ? 'No Private Customer Complaints Pending'
+                  : `No ${requestsFilter.replace('_', ' ')} customer requests`}
+              </h3>
+              <p className="mx-auto mt-1 max-w-md text-xs text-slate-500 leading-relaxed">
+                Your QR review standees redirect happy 4 & 5 star ratings straight to Google Maps. 
+                Any customer rating 1–3 stars is intercepted here privately so your team can resolve it directly before negative reviews impact your Google ranking!
+              </p>
+              <div className="pt-4 flex justify-center">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsCreateRequestModalOpen(true)}
+                  className="rounded-xl text-xs font-bold gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Log a Walk-in / Phone Complaint</span>
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredRequests.map((req) => {
+                const status = req.resolutionStatus || 'open';
+                const isUpdating = isUpdatingStatus[req.id];
+
+                return (
+                  <Card
+                    key={req.id}
+                    className={`rounded-2xl border transition-all shadow-xs ${
+                      status === 'resolved'
+                        ? 'bg-slate-50/70 border-slate-200 opacity-80'
+                        : status === 'in_progress'
+                        ? 'bg-blue-50/20 border-blue-200'
+                        : 'bg-white border-amber-200'
+                    }`}
+                  >
+                    <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                          {req.customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-slate-900 text-sm">{req.customerName}</span>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                req.rating <= 1
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : req.rating <= 2
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                              }`}
+                            >
+                              {req.rating}★ Intercepted
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" />
+                            <span>{formatTimeAgo(req.createdAt)}</span>
+                            {req.customerPhone && (
+                              <>
+                                <span>•</span>
+                                <span className="font-mono text-slate-600">{req.customerPhone}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <span
+                        className={`text-[11px] font-black px-2.5 py-1 rounded-xl border flex items-center gap-1 ${
+                          status === 'resolved'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : status === 'in_progress'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-200 animate-pulse'
+                        }`}
+                      >
+                        {status === 'resolved' ? (
+                          <><Check className="h-3 w-3" /> Resolved</>
+                        ) : status === 'in_progress' ? (
+                          <><Clock className="h-3 w-3" /> In Progress</>
+                        ) : (
+                          <><AlertCircle className="h-3 w-3" /> Awaiting Action</>
+                        )}
+                      </span>
+                    </CardHeader>
+
+                    <CardContent className="p-4 space-y-3">
+                      <p className="text-xs text-slate-700 leading-relaxed bg-slate-50/80 p-3 rounded-xl border border-slate-100 font-normal">
+                        "{req.reviewText}"
+                      </p>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                        {/* Direct Communication Buttons */}
+                        <div className="flex items-center gap-2">
+                          {req.customerPhone ? (
+                            <>
+                              <a href={`tel:${req.customerPhone}`}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[11px] font-bold rounded-lg gap-1 border-slate-200 hover:bg-slate-100 text-slate-700"
+                                >
+                                  <Phone className="h-3 w-3 text-emerald-600" />
+                                  <span>Call</span>
+                                </Button>
+                              </a>
+                              <a
+                                href={`https://wa.me/${req.customerPhone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[11px] font-bold rounded-lg gap-1 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100 text-emerald-800"
+                                >
+                                  <MessageCircle className="h-3 w-3 text-emerald-600" />
+                                  <span>WhatsApp</span>
+                                </Button>
+                              </a>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">No phone provided</span>
+                          )}
+                        </div>
+
+                        {/* Status Action Buttons */}
+                        <div className="flex items-center gap-1.5">
+                          {status !== 'resolved' ? (
+                            <>
+                              {status === 'open' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isUpdating}
+                                  onClick={() => handleUpdateRequestStatus(req.id, 'in_progress')}
+                                  className="h-7 text-[11px] font-bold rounded-lg border-blue-200 text-blue-700 hover:bg-blue-50 cursor-pointer"
+                                >
+                                  Start Progress
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                disabled={isUpdating}
+                                onClick={() => handleUpdateRequestStatus(req.id, 'resolved')}
+                                className="h-7 text-[11px] font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white gap-1 shadow-2xs cursor-pointer"
+                              >
+                                <Check className="h-3 w-3" />
+                                <span>Mark Resolved</span>
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateRequestStatus(req.id, 'open')}
+                              className="h-7 text-[11px] font-bold rounded-lg border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer"
+                            >
+                              Re-open Issue
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2123,6 +2639,119 @@ export function ReviewsRepliesPage() {
                     <>
                       <Check className="h-3.5 w-3.5" />
                       <span>Import & Generate Reply</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Log Direct Customer Request Modal */}
+      {isCreateRequestModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+          <Card className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 my-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Log Customer Request / Complaint</h3>
+                  <p className="text-xs text-slate-500">Record an offline or phone complaint to track private resolution</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateRequestModalOpen(false)}
+                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCustomerRequest} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">Customer Name</Label>
+                  <Input
+                    value={newReqName}
+                    onChange={(e) => setNewReqName(e.target.value)}
+                    placeholder="e.g. Ramesh Bhai"
+                    className="rounded-xl text-xs"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-700">Phone Number (Optional)</Label>
+                  <Input
+                    value={newReqPhone}
+                    onChange={(e) => setNewReqPhone(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Rating or Severity</Label>
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  {[1, 2, 3].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setNewReqRating(star)}
+                      className="p-1 hover:scale-110 transition-transform cursor-pointer"
+                    >
+                      <Star
+                        className={`h-5 w-5 ${
+                          star <= newReqRating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-xs font-bold text-slate-500 ml-2 font-mono">
+                    {newReqRating} of 3 Stars ({newReqRating === 1 ? 'Severe Issue' : newReqRating === 2 ? 'Moderate' : 'Mild Concern'})
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-700">Complaint / Request Details</Label>
+                <Textarea
+                  rows={4}
+                  value={newReqText}
+                  onChange={(e) => setNewReqText(e.target.value)}
+                  placeholder="Explain customer issue or request (e.g. Order delivered cold, packaging torn, AC not working...)"
+                  className="rounded-xl text-xs font-normal leading-relaxed"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateRequestModalOpen(false)}
+                  className="text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreatingRequest || !newReqText.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                >
+                  {isCreatingRequest ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Saving…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Record Customer Request</span>
                     </>
                   )}
                 </Button>
