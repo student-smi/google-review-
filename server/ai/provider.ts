@@ -212,7 +212,9 @@ export function getOwnerReplyFallbacks(
   const cName = customerName && customerName.trim() ? customerName.trim() : 'Valued Customer';
   const locInfo = city ? ` (${city})` : '';
   const s = seed ? Math.abs(seed) : Math.floor(Math.random() * 1000);
-  const isNegative = typeof rating === 'number' && rating > 0 && rating <= 2;
+  const isNegative =
+    (typeof rating === 'number' && rating > 0 && rating <= 3) ||
+    /bad|worst|poor|terrible|rude|horrible|waste|scam|cheat|disappoint|pathetic|delay|unprofessional|slow/i.test(reviewText || '');
   const contactText = resolutionContact && resolutionContact !== 'our management'
     ? ` directly at ${resolutionContact}`
     : '';
@@ -287,29 +289,40 @@ export async function generateOwnerReplies(
   ];
   const chosenAngle = ownerReplyAngles[(seed ? Math.abs(seed) : Math.floor(Math.random() * 1000)) % ownerReplyAngles.length];
 
+  const isNegative =
+    (typeof rating === 'number' && rating > 0 && rating <= 3) ||
+    /bad|worst|poor|terrible|rude|horrible|waste|scam|cheat|disappoint|pathetic|delay|unprofessional|slow/i.test(reviewText || '');
+
   const prompt = `You are the owner of "${businessName}"${locInfo}${category ? ` (${category})` : ''}.
 TASK: Generate THREE COMPLETELY DISTINCT, FRESH, AUTHENTIC review reply options for this Google review:
 CUSTOMER REVIEW DETAILS:
 - Review text: "${reviewText}"
 - Customer name: "${customerName || 'Customer'}"
-- Rating: ${rating ? `${rating} stars` : '5 stars'}
-${resolutionContact && resolutionContact !== 'our management' ? `- Resolution contact: "${resolutionContact}"` : ''}
+- Rating: ${rating ? `${rating} stars` : (isNegative ? '1 star' : '5 stars')}
+${resolutionContact && resolutionContact !== 'our management' ? `- Direct resolution contact: "${resolutionContact}"` : ''}
 - Reply creative angle: ${chosenAngle}
 - Variation jitter seed: #${seed || Math.floor(Math.random() * 1000000)}
+
+CORE DIRECTIVE (MANDATORY):
+1. CUSTOMIZED TO THE REVIEW, RATING, AND REVIEWER:
+   - Greet the reviewer directly by their name (e.g., "${customerName ? customerName.split(' ')[0] : 'Valued Customer'}").
+   - Explicitly reflect and mention the specific details or experiences written in their review ("${reviewText.slice(0, 140)}...").
+2. TONE BASED ON RATING & SENTIMENT:
+   - NEGATIVE REVIEWS (Rating 1-3 stars or complaints/criticism): Reply in a genuinely APOLOGETIC, humble, polite, and reassuring tone. Take full accountability without arguing, making excuses, or shifting blame. Apologize sincerely for their disappointment and invite them to connect directly via ${resolutionContact || 'our management team'} so you can investigate and make it right.
+   - POSITIVE REVIEWS (Rating 4-5 stars or compliments): Reply warmly, enthusiastically, and gratefully. Thank them specifically for their kind feedback and patronage, and welcome them back soon.
 
 OUTPUT REQUIREMENTS:
 Return valid JSON with exactly three keys: "warm", "professional", and "concise".
 
 CRITICAL DIVERSITY & HUMAN QUALITY RULES:
-1. NEVER USE CANNED CLICHÉ OPENINGS on every reply! Do NOT always start with "Thank you, [Name], for your kind words about...".
-   Vary greetings naturally (e.g. "Hi [Name], we're thrilled to read this!", "Hello [Name], thank you so much for the wonderful review!", "Dear [Name], your feedback truly made our day!", "Hey [Name], huge thanks from all of us at ${businessName}!").
-2. SPECIFIC CONTEXT: Naturally reference 1 or 2 specific details or services mentioned in their review (e.g. from "${reviewText.slice(0, 120)}...") so it feels genuinely written by a human business owner who actually read their review.
+1. Address the customer by name naturally. Vary greetings (e.g. "Hi [Name]", "Dear [Name]", "Hello [Name]").
+2. Reference specific services or details mentioned in their review so it feels 100% human and personalized.
 3. THREE DISTINCT STYLES:
-   - "warm": Heartfelt, friendly, enthusiastic, community-spirited (2-3 sentences).
+   - "warm": Heartfelt, friendly, empathetic, community-spirited (2-3 sentences).
    - "professional": Polished, courteous, service & quality-oriented, refined tone (2-3 sentences).
    - "concise": Punchy, direct, upbeat, under 30 words.
 4. STRICT CRITICAL RULE: NEVER use brackets or placeholders like "[Your Name]", "[Name]", "[Owner]", "[Business Name]", or "(our management)". Everything must be 100% complete text ready to publish immediately on Google Maps. Sign off naturally as "The ${businessName} Team" or "Team ${businessName}".
-5. For negative reviews, apologize sincerely and offer offline resolution without arguing or making excuses.`;
+5. Never argue, never blame the customer, never reveal private details.`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {

@@ -64,7 +64,7 @@ describe('AI Owner Reply Generator (Phase 3)', () => {
     expect(result.professional).not.toEqual(result.concise);
   });
 
-  it('gracefully handles negative reviews with resolution contact', async () => {
+  it('gracefully handles negative reviews with resolution contact and apologetic tone', async () => {
     const result = await generateOwnerReplies(null, {
       businessName: 'XYZ Store',
       customerName: 'Upset Customer',
@@ -75,5 +75,24 @@ describe('AI Owner Reply Generator (Phase 3)', () => {
     expect(result.warm).toBeTruthy();
     expect(result.professional).toBeTruthy();
     expect(result.concise).toBeTruthy();
+    // Negative reviews must be apologetic
+    expect(result.warm.toLowerCase()).toMatch(/sorry|apologize|regret/);
+    expect(result.professional.toLowerCase()).toMatch(/sorry|apologize|regret/);
+    expect(result.concise.toLowerCase()).toMatch(/sorry|apologize|regret/);
+    // Must address reviewer and mention contact
+    expect(result.warm).toContain('Upset Customer');
+    expect(result.warm).toContain('manager@xyzstore.com');
+  });
+
+  it('generates appreciative tone for positive reviews matching rating and reviewer', async () => {
+    const result = await generateOwnerReplies(null, {
+      businessName: 'Delight Bakery',
+      customerName: 'Kavita Joshi',
+      reviewText: 'Amazing pastries and warm staff! Loved it.',
+      rating: 5
+    });
+    expect(result.warm.toLowerCase()).toMatch(/thank|pleasure|thrilled|overjoyed/);
+    expect(result.warm).toContain('Kavita Joshi');
+    expect(result.warm).toContain('Delight Bakery');
   });
 });

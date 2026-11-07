@@ -53,7 +53,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
   const singleNavItems = [
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
     { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
-    { label: 'AI Reply Copilot', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'AI Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Review QR & Standees', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
@@ -91,7 +91,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
     { label: 'Branches', to: '/dashboard/branches', icon: Store, badge: 'Outlets' },
     { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
-    { label: 'AI Replies', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'Copilot' },
+    { label: 'AI Replies', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review Collection', to: '/dashboard/qr', icon: QrCode, badge: 'QR/NFC' },

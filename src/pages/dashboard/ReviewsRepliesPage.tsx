@@ -951,30 +951,28 @@ export function ReviewsRepliesPage() {
               {activeTab === 'requests'
                 ? 'Customer Requests & Private Feedback'
                 : activeTab === 'tester'
-                ? 'AI Reply Assistant & Copilot'
+                ? 'AI Reply Assistant'
                 : activeTab === 'sync'
                 ? 'Sync Google Maps & Quick Target'
                 : 'Customer Reviews Feed'}
             </h1>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${
-                activeTab === 'requests'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600'
-                  : activeTab === 'tester'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600'
+            {activeTab !== 'tester' && (
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${
+                  activeTab === 'requests'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600'
+                    : activeTab === 'sync'
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                }`}
+              >
+                {activeTab === 'requests'
+                  ? '🛡️ Private Funnel'
                   : activeTab === 'sync'
-                  ? 'bg-gradient-to-r from-amber-600 to-orange-600'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600'
-              }`}
-            >
-              {activeTab === 'requests'
-                ? '🛡️ Private Funnel'
-                : activeTab === 'tester'
-                ? '⚡ Llama 3.2 AI'
-                : activeTab === 'sync'
-                ? 'Google Places API'
-                : 'Google Maps Live'}
-            </span>
+                  ? 'Google Places API'
+                  : 'Google Maps Live'}
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
             {activeTab === 'requests'
@@ -1596,9 +1594,6 @@ export function ReviewsRepliesPage() {
                               <span className="text-xs sm:text-sm font-bold text-slate-900">
                                 AI Generated Response for {review.customerName}
                               </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                                Llama 3.2
-                              </span>
                             </div>
 
                             {/* Tone Switcher */}
@@ -1638,7 +1633,7 @@ export function ReviewsRepliesPage() {
                                 <div className="absolute inset-0 rounded-xl bg-white/80 backdrop-blur-xs flex items-center justify-center z-10">
                                   <div className="flex items-center gap-2 text-xs text-purple-700 font-bold">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Llama 3.2 is crafting tailored reply…</span>
+                                    <span>AI is crafting tailored reply…</span>
                                   </div>
                                 </div>
                               )}
