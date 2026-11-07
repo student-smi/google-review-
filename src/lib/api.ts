@@ -130,5 +130,11 @@ export function isCurrentUserAdmin(): boolean {
   const user = getCurrentUser();
   if (!user) return false;
   const email = (user.email || '').toLowerCase().trim();
-  return user.role === 'admin' || email === 'smitpanchal734@gmail.com' || email === 'admin@reviewqr.com';
+  return (
+    user.role === 'admin' ||
+    email === 'smitpanchal734@gmail.com' ||
+    email === 'info.upmark.in@gmail.com' ||
+    email === 'smitpanchal730@gmail.com' ||
+    email === 'admin@reviewqr.com'
+  );
 }

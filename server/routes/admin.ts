@@ -186,6 +186,8 @@ adminRoutes.get('/users', async (c) => {
     const enrichedUsers = userList.map((u) => {
       const isSuperAdminEmail =
         u.email === 'smitpanchal734@gmail.com' ||
+        u.email === 'info.upmark.in@gmail.com' ||
+        u.email === 'smitpanchal730@gmail.com' ||
         u.email === 'admin@reviewqr.com' ||
         u.email === 'admin@upmark.com';
 
@@ -245,7 +247,7 @@ adminRoutes.post('/users/:userId/block', async (c) => {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    if (target.email === 'smitpanchal734@gmail.com') {
+    if (target.email === 'smitpanchal734@gmail.com' || target.email === 'info.upmark.in@gmail.com') {
       return c.json({ error: 'Primary Super Administrator cannot be blocked' }, 403);
     }
 
@@ -324,7 +326,7 @@ adminRoutes.post('/users/:userId/role', async (c) => {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    if (target.email === 'smitpanchal734@gmail.com' && newRole !== 'admin') {
+    if ((target.email === 'smitpanchal734@gmail.com' || target.email === 'info.upmark.in@gmail.com') && newRole !== 'admin') {
       return c.json({ error: 'Primary Super Administrator role cannot be changed' }, 403);
     }
 

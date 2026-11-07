@@ -26,6 +26,7 @@ businessRoutes.get('/', async (c) => {
     const isAdmin =
       user?.role === 'admin' ||
       user?.email === 'smitpanchal734@gmail.com' ||
+      user?.email === 'info.upmark.in@gmail.com' ||
       ownerId === 'usr_admin_smit';
 
     if (isAdmin) {
@@ -525,6 +526,7 @@ businessRoutes.get('/:id/reviews', async (c) => {
     const isAdmin =
       currentUser?.role === 'admin' ||
       currentUser?.email === 'smitpanchal734@gmail.com' ||
+      currentUser?.email === 'info.upmark.in@gmail.com' ||
       currentUser?.email === 'admin@reviewqr.com';
 
     if (isAdmin) {

@@ -706,7 +706,7 @@ export function AdminUsersPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={isCurrentAdmin || user.email === 'smitpanchal734@gmail.com'}
+                                disabled={isCurrentAdmin || user.email === 'smitpanchal734@gmail.com' || user.email === 'info.upmark.in@gmail.com'}
                                 onClick={() => {
                                   setBlockingTarget(user);
                                   setBlockReason('Violation of platform policy');
@@ -719,7 +719,7 @@ export function AdminUsersPage() {
                             )}
 
                             {/* Toggle Admin Role */}
-                            {user.email !== 'smitpanchal734@gmail.com' && !isCurrentAdmin && (
+                            {user.email !== 'smitpanchal734@gmail.com' && user.email !== 'info.upmark.in@gmail.com' && !isCurrentAdmin && (
                               <Button
                                 size="sm"
                                 variant="ghost"

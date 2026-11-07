@@ -537,11 +537,20 @@ publicRoutes.post('/auth/google', async (c) => {
     );
     const payload = JSON.parse(jsonPayload);
 
+    const lowerEmail = (payload.email || '').toLowerCase().trim();
+    const isAdmin = (
+      lowerEmail === 'smitpanchal734@gmail.com' ||
+      lowerEmail === 'info.upmark.in@gmail.com' ||
+      lowerEmail === 'smitpanchal730@gmail.com' ||
+      lowerEmail === 'admin@reviewqr.com'
+    );
+
     const user = {
       id: payload.sub,
       email: payload.email,
       name: payload.name,
       picture: payload.picture,
+      role: isAdmin ? 'admin' : 'owner',
       emailVerified: payload.email_verified
     };
 
@@ -557,7 +566,7 @@ publicRoutes.post('/auth/google', async (c) => {
         email: payload.email,
         emailVerified: true,
         image: payload.picture,
-        role: payload.email === 'smitpanchal734@gmail.com' ? 'admin' : 'owner',
+        role: isAdmin ? 'admin' : 'owner',
         lastLoginAt: now,
         createdAt: now,
         updatedAt: now
@@ -567,6 +576,7 @@ publicRoutes.post('/auth/google', async (c) => {
           name: payload.name || 'Google User',
           email: payload.email,
           image: payload.picture,
+          role: isAdmin ? 'admin' : sql`COALESCE(${users.role}, 'owner')`,
           lastLoginAt: now,
           updatedAt: now
         }

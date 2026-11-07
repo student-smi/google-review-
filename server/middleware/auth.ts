@@ -17,6 +17,25 @@ export async function requireAuth(c: Context<{ Bindings: Env; Variables: { owner
     if (token.startsWith('gauth_')) {
       const parts = token.split('_');
       ownerId = parts[1] || 'owner-google';
+      try {
+        const db = getDb(c.env.DB);
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, ownerId))
+          .limit(1);
+        if (userRow) {
+          userProfile = userRow;
+          if (userProfile && (userProfile.isBlocked === true || (userProfile.isBlocked as any) === 1)) {
+            return c.json({
+              error: `Your account has been suspended by the administrator.${userProfile.blockReason ? ` Reason: ${userProfile.blockReason}` : ''} Please contact support.`,
+              isBlocked: true
+            }, 403);
+          }
+        }
+      } catch (err) {
+        console.warn('Google session check failed:', err);
+      }
     } else {
       try {
         const db = getDb(c.env.DB);
@@ -88,7 +107,12 @@ export async function requireAdmin(c: Context<{ Bindings: Env; Variables: { owne
   const isAdminEmail = (email?: string | null) => {
     if (!email) return false;
     const lower = email.toLowerCase().trim();
-    return lower === 'smitpanchal734@gmail.com' || lower === 'admin@reviewqr.com';
+    return (
+      lower === 'smitpanchal734@gmail.com' ||
+      lower === 'info.upmark.in@gmail.com' ||
+      lower === 'smitpanchal730@gmail.com' ||
+      lower === 'admin@reviewqr.com'
+    );
   };
 
   if (user && (user.role === 'admin' || isAdminEmail(user.email))) {
