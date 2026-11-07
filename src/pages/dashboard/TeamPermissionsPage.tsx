@@ -164,7 +164,7 @@ export function TeamPermissionsPage() {
         })
       });
 
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://reviews.tapbez.in';
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://loctimize.in';
       setCreatedCredentials({
         name: inviteName.trim() || inviteEmail.split('@')[0],
         email: inviteEmail.trim().toLowerCase(),
@@ -462,7 +462,7 @@ export function TeamPermissionsPage() {
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  The team member will log in with this email & password at <strong className="text-slate-600">reviews.tapbez.in/login</strong>.
+                  The team member will log in with this email & password at <strong className="text-slate-600">loctimize.in/login</strong>.
                 </p>
               </div>
 
