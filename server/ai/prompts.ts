@@ -9,7 +9,7 @@ NON-NEGOTIABLE INTEGRITY RULES:
 2. NEVER invent details, dishes, amenities, dates, prices, discounts, or staff names.
 3. Language: {language} ({script}).
 4. Tone: {tone}.
-5. Word Count: 30 to 80 words maximum. Short, natural, and authentic.
+5. Word Count: Strictly 30 to 50 words. Every generated review MUST contain between 30 and 50 words.
 6. Output ONLY the review text. Do NOT wrap in quotes, do not add intros or sign-offs.`,
   
   user: `Customer selected points: {chips}

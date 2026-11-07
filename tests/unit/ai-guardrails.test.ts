@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates } from '../../server/ai/guardrails';
+import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates, enforceWordCount, countWords } from '../../server/ai/guardrails';
 
 describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
   it('approves legitimate drafts reflecting customer input', () => {
@@ -11,6 +11,9 @@ describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
     expect(result.isValid).toBe(true);
     expect(result.usedFallback).toBe(false);
     expect(result.flaggedEntities).toHaveLength(0);
+    const words = countWords(result.sanitizedDraft);
+    expect(words).toBeGreaterThanOrEqual(30);
+    expect(words).toBeLessThanOrEqual(50);
   });
 
   it('detects and flags hallucinated unmentioned staff, prices, or dishes', () => {
@@ -27,7 +30,33 @@ describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
     expect(result.flaggedEntities).toContain('rupees');
   });
 
-  it('produces valid deterministic multilingual fallbacks without blocking the customer', () => {
+  it('strictly enforces word count limits: minimum 30 and maximum 50 words', () => {
+    // 1. Under-length text (< 30 words) gets padded with authentic closing
+    const shortDraft = 'Great business and lovely atmosphere. The sweets were very delicious and fresh.';
+    expect(countWords(shortDraft)).toBeLessThan(30);
+
+    const padded = enforceWordCount(shortDraft, 30, 50, 'en', 'Royal Sweets');
+    const paddedCount = countWords(padded);
+    expect(paddedCount).toBeGreaterThanOrEqual(30);
+    expect(paddedCount).toBeLessThanOrEqual(50);
+
+    // 2. Over-length text (> 50 words) gets cleanly trimmed
+    const longDraft = [
+      'We visited this shop today with all our friends and relatives.',
+      'Everything from the ambiance to the service and cleanliness was top notch.',
+      'The sweets were extremely fresh, flavorful, and served with great care by the attentive staff.',
+      'Prices were very reasonable and we loved the prompt checkout process.',
+      'We will definitely recommend this place to all our neighbors and colleagues for special occasions!'
+    ].join(' ');
+    expect(countWords(longDraft)).toBeGreaterThan(50);
+
+    const trimmed = enforceWordCount(longDraft, 30, 50, 'en', 'Royal Sweets');
+    const trimmedCount = countWords(trimmed);
+    expect(trimmedCount).toBeGreaterThanOrEqual(30);
+    expect(trimmedCount).toBeLessThanOrEqual(50);
+  });
+
+  it('produces valid deterministic multilingual fallbacks within 30 to 50 words', () => {
     const business = 'Royal Sweets';
     const chips = ['Tasty sweets', 'Clean counter'];
     const note = 'Soft rasgulla';
@@ -35,30 +64,45 @@ describe('AI Guardrails & Anti-Fabrication Pipeline', () => {
     const enFallback = getFallbackTemplate(business, chips, note, 'en');
     expect(enFallback).toContain('Royal Sweets');
     expect(enFallback).toContain('Soft rasgulla');
+    expect(countWords(enFallback)).toBeGreaterThanOrEqual(30);
+    expect(countWords(enFallback)).toBeLessThanOrEqual(50);
 
     const hiFallback = getFallbackTemplate(business, chips, note, 'hi');
     expect(hiFallback).toContain('Royal Sweets');
     expect(hiFallback).toContain('अनुभव');
+    expect(countWords(hiFallback)).toBeGreaterThanOrEqual(30);
+    expect(countWords(hiFallback)).toBeLessThanOrEqual(50);
 
     const guFallback = getFallbackTemplate(business, chips, note, 'gu');
     expect(guFallback).toContain('Royal Sweets');
     expect(guFallback).toContain('મુલાકાત');
+    expect(countWords(guFallback)).toBeGreaterThanOrEqual(30);
+    expect(countWords(guFallback)).toBeLessThanOrEqual(50);
   });
 
-  it('produces 3 distinct review options in Gujarati, Hindi and English', () => {
+  it('produces 3 distinct review options in Gujarati, Hindi, Hinglish and English all between 30 and 50 words', () => {
     const business = 'Royal Sweets';
     const chips = ['Delicious & fresh', 'Fast service'];
     const note = 'Loved the kaju katli';
 
-    const guOptions = getFallbackTemplates(business, chips, note, 'gu');
-    expect(guOptions).toHaveLength(3);
-    expect(guOptions[0].title).toContain('Short & Crisp');
-    expect(guOptions[1].title).toContain('Warm & Detailed');
-    expect(guOptions[2].title).toContain('Balanced & Friendly');
-    expect(guOptions[0].text).not.toEqual(guOptions[1].text);
+    const languages: Array<'en' | 'hi' | 'gu' | 'hinglish'> = ['en', 'hi', 'gu', 'hinglish'];
 
-    const enOptions = getFallbackTemplates(business, chips, note, 'en');
-    expect(enOptions).toHaveLength(3);
-    expect(enOptions[0].text).toContain('Royal Sweets');
+    for (const lang of languages) {
+      for (let seed = 0; seed < 4; seed++) {
+        const options = getFallbackTemplates(business, chips, note, lang, 'sweet bakery', 'Ahmedabad', seed);
+        expect(options).toHaveLength(3);
+        options.forEach((opt, idx) => {
+          const words = countWords(opt.text);
+          expect(
+            words,
+            `Expected ${lang} seed ${seed} option ${idx + 1} ("${opt.text}") to be between 30 and 50 words, got ${words}`
+          ).toBeGreaterThanOrEqual(30);
+          expect(
+            words,
+            `Expected ${lang} seed ${seed} option ${idx + 1} ("${opt.text}") to be between 30 and 50 words, got ${words}`
+          ).toBeLessThanOrEqual(50);
+        });
+      }
+    }
   });
 });

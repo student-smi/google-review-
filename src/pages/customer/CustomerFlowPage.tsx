@@ -621,8 +621,8 @@ export function CustomerFlowPage() {
                         </span>
                       </div>
 
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
-                        {opt.wordCount || opt.text.split(/\s+/).length} words
+                      <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800">
+                        {opt.wordCount || opt.text.trim().split(/\s+/).filter(Boolean).length} words • {draftLanguage === 'gu' ? 'પરફેક્ટ સાઇઝ' : draftLanguage === 'hi' ? 'परफेक्ट साइज़' : 'Ideal Length'}
                       </Badge>
                     </div>
 
@@ -682,9 +682,18 @@ export function CustomerFlowPage() {
             </div>
 
             {/* Editable Box for Selected Review */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 space-y-2 mt-2">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 space-y-2 mt-2 shadow-2xs">
               <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                <span>પસંદ કરેલ રિવ્યૂમાં ફેરફાર કરવો હોય તો અહીં લખો (Editable):</span>
+                <span>
+                  {draftLanguage === 'gu'
+                    ? 'પસંદ કરેલ રિવ્યૂમાં ફેરફાર કરવો હોય તો અહીં લખો (Editable):'
+                    : draftLanguage === 'hi'
+                    ? 'चुने गए रिव्यू में बदलाव करना हो तो यहाँ लिखें (Editable):'
+                    : 'Edit selected review text if desired:'}
+                </span>
+                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  {activeReviewText.trim().split(/\s+/).filter(Boolean).length} / 50 words
+                </span>
               </div>
               <Textarea
                 rows={3}

@@ -1,4 +1,4 @@
-import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates } from './guardrails';
+import { validateReviewDraft, getFallbackTemplate, getFallbackTemplates, countWords, enforceWordCount } from './guardrails';
 
 export interface GenerateReviewDraftParams {
   businessName: string;
@@ -52,22 +52,26 @@ CRITICAL INSTRUCTIONS FOR HIGH VARIETY & NATURAL WRITING:
 4. Customer Angle/Emphasis for this run: ${chosenPerspective}
 5. Unique Variation Jitter ID: #${seed || Math.floor(Math.random() * 1000000)}
 
+WORD COUNT CONSTRAINT (STRICT - NON-NEGOTIABLE):
+Every single generated review option MUST contain BETWEEN 30 AND 50 WORDS (Minimum 30 words, Maximum 50 words). Do NOT generate reviews shorter than 30 words or longer than 50 words.
+
 REVIEW VARIATIONS:
-- Option 1 (Short & Crisp): 1-2 punchy sentences focusing directly on the key highlights (${selectedKeywordsText}) and great experience.
-- Option 2 (Warm & Detailed): 2-4 sentences detailing what made the visit memorable, mentioning the business "${businessName}", specific highlights (${selectedKeywordsText}), and recommending it to others${city ? ` in ${city}` : ''}.
-- Option 3 (Balanced & Friendly): 2-3 casual, upbeat sentences for Google Maps visitors praising the service and highlights.
+- Option 1 (Short & Crisp): 30 to 38 words focusing directly on key highlights (${selectedKeywordsText}) and great experience.
+- Option 2 (Warm & Detailed): 40 to 48 words detailing what made the visit memorable, mentioning the business "${businessName}", specific highlights (${selectedKeywordsText}), and recommending it to others${city ? ` in ${city}` : ''}.
+- Option 3 (Balanced & Friendly): 32 to 42 words in an upbeat, casual tone praising the service and highlights.
 
 RULES:
 1. Every review must sound like a real customer wrote it.
-2. Language: ${language === 'hi' ? 'Hindi in Devanagari script (concise, under 35 words per draft)' : language === 'gu' ? 'Gujarati script (concise, under 30 words per draft)' : language === 'hinglish' ? 'Hinglish (Hindi written in English alphabets, e.g. "Bohot achi service thi aur maza aa gaya")' : 'English'}.
-3. Return ONLY valid JSON: {"drafts": ["review option 1", "review option 2", "review option 3"]}
-4. Do NOT include markdown codeblocks or explanations outside the JSON.`;
+2. STRICT LENGTH: Minimum 30 words, Maximum 50 words per review.
+3. Language: ${language === 'hi' ? 'Hindi in Devanagari script (strictly 30 to 50 words per draft)' : language === 'gu' ? 'Gujarati script (strictly 30 to 50 words per draft)' : language === 'hinglish' ? 'Hinglish (Hindi written in English alphabets, strictly 30 to 50 words per draft)' : 'English (strictly 30 to 50 words per draft)'}.
+4. Return ONLY valid JSON: {"drafts": ["review option 1", "review option 2", "review option 3"]}
+5. Do NOT include markdown codeblocks or explanations outside the JSON.`;
 
   const userPrompt = `Business: ${businessName}${category ? ` (${category})` : ''}${city ? ` in ${city}` : ''}
 Selected Customer Highlights: ${selectedKeywordsText}
 ${freeText ? `Customer Personal Note: "${freeText}"` : ''}
 Creative Angle: ${chosenPerspective}
-Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these customer highlights.`;
+Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these customer highlights. Remember: strictly 30 to 50 words per option!`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
@@ -82,13 +86,15 @@ Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these cus
     // Check if Cloudflare AI already parsed the response into an object
     if (response && typeof response === 'object' && Array.isArray((response as any)?.drafts)) {
       const validatedDrafts = (response as any).drafts.slice(0, 3).map((text: any, i: number) => {
-        const str = String(text || '').trim();
+        const rawStr = String(text || '').trim();
+        const v = validateReviewDraft(rawStr, chips, freeText, language, businessName);
+        const finalDraft = v.isValid ? v.sanitizedDraft : (v.sanitizedDraft || fallbacks[i]?.text || fallbacks[0].text);
         const title = i === 0 ? 'Short & Crisp' : i === 1 ? 'Warm & Detailed' : 'Balanced & Friendly';
         return {
           id: `opt_${i + 1}`,
           title,
-          text: str || fallbacks[i]?.text || fallbacks[0].text,
-          wordCount: str.split(/\s+/).filter(Boolean).length
+          text: finalDraft,
+          wordCount: countWords(finalDraft)
         };
       });
       return { drafts: validatedDrafts, usedFallback: false };
@@ -96,13 +102,15 @@ Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these cus
 
     if (response?.response && typeof response.response === 'object' && Array.isArray((response.response as any)?.drafts)) {
       const validatedDrafts = (response.response as any).drafts.slice(0, 3).map((text: any, i: number) => {
-        const str = String(text || '').trim();
+        const rawStr = String(text || '').trim();
+        const v = validateReviewDraft(rawStr, chips, freeText, language, businessName);
+        const finalDraft = v.isValid ? v.sanitizedDraft : (v.sanitizedDraft || fallbacks[i]?.text || fallbacks[0].text);
         const title = i === 0 ? 'Short & Crisp' : i === 1 ? 'Warm & Detailed' : 'Balanced & Friendly';
         return {
           id: `opt_${i + 1}`,
           title,
-          text: str || fallbacks[i]?.text || fallbacks[0].text,
-          wordCount: str.split(/\s+/).filter(Boolean).length
+          text: finalDraft,
+          wordCount: countWords(finalDraft)
         };
       });
       return { drafts: validatedDrafts, usedFallback: false };
@@ -140,14 +148,15 @@ Generate 3 fresh, uniquely phrased 5-star reviews naturally weaving in these cus
         const parsed = JSON.parse(jsonMatch[0]);
         if (Array.isArray(parsed?.drafts) && parsed.drafts.length >= 2) {
           const validatedDrafts = parsed.drafts.slice(0, 3).map((item: any, i: number) => {
-            const text = (typeof item === 'string' ? item : (item?.review || item?.text || item?.draft || '')).trim();
-            const v = validateReviewDraft(text, chips, freeText);
+            const rawText = (typeof item === 'string' ? item : (item?.review || item?.text || item?.draft || '')).trim();
+            const v = validateReviewDraft(rawText, chips, freeText, language, businessName);
             const title = i === 0 ? 'Short & Crisp' : i === 1 ? 'Warm & Detailed' : 'Balanced & Friendly';
+            const finalDraft = v.isValid ? v.sanitizedDraft : (v.sanitizedDraft || fallbacks[i]?.text || fallbacks[0].text);
             return {
               id: `opt_${i + 1}`,
               title,
-              text: v.isValid ? v.sanitizedDraft : (text || fallbacks[i]?.text || fallbacks[0].text),
-              wordCount: text ? text.split(/\s+/).filter(Boolean).length : 0
+              text: finalDraft,
+              wordCount: countWords(finalDraft)
             };
           });
 
