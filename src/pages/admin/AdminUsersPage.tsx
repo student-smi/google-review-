@@ -23,7 +23,11 @@ import {
   Clock,
   Sparkles,
   Cpu,
-  Database
+  Database,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { getCurrentUser, isAdminUser } from '@/lib/auth';
@@ -99,6 +103,13 @@ export function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'active' | 'blocked' | 'admins'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset pagination to page 1 on filter, search or page size change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterMode, pageSize]);
 
   // Block modal state
   const [blockingTarget, setBlockingTarget] = useState<EnrichedUser | null>(null);
@@ -222,6 +233,13 @@ export function AdminUsersPage() {
     if (filterMode === 'admins') return u.role === 'admin';
     return true;
   });
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredUsers.length);
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   const formatTime = (ts?: number | null) => {
     if (!ts) return 'Never';
@@ -536,10 +554,10 @@ export function AdminUsersPage() {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {(
               [
-                { id: 'all', label: 'All Users' },
-                { id: 'active', label: 'Active' },
-                { id: 'blocked', label: 'Blocked' },
-                { id: 'admins', label: 'Admins' }
+                { id: 'all', label: `All Users (${users.length})` },
+                { id: 'active', label: `Active (${users.filter((u) => !u.isBlocked).length})` },
+                { id: 'blocked', label: `Blocked (${users.filter((u) => u.isBlocked).length})` },
+                { id: 'admins', label: `Admins (${users.filter((u) => u.role === 'admin').length})` }
               ] as const
             ).map((tab) => (
               <button
@@ -587,7 +605,7 @@ export function AdminUsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => {
+                  paginatedUsers.map((user) => {
                     const initials =
                       user.name
                         ?.split(' ')
@@ -739,6 +757,115 @@ export function AdminUsersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {!isLoading && filteredUsers.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t border-slate-200/80 bg-slate-50/60">
+              <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-500 font-medium">
+                <span>
+                  Showing <strong className="text-slate-900 font-bold">{startIndex + 1}</strong> to{' '}
+                  <strong className="text-slate-900 font-bold">{endIndex}</strong> of{' '}
+                  <strong className="text-slate-900 font-bold">{filteredUsers.length}</strong> users
+                </span>
+
+                <span className="text-slate-300">|</span>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">Per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    aria-label="Items per page"
+                    className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                  title="First Page"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {/* Page number buttons */}
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((pageNum) => {
+                      if (totalPages <= 5) return true;
+                      if (pageNum === 1 || pageNum === totalPages) return true;
+                      return Math.abs(pageNum - safeCurrentPage) <= 1;
+                    })
+                    .map((pageNum, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const showEllipsis = prev && pageNum - prev > 1;
+
+                      return (
+                        <div key={pageNum} className="flex items-center">
+                          {showEllipsis && (
+                            <span className="px-1 text-slate-400 select-none text-xs">...</span>
+                          )}
+                          <Button
+                            size="sm"
+                            variant={safeCurrentPage === pageNum ? 'primary' : 'outline'}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`h-8 min-w-[32px] px-2 text-xs font-bold transition-all cursor-pointer ${
+                              safeCurrentPage === pageNum
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                                : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safeCurrentPage === totalPages}
+                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                  title="Last Page"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
