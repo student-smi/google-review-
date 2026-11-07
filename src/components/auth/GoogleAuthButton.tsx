@@ -16,13 +16,15 @@ interface GoogleAuthButtonProps {
   onSuccess?: (user: GoogleUserProfile) => void | Promise<void>;
   className?: string;
   compact?: boolean;
+  forceButton?: boolean;
 }
 
 export const GOOGLE_CLIENT_ID = '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com';
 
-export function GoogleAuthButton({ onSuccess, className = '', compact = false }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ onSuccess, className = '', compact = false, forceButton = false }: GoogleAuthButtonProps) {
   const navigate = useNavigate();
   const [user, setUser] = useState<GoogleUserProfile | null>(() => {
+    if (forceButton) return null;
     try {
       const saved = localStorage.getItem('reviewqr_user');
       return saved ? JSON.parse(saved) : null;
@@ -47,7 +49,8 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false }:
         setAuthSession(token, {
           id: data.user.id,
           name: data.user.name,
-          email: data.user.email
+          email: data.user.email,
+          role: data.user.email === 'smitpanchal734@gmail.com' ? 'admin' : (data.user.role || 'owner')
         });
         setUser(data.user);
         if (onSuccess) {
@@ -57,8 +60,8 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false }:
             console.warn('onSuccess error:', e);
           }
         }
-        // Always redirect to dashboard on successful SSO
-        navigate('/dashboard', { replace: true });
+        // Always redirect directly to dashboard via full page load to initialize all providers
+        window.location.href = '/dashboard';
       }
     } catch (err) {
       console.error('Google sign-in error:', err);

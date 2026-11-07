@@ -130,9 +130,9 @@ export function AuthPage() {
           {/* Google Sign-in */}
           <div className="space-y-3">
             <GoogleAuthButton
+              forceButton
               onSuccess={async () => {
                 await handlePostAuthSync(true);
-                navigate('/dashboard', { replace: true });
               }}
             />
             <div className="relative flex items-center justify-center">
