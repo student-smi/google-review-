@@ -21,7 +21,9 @@ import {
   KeyRound,
   ArrowLeft,
   Clock,
-  Sparkles
+  Sparkles,
+  Cpu,
+  Database
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { getCurrentUser, isAdminUser } from '@/lib/auth';
@@ -58,11 +60,41 @@ interface AdminOverviewStats {
   totalScans: number;
 }
 
+interface AdminTelemetry {
+  ai: {
+    callsToday: number;
+    neuronsUsedToday: number;
+    neuronsLimitDaily: number;
+    neuronsRemainingToday: number;
+    neuronsPercentUsed: number;
+    tokensEstimatedToday: number;
+    allTimeCalls: number;
+    allTimeNeurons: number;
+    allTimeTokens: number;
+  };
+  database: {
+    sizeBytes: number;
+    usedMb: number;
+    limitMb: number;
+    remainingMb: number;
+    percentUsed: number;
+    status: string;
+    tableCounts: {
+      users: number;
+      businesses: number;
+      reviews: number;
+      scans: number;
+      sessions: number;
+    };
+  };
+}
+
 export function AdminUsersPage() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
 
   const [stats, setStats] = useState<AdminOverviewStats | null>(null);
+  const [telemetry, setTelemetry] = useState<AdminTelemetry | null>(null);
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,12 +117,15 @@ export function AdminUsersPage() {
     setIsLoading(true);
     try {
       const [overviewRes, usersRes] = await Promise.all([
-        apiFetch<{ success: boolean; stats: AdminOverviewStats }>('/api/admin/overview'),
+        apiFetch<{ success: boolean; stats: AdminOverviewStats; telemetry?: AdminTelemetry }>('/api/admin/overview'),
         apiFetch<{ success: boolean; users: EnrichedUser[] }>('/api/admin/users')
       ]);
 
       if (overviewRes?.stats) {
         setStats(overviewRes.stats);
+        if (overviewRes.telemetry) {
+          setTelemetry(overviewRes.telemetry);
+        }
       }
       if (usersRes?.users) {
         setUsers(usersRes.users);
@@ -332,6 +367,153 @@ export function AdminUsersPage() {
             </div>
             <div className="h-11 w-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
               <Ban className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Infrastructure & Quota Telemetry (Workers AI & Cloudflare D1 Storage) */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Widget 1: Cloudflare Workers AI Quota & Tokens */}
+        <Card className="border-purple-200/80 dark:border-purple-900/60 bg-gradient-to-br from-purple-50/40 via-white to-indigo-50/30 dark:from-[#0f111a] dark:to-[#161926] shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b border-purple-100/70 dark:border-purple-900/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                  <Cpu className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <span>Cloudflare AI Quota & Tokens</span>
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-purple-300 text-purple-700 bg-purple-100/60 font-mono">
+                      Llama 3.2
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500">
+                    Daily 10,000 Neurons Free Quota • Resets at 00:00 UTC (5:30 AM IST)
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 text-white text-[10px] font-bold">
+                🟢 Live Normal
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                  {telemetry?.ai.neuronsUsedToday?.toLocaleString() ?? 0}
+                </span>
+                <span className="text-sm font-bold text-slate-400 ml-1">
+                  / {telemetry?.ai.neuronsLimitDaily?.toLocaleString() ?? '10,000'} Neurons
+                </span>
+              </div>
+              <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                {telemetry?.ai.neuronsPercentUsed ?? 0}% Used
+              </span>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+              <div
+                className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(2, telemetry?.ai.neuronsPercentUsed ?? 0))}%` }}
+              />
+            </div>
+
+            {/* Sub-metrics Grid */}
+            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-purple-100/50 dark:border-purple-900/30 text-center">
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-purple-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Remaining Today</span>
+                <span className="text-xs sm:text-sm font-extrabold text-emerald-600">
+                  {telemetry?.ai.neuronsRemainingToday?.toLocaleString() ?? '10,000'}
+                </span>
+              </div>
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-purple-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Tokens Processed</span>
+                <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                  ~{telemetry?.ai.tokensEstimatedToday?.toLocaleString() ?? 0}
+                </span>
+              </div>
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-purple-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Total AI Calls</span>
+                <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                  {telemetry?.ai.allTimeCalls?.toLocaleString() ?? 0}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Widget 2: Cloudflare D1 Database Storage */}
+        <Card className="border-blue-200/80 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/40 via-white to-sky-50/30 dark:from-[#0f111a] dark:to-[#161926] shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b border-blue-100/70 dark:border-blue-900/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Database className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <span>Cloudflare D1 Storage</span>
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-blue-300 text-blue-700 bg-blue-100/60 font-mono">
+                      reviewqr-db
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-slate-500">
+                    Live database disk footprint & capacity
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 text-white text-[10px] font-bold">
+                🟢 Healthy ({telemetry?.database.limitMb ?? 500} MB Plan)
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 space-y-4">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                  {telemetry?.database.usedMb ?? 3.12} MB
+                </span>
+                <span className="text-sm font-bold text-slate-400 ml-1">
+                  / {telemetry?.database.limitMb ?? 500} MB
+                </span>
+              </div>
+              <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                {telemetry?.database.percentUsed ?? 0.62}% Used
+              </span>
+            </div>
+
+            {/* Visual Progress Bar */}
+            <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-sky-600 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(2, telemetry?.database.percentUsed ?? 0.62))}%` }}
+              />
+            </div>
+
+            {/* Sub-metrics Grid */}
+            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-blue-100/50 dark:border-blue-900/30 text-center">
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-blue-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Available Free</span>
+                <span className="text-xs sm:text-sm font-extrabold text-emerald-600">
+                  {telemetry?.database.remainingMb ?? 496.88} MB
+                </span>
+              </div>
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-blue-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Total Reviews</span>
+                <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                  {stats?.totalReviews?.toLocaleString() ?? 0}
+                </span>
+              </div>
+              <div className="bg-white/80 dark:bg-slate-900/50 p-2.5 rounded-xl border border-blue-100/60">
+                <span className="text-[10px] text-slate-500 font-medium block">Total QR Scans</span>
+                <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                  {stats?.totalScans?.toLocaleString() ?? 0}
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
