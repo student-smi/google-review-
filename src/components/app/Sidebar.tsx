@@ -58,7 +58,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Review QR & Standees', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
-    { label: 'Store Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+    { label: 'Profile Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
   // 0b. Executive Scoped Nav Items (Restricted strictly to their assigned branch: Review, QR Score, QR Code & Reply)
@@ -83,7 +83,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Analytics & Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Team & Permissions', to: '/dashboard/team', icon: ShieldCheck, badge: null },
     { label: 'Package & Billing', to: '/dashboard/billing', icon: Crown, badge: null },
-    { label: 'Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+    { label: 'Profile Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
   // 2. Business Level Items (Image 3)
@@ -98,7 +98,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Reports', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Staff & Roles', to: '/dashboard/team', icon: ShieldCheck, badge: null },
     { label: 'Subscription & Invoices', to: '/dashboard/billing', icon: CreditCard, badge: null },
-    { label: 'Business Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+    { label: 'Profile Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
   // 3. Branch Level Items (Image 4)
@@ -111,7 +111,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
     { label: 'Branch Analytics', to: '/dashboard/analytics', icon: TrendingUp, badge: null },
     { label: 'Staff', to: '/dashboard/team', icon: ShieldCheck, badge: null },
-    { label: 'Branch Settings', to: '/dashboard/settings', icon: Settings, badge: null }
+    { label: 'Profile Settings', to: '/dashboard/settings', icon: Settings, badge: null }
   ];
 
   const currentNavItems = roles.isExecutive

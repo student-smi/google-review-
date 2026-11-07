@@ -53,7 +53,7 @@ const pageTitles: Record<string, string> = {
   '/dashboard/keywords': 'Keyword Management',
   '/dashboard/analytics': 'Conversion Analytics',
   '/dashboard/local-seo': 'Local SEO Checklist',
-  '/dashboard/settings': 'Settings & Google Link'
+  '/dashboard/settings': 'Profile Settings'
 };
 
 export function Header({

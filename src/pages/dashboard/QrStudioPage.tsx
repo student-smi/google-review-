@@ -204,7 +204,7 @@ export function QrStudioPage() {
   const [dotColor, setDotColor] = useState(activeBranch?.brandColor || activeBusiness?.brandColor || '#4338CA');
   const [dotType, setDotType] = useState<'rounded' | 'dots' | 'classy' | 'square'>('rounded');
   const [cornerSquareType, setCornerSquareType] = useState<'extra-rounded' | 'square' | 'dot'>('extra-rounded');
-  const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4' | 'round-sticker'>('table-tent');
+  const [posterFormat, setPosterFormat] = useState<'table-tent' | 'counter-a4'>('table-tent');
   const [copied, setCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -717,7 +717,7 @@ export function QrStudioPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPosterFormat('table-tent')}
@@ -744,20 +744,6 @@ export function QrStudioPage() {
                   <Printer className="h-4 w-4 mx-auto mb-1.5 text-indigo-600" />
                   <span className="text-xs block">Counter Stand</span>
                   <span className="text-[10px] text-slate-400">A4 Acrylic</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPosterFormat('round-sticker')}
-                  className={`rounded-xl border p-3 text-center transition-all cursor-pointer ${
-                    posterFormat === 'round-sticker'
-                      ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 ring-2 ring-purple-500/10 font-bold shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 font-medium'
-                  }`}
-                >
-                  <Layers className="h-4 w-4 mx-auto mb-1.5 text-pink-600" />
-                  <span className="text-xs block">Round Sticker</span>
-                  <span className="text-[10px] text-slate-400">Vinyl 3"</span>
                 </button>
               </div>
             </CardContent>
@@ -1215,9 +1201,7 @@ export function QrStudioPage() {
             {/* Real Mockup Box */}
             <div
               ref={posterRef}
-              className={`w-full max-w-sm rounded-2xl sm:rounded-3xl bg-white text-slate-900 p-4 sm:p-7 shadow-2xl flex flex-col items-center text-center transition-all border border-slate-200/90 ${
-                posterFormat === 'round-sticker' ? 'rounded-full aspect-square justify-center p-6 sm:p-9' : ''
-              }`}
+              className="w-full max-w-sm rounded-2xl sm:rounded-3xl bg-white text-slate-900 p-4 sm:p-7 shadow-2xl flex flex-col items-center text-center transition-all border border-slate-200/90"
             >
               {/* Business Badge with optional Owner Logo */}
               <div className="space-y-2 mb-4 flex flex-col items-center">

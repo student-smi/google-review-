@@ -46,7 +46,7 @@ export function CommandPalette({ isOpen, onClose, activeBusiness }: CommandPalet
     { label: 'AI Review & Reply Assistant', icon: MessageSquareQuote, action: () => navigate('/dashboard/replies') },
     { label: 'View Conversion Analytics', icon: TrendingUp, action: () => navigate('/dashboard/analytics') },
     { label: 'Local SEO Audit Checklist', icon: MapPin, action: () => navigate('/dashboard/local-seo') },
-    { label: 'Business & Brand Settings', icon: Settings, action: () => navigate('/dashboard/settings') },
+    { label: 'Profile Settings', icon: Settings, action: () => navigate('/dashboard/settings') },
     { label: 'Add New Location', icon: PlusCircle, action: () => navigate('/onboarding') },
     ...(activeBusiness?.googleReviewUrl ? [
       {
