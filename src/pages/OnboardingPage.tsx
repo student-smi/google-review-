@@ -312,6 +312,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-3 sm:p-6 antialiased font-sans">
       <div className="w-full max-w-xl space-y-6">
+        {/* Brand Logo Header */}
+        <div className="flex justify-center">
+          <img
+            src="/loctimize-logo.jpg"
+            alt="Loctimize"
+            className="h-10 sm:h-12 w-auto object-contain rounded-lg drop-shadow-2xs"
+          />
+        </div>
+
         {/* Header Title & Steps */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-bold text-blue-700 shadow-2xs">

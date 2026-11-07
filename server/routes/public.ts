@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, or, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews, locations } from '../db/schema';
+import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews, locations, users, sessions } from '../db/schema';
 
 export interface Env {
   DB: any;
@@ -545,10 +545,49 @@ publicRoutes.post('/auth/google', async (c) => {
       emailVerified: payload.email_verified
     };
 
+    const sessionToken = `gauth_${payload.sub}_${Date.now()}`;
+    const now = new Date();
+
+    // Ensure user & session exist in D1 so all protected routes work smoothly
+    try {
+      const db = getDb(c.env.DB);
+      await db.insert(users).values({
+        id: payload.sub,
+        name: payload.name || 'Google User',
+        email: payload.email,
+        emailVerified: true,
+        image: payload.picture,
+        role: payload.email === 'smitpanchal734@gmail.com' ? 'admin' : 'owner',
+        lastLoginAt: now,
+        createdAt: now,
+        updatedAt: now
+      }).onConflictDoUpdate({
+        target: users.id,
+        set: {
+          name: payload.name || 'Google User',
+          email: payload.email,
+          image: payload.picture,
+          lastLoginAt: now,
+          updatedAt: now
+        }
+      });
+
+      await db.insert(sessions).values({
+        id: `sess_${payload.sub}_${Date.now()}`,
+        userId: payload.sub,
+        token: sessionToken,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        createdAt: now,
+        updatedAt: now
+      }).onConflictDoNothing();
+    } catch (dbErr) {
+      console.warn('Google SSO user DB sync:', dbErr);
+    }
+
     return c.json({
       success: true,
       user,
-      sessionToken: `gauth_${payload.sub}_${Date.now()}`
+      sessionToken
     });
   } catch (err: any) {
     console.error('Google auth error:', err);

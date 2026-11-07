@@ -170,18 +170,22 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     >
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-slate-200">
-        <NavLink to="/dashboard" onClick={handleNavClick} className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-sm shadow-md shadow-blue-500/20 shrink-0">
-            RB
-          </div>
-          {(!collapsed || mobileOpen) && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-base tracking-tight text-slate-900 truncate">
-                ReviewBoost <span className="text-[#2563EB] bg-blue-50 px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider border border-blue-200">AI</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">
-                {isSingleMode ? 'Single Store' : '3-Tier Hierarchy'}
-              </span>
+        <NavLink to="/dashboard" onClick={handleNavClick} className="flex items-center gap-2 overflow-hidden">
+          {(!collapsed || mobileOpen) ? (
+            <div className="flex items-center gap-2">
+              <img
+                src="/loctimize-logo.jpg"
+                alt="Loctimize"
+                className="h-10 max-w-[170px] object-contain rounded"
+              />
+            </div>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden bg-white border border-slate-200 shadow-2xs shrink-0">
+              <img
+                src="/loctimize-logo.jpg"
+                alt="Loctimize"
+                className="h-9 w-9 object-cover object-left"
+              />
             </div>
           )}
         </NavLink>

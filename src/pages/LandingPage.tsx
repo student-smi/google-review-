@@ -136,7 +136,7 @@ export function LandingPage() {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-blue-500/20 selection:text-blue-600">
       {/* 1. TOP ANNOUNCEMENT RIBBON */}
       <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 text-indigo-900 text-xs py-2 px-4 text-center font-semibold flex items-center justify-center gap-1.5 border-b border-indigo-100/80">
-        <span>Meet ReviewQR 2.0: Polished, powerful, and Google Places connected.</span>
+        <span>Meet Loctimize™: AI-Powered Google Reviews, Multi-Branch QR Standees & Local SEO.</span>
         <NavLink
           to="/signup"
           className="text-[#2563EB] font-bold underline underline-offset-2 hover:text-[#1D4ED8] transition-colors ml-1 inline-flex items-center"
@@ -151,13 +151,12 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Left: Brand Logo & Navigation */}
           <div className="flex items-center gap-8">
-            <NavLink to="/" className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-sm shadow-md shadow-blue-500/20">
-                RQ
-              </div>
-              <span className="font-extrabold text-xl tracking-tight text-slate-900">
-                Review<span className="text-[#2563EB]">QR</span>
-              </span>
+            <NavLink to="/" className="flex items-center gap-2">
+              <img
+                src="/loctimize-logo.jpg"
+                alt="Loctimize"
+                className="h-10 w-auto object-contain rounded"
+              />
             </NavLink>
 
             {/* Menu Links with Dropdowns */}
@@ -766,12 +765,14 @@ export function LandingPage() {
       {/* 9. FOOTER */}
       <footer className="border-t border-slate-200/80 py-8 bg-slate-50 text-slate-500 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-tr from-[#2563EB] to-[#7B68EE] text-white font-black text-[10px]">
-              RQ
-            </div>
-            <span className="font-extrabold text-slate-900">ReviewQR</span>
-            <span>• Built for Indian Local Businesses</span>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/loctimize-logo.jpg"
+              alt="Loctimize"
+              className="h-8 w-auto object-contain rounded"
+            />
+            <span className="font-extrabold text-slate-900">Loctimize™</span>
+            <span>• Optimize Local. Grow Global.</span>
           </div>
           <div>100% Cloudflare Free Tier • DPDP Act & Google Policy Compliant</div>
         </div>

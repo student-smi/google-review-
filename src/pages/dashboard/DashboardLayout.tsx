@@ -105,7 +105,7 @@ function DashboardContent() {
               </div>
               <div className="space-y-1.5">
                 <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-                  Welcome to ReviewQR
+                  Welcome to Loctimize
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
                   Set up your organization, business brand, and first Google branch outlet.

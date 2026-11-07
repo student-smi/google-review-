@@ -238,7 +238,7 @@ export function ReviewsRepliesPage() {
             if (tokenResponse.access_token) {
               const scopes = tokenResponse.scope || '';
               if (scopes && !scopes.includes('business.manage')) {
-                alert('⚠️ Google Business Permission Required:\n\nDuring Google sign-in, you MUST check the box:\n☑ "See, edit, create, and delete your Google business listings"\n\nWithout this permission, Google blocks ReviewQR from reading your Google Reviews.');
+                alert('⚠️ Google Business Permission Required:\n\nDuring Google sign-in, you MUST check the box:\n☑ "See, edit, create, and delete your Google business listings"\n\nWithout this permission, Google blocks Loctimize from reading your Google Reviews.');
                 return reject(new Error('business.manage permission not granted'));
               }
               resolve(tokenResponse.access_token);
@@ -769,7 +769,7 @@ export function ReviewsRepliesPage() {
   };
 
   // Self-contained Bookmarklet code that extracts reviews directly from Google Maps DOM
-  const bookmarkletCode = `javascript:(function(){const r=[];document.querySelectorAll('div.jftiEf,div[data-review-id],div.gws-localreviews__google-review').forEach(e=>{const n=e.querySelector('div.d4r55,button[data-href*="contrib"],div.TSUbDb')?.innerText?.trim();const s=e.querySelector('span.kvMYJc,span[role="img"]')?.getAttribute('aria-label')?.match(/\\d+/)?.[0];const t=e.querySelector('span.wiI7m,span.review-full-text')?.innerText?.trim();if(n&&t)r.push({authorName:n,rating:parseInt(s||'5',10),reviewText:t})});if(!r.length){alert('Please open the Google Maps Reviews tab and scroll down to load reviews first!');return;}const b='${activeBusiness?.id}';fetch('https://reviewqr.panchalsmit.workers.dev/api/gmb/import-browser-reviews',{method:'POST',headers:{'Content-Type':'application/json','X-Owner-Id':'owner-default'},body:JSON.stringify({businessId:b,reviews:r})}).then(res=>res.json()).then(d=>{alert('✨ Successfully synced '+r.length+' reviews to ReviewQR!');window.open('https://reviewqr.panchalsmit.workers.dev/dashboard/replies','_blank')}).catch(e=>alert('Error syncing: '+e.message));})();`;
+  const bookmarkletCode = `javascript:(function(){const r=[];document.querySelectorAll('div.jftiEf,div[data-review-id],div.gws-localreviews__google-review').forEach(e=>{const n=e.querySelector('div.d4r55,button[data-href*="contrib"],div.TSUbDb')?.innerText?.trim();const s=e.querySelector('span.kvMYJc,span[role="img"]')?.getAttribute('aria-label')?.match(/\\d+/)?.[0];const t=e.querySelector('span.wiI7m,span.review-full-text')?.innerText?.trim();if(n&&t)r.push({authorName:n,rating:parseInt(s||'5',10),reviewText:t})});if(!r.length){alert('Please open the Google Maps Reviews tab and scroll down to load reviews first!');return;}const b='${activeBusiness?.id}';fetch('https://loctimize.in/api/gmb/import-browser-reviews',{method:'POST',headers:{'Content-Type':'application/json','X-Owner-Id':'owner-default'},body:JSON.stringify({businessId:b,reviews:r})}).then(res=>res.json()).then(d=>{alert('✨ Successfully synced '+r.length+' reviews to Loctimize!');window.open('https://loctimize.in/dashboard/replies','_blank')}).catch(e=>alert('Error syncing: '+e.message));})();`;
 
 
   // Manual Tester Generate
@@ -1865,7 +1865,7 @@ export function ReviewsRepliesPage() {
                   Google Maps Live Reviews Sync & Target Engine
                 </h3>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  Directly pull live Google Maps customer reviews into ReviewQR or target any specific review (e.g. someone said "Too good") to generate AI replies and post them back to Google Maps in 1 click.
+                  Directly pull live Google Maps customer reviews into Loctimize or target any specific review (e.g. someone said "Too good") to generate AI replies and post them back to Google Maps in 1 click.
                 </p>
               </div>
             </div>
@@ -1974,7 +1974,7 @@ export function ReviewsRepliesPage() {
                     </CardTitle>
                   </div>
                   <CardDescription className="text-xs text-slate-500">
-                    Sync all reviews on your screen in 1 click directly from Google Maps into ReviewQR.
+                    Sync all reviews on your screen in 1 click directly from Google Maps into Loctimize.
                   </CardDescription>
                 </CardHeader>
 
@@ -1996,7 +1996,7 @@ export function ReviewsRepliesPage() {
                         title="Drag me to your Bookmarks Bar!"
                       >
                         <Zap className="h-4 w-4 text-amber-300" />
-                        <span>📥 Sync to ReviewQR</span>
+                        <span>📥 Sync to Loctimize</span>
                       </a>
                     </div>
                     <div className="pt-1">
@@ -2027,7 +2027,7 @@ export function ReviewsRepliesPage() {
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0 text-[11px]">2</span>
-                      <p>Click the <span className="font-bold text-indigo-700">"Sync to ReviewQR"</span> bookmark in your browser bar.</p>
+                      <p>Click the <span className="font-bold text-indigo-700">"Sync to Loctimize"</span> bookmark in your browser bar.</p>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0 text-[11px]">3</span>
@@ -2049,7 +2049,7 @@ export function ReviewsRepliesPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  The ReviewQR Chrome extension is built and saved in <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">extension/</code>. Load unpacked in <span className="font-bold text-slate-700">chrome://extensions</span> to get a permanent floating sync button on Google Maps!
+                  The Loctimize Chrome extension is built and saved in <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px]">extension/</code>. Load unpacked in <span className="font-bold text-slate-700">chrome://extensions</span> to get a permanent floating sync button on Google Maps!
                 </p>
               </div>
             </div>

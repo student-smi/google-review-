@@ -101,17 +101,16 @@ export function AuthPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 sm:p-6 antialiased font-sans">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-2.5 mx-auto">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-[#2563EB] via-[#3B82F6] to-[#7B68EE] text-white font-black text-base shadow-md shadow-blue-500/20">
-              RB
-            </div>
-            <span className="font-extrabold text-2xl tracking-tight text-slate-900">
-              ReviewBoost <span className="text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-lg text-xs font-black uppercase tracking-wider ml-0.5 border border-blue-200">AI</span>
-            </span>
+        <div className="text-center space-y-2 flex flex-col items-center">
+          <Link to="/" className="inline-flex items-center justify-center mx-auto">
+            <img
+              src="/loctimize-logo.jpg"
+              alt="Loctimize"
+              className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs rounded-lg"
+            />
           </Link>
-          <p className="text-xs text-slate-500">
-            AI-Powered Google Review QR for Local Businesses
+          <p className="text-xs text-slate-500 font-medium">
+            AI-Powered Google Review QR & Local SEO Platform
           </p>
         </div>
 
@@ -132,7 +131,8 @@ export function AuthPage() {
           <div className="space-y-3">
             <GoogleAuthButton
               onSuccess={async () => {
-                await handlePostAuthSync(isLogin);
+                await handlePostAuthSync(true);
+                navigate('/dashboard', { replace: true });
               }}
             />
             <div className="relative flex items-center justify-center">

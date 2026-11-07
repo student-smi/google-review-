@@ -51,8 +51,14 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false }:
         });
         setUser(data.user);
         if (onSuccess) {
-          await onSuccess(data.user);
+          try {
+            await onSuccess(data.user);
+          } catch (e) {
+            console.warn('onSuccess error:', e);
+          }
         }
+        // Always redirect to dashboard on successful SSO
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       console.error('Google sign-in error:', err);

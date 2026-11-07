@@ -25,7 +25,7 @@ export function HeaderQrModal({ isOpen, onClose, business }: HeaderQrModalProps)
 
   const reviewUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/r/${business?.slug || business?.id || ''}`
-    : `https://reviewqr.panchalsmit.workers.dev/r/${business?.slug || business?.id || ''}`;
+    : `https://loctimize.in/r/${business?.slug || business?.id || ''}`;
 
   useEffect(() => {
     if (!isOpen || !qrRef.current || !business) return;

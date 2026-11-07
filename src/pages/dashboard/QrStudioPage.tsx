@@ -282,7 +282,7 @@ export function QrStudioPage() {
   // Target customer URL
   const targetUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/r/${shortCode}`
-    : `https://reviewqr.panchalsmit.workers.dev/r/${shortCode}`;
+    : `https://loctimize.in/r/${shortCode}`;
 
   const hasCenterLogo = Boolean(showQrCenterLogo && logoUrl);
   // Transparent 1x1 png data URI to safely trigger dot clearance in QRCodeStyling without SVG image taint
@@ -629,7 +629,7 @@ export function QrStudioPage() {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...hexToRgb(dotColor));
-      doc.text(`reviewqr.in/r/${shortCode}`, W / 2, textStartY + 158, { align: 'center' });
+      doc.text(`loctimize.in/r/${shortCode}`, W / 2, textStartY + 158, { align: 'center' });
 
       // Bottom accent bar
       doc.setFillColor(...hexToRgb(dotColor));
@@ -637,7 +637,7 @@ export function QrStudioPage() {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.text('Powered by ReviewBoost AI', W / 2, H - 3.5, { align: 'center' });
+      doc.text('Powered by Loctimize™', W / 2, H - 3.5, { align: 'center' });
 
       doc.save(`${shortCode}-a4-poster.pdf`);
     } catch (err) {
@@ -1284,7 +1284,7 @@ export function QrStudioPage() {
                   {subheadline}
                 </p>
                 <div className="text-[10px] font-mono text-slate-400">
-                  reviewqr.in/r/{shortCode}
+                  loctimize.in/r/{shortCode}
                 </div>
               </div>
             </div>
