@@ -1350,8 +1350,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 8. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS) */}
-      <section className="growth-action-section section-wrap screen-snap-section reveal-on-scroll" id="growth-benefits">
+      {/* 8. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + PROOF + CTA) */}
+      <section className="growth-full-section section-wrap screen-snap-section reveal-on-scroll" id="businesses">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
           <h2>Designed for Everyday <span>Business Growth.</span></h2>
@@ -1361,36 +1361,40 @@ export function LandingPage() {
         {/* 4 Feature Action Cards matching Blueprint */}
         <div className="growth-action-grid reveal-stagger">
           <div className="growth-action-card">
-            <span className="growth-action-icon"><Star size={24} /></span>
-            <h3>Get More Reviews</h3>
-            <p>Put review access directly in front of happy customers right at checkout.</p>
+            <span className="growth-action-icon star-icon"><Star size={24} /></span>
+            <div>
+              <h3>Get More Reviews</h3>
+              <p>Put review access directly in front of happy customers right at checkout.</p>
+            </div>
+            <span className="growth-metric-pill">+300% Conversion</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon"><MessageSquareText size={24} /></span>
-            <h3>Manage Feedback Easily</h3>
-            <p>One unified inbox for all Google reviews across single or multiple locations.</p>
+            <span className="growth-action-icon msg-icon"><MessageSquareText size={24} /></span>
+            <div>
+              <h3>Manage Feedback Easily</h3>
+              <p>One unified inbox for all Google reviews across single or multiple locations.</p>
+            </div>
+            <span className="growth-metric-pill">Unified Inbox</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon"><Zap size={24} /></span>
-            <h3>Save Time with AI Replies</h3>
-            <p>Generate polite, SEO-optimized owner responses in 1-click without typing fatigue.</p>
+            <span className="growth-action-icon zap-icon"><Zap size={24} /></span>
+            <div>
+              <h3>Save Time with AI Replies</h3>
+              <p>Generate polite, SEO-optimized owner responses in 1-click without typing fatigue.</p>
+            </div>
+            <span className="growth-metric-pill">1-Click AI Draft</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon"><BarChart3 size={24} /></span>
-            <h3>Understand Customer Insights</h3>
-            <p>Identify rating trends, customer sentiment, and operational highlights easily.</p>
+            <span className="growth-action-icon chart-icon"><BarChart3 size={24} /></span>
+            <div>
+              <h3>Understand Customer Insights</h3>
+              <p>Identify rating trends, customer sentiment, and operational highlights easily.</p>
+            </div>
+            <span className="growth-metric-pill">Realtime Trends</span>
           </div>
         </div>
-      </section>
 
-      {/* 9. MERCHANT PROOF & FINAL CTA SHOWCASE (BALANCED FULL-WIDTH 2-COLUMN) */}
-      <section className="merchant-proof-section section-wrap screen-snap-section reveal-on-scroll" id="businesses">
-        <div className="section-heading centered-heading">
-          <span className="eyebrow" style={{ justifyContent: 'center' }}>PROVEN AT CHECKOUT · TRUSTED BY LOCAL MERCHANTS</span>
-          <h2>Loved by Business Owners. <span>Frictionless for Customers.</span></h2>
-          <p>Real local merchants generating verified 5-star Google reviews every single day.</p>
-        </div>
-
+        {/* Testimonial & Final CTA Side-by-Side Row */}
         <div className="proof-cta-row reveal-stagger">
           {/* Real Merchant Testimonial Card */}
           <div className="owner-testimonial-card">
@@ -1429,7 +1433,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 10. PRICING SECTION */}
+      {/* 9. PRICING SECTION (UPGRADED HIGH-CONVERTING CARDS) */}
       <section className="pricing-section section-wrap screen-snap-section reveal-on-scroll" id="pricing">
         <div className="pricing-top">
           <div>
@@ -1478,11 +1482,11 @@ export function LandingPage() {
                       width={1024}
                       height={1024}
                     />
-                    <span>{prod.viewLabel}</span>
+                    <span className="price-photo-badge">{prod.viewLabel}</span>
                   </div>
 
                   <div className="price-card-content">
-                    {prod.recommended && <span className="price-recommendation">RECOMMENDED</span>}
+                    {prod.recommended && <span className="price-recommendation">★ BESTSELLER · RECOMMENDED</span>}
                     <h3 className="price-product-name">{prod.name}</h3>
                     <p className="price-product-intro">{prod.intro}</p>
                     <div className="hardware-price">
@@ -1490,13 +1494,13 @@ export function LandingPage() {
                       <span>One-time hardware purchase</span>
                     </div>
                     <ul className="hardware-features">
-                      {[prod.access, 'Direct access to your review link', 'No app needed to scan'].map(feat => (
+                      {[prod.access, 'Direct link to Google Reviews', 'No app needed to scan'].map(feat => (
                         <li key={feat}><Check size={16} />{feat}</li>
                       ))}
                     </ul>
                     <button
                       type="button"
-                      className="rr-button price-select-button"
+                      className={`rr-button price-select-button ${prod.recommended ? 'price-recommended-btn' : ''}`}
                       onClick={() => handleSelectProduct(prod.name)}
                       aria-label={`Select ${prod.name} for enquiry`}
                       aria-pressed={selectedProduct === prod.name}
@@ -1550,145 +1554,137 @@ export function LandingPage() {
         )}
       </section>
 
-      {/* 10. BULK / CORPORATE INQUIRY FORM */}
+      {/* 10. BULK / CORPORATE INQUIRY FORM (2-COLUMN BALANCED LAYOUT - ZERO CUTOFF) */}
       <section className="inquiry-section section-wrap screen-snap-section reveal-on-scroll" id="bulk-inquiry">
-        <div className="purchase-information" style={{ margin: '0 0 20px', width: '100%' }}>
-          <div>
-            <h3>Setup</h3>
-            <p>Choose your business review destination. Setup assistance confirmed before dispatch.</p>
+        <div className="inquiry-grid-layout">
+          {/* Left Column: Heading & Value Proposition */}
+          <div className="inquiry-left-col">
+            <span className="eyebrow">BULK & MULTI-LOCATION ENQUIRIES</span>
+            <h2>Equip All Your Counters. <span>Scale Google Reviews.</span></h2>
+            <p>From single cafes to 50+ clinic or retail chains — get custom volume pricing with verified setup.</p>
+            
+            <div className="inquiry-trust-list">
+              <div className="inquiry-trust-item">
+                <span className="inquiry-trust-icon">⚡</span>
+                <div>
+                  <strong>Pre-Configured Setup</strong>
+                  <span>Each standee is linked directly to your Google Maps review URL.</span>
+                </div>
+              </div>
+              <div className="inquiry-trust-item">
+                <span className="inquiry-trust-icon">📦</span>
+                <div>
+                  <strong>Pan-India Express Delivery</strong>
+                  <span>Doorstep courier tracking across all Indian pin codes.</span>
+                </div>
+              </div>
+              <div className="inquiry-trust-item">
+                <span className="inquiry-trust-icon">🛡️</span>
+                <div>
+                  <strong>Zero Advance Payment</strong>
+                  <span>Review specifications and sample proofs before final order.</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3>Delivery & support</h3>
-            <p>Pan-India courier delivery with doorstep tracking and customer support.</p>
-          </div>
-          <div>
-            <h3>Zero Risk</h3>
-            <p>Submit inquiry with zero payment. Final pricing verified before ordering.</p>
+
+          {/* Right Column: Compact Form with fully visible Submit button */}
+          <div className="inquiry-form-card">
+            <div className="form-heading">
+              <strong>Explore Business Enquiry</strong>
+              <span>Fast 2-hour response</span>
+            </div>
+
+            {selectedProduct && (
+              <div className="selected-product-badge">
+                Selected: <strong>{selectedProduct}</strong>
+              </div>
+            )}
+
+            <form className="inquiry-form-inner" ref={formRef} onSubmit={handleFormSubmit}>
+              <div className="inquiry-fields-grid">
+                <label>
+                  Company *
+                  <input name="company" autoComplete="organization" required placeholder="Business or brand name" />
+                </label>
+                <label>
+                  Contact Person *
+                  <input name="contact" autoComplete="name" required placeholder="Your name" />
+                </label>
+                <label>
+                  Mobile Number *
+                  <input name="mobile" autoComplete="tel" required placeholder="+91 98765 43210" />
+                </label>
+                <label>
+                  Email *
+                  <input name="email" type="email" autoComplete="email" required placeholder="you@company.com" />
+                </label>
+                <label>
+                  Locations *
+                  <input name="locations" type="number" required min={1} defaultValue={1} />
+                </label>
+                <label>
+                  Quantity *
+                  <select name="quantity" required value={selectedQuantity} onChange={e => setSelectedQuantity(e.target.value)}>
+                    {['5-10 units', '10-25 units', '25-50 units', '50-100 units', '100+ units'].map(qty => (
+                      <option key={qty} value={qty}>{qty}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="inquiry-full-field">
+                  Product Choice *
+                  <select name="product" required value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)}>
+                    <option value="" disabled>Select product or plan</option>
+                    {products.map(prod => (
+                      <option key={prod.name} value={prod.name}>{prod.name}</option>
+                    ))}
+                    {softwarePlans.map(plan => (
+                      <option key={plan.name} value={`${plan.name} software plan`}>{plan.name} software plan</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="inquiry-full-field">
+                  Special Requirements
+                  <input name="message" placeholder="Custom logo, multiple addresses or questions" />
+                </label>
+              </div>
+
+              <button type="submit" className="rr-button inquiry-submit-btn">
+                {formStatus === 'ready' ? 'Enquiry Details Ready' : 'Submit Business Enquiry'}
+                <ArrowRight size={16} />
+              </button>
+
+              <span className="inquiry-privacy-pill">
+                <CheckCircle2 size={13} color="#16a34a" /> Zero spam guarantee · 100% confidential
+              </span>
+            </form>
           </div>
         </div>
-        <div className="inquiry-copy">
-          <span className="eyebrow">Bulk, multi-location & product enquiries</span>
-          <h2>Let's talk about <span>your business.</span></h2>
-          <p>Tell us what you’re exploring. This preview doesn’t send or store your details: live inquiry delivery isn’t configured yet.</p>
-          <div className="inquiry-response-card">
-            <span className="inquiry-note-icon"><MessageSquareText size={18} /></span>
-            <span>
-              <strong>Product and bulk enquiries</strong>
-              <small>Share an item, location count or quantity to explore.</small>
-            </span>
-          </div>
-        </div>
-
-        <form className="inquiry-form" ref={formRef} onSubmit={handleFormSubmit}>
-          <div className="form-heading">
-            <strong>Explore a business enquiry</strong>
-            <span>Fields marked * are required</span>
-          </div>
-
-          {selectedProduct && (
-            <p className="selected-product-note" role="status">
-              Your selected product or plan<strong>{selectedProduct}</strong>
-            </p>
-          )}
-
-          <div className="form-two-column">
-            <label>
-              Company name *
-              <input name="company" autoComplete="organization" required minLength={2} placeholder="Your company" />
-            </label>
-            <label>
-              Contact person *
-              <input name="contact" autoComplete="name" required minLength={2} placeholder="Your name" />
-            </label>
-            <label>
-              Mobile number *
-              <input
-                name="mobile"
-                autoComplete="tel"
-                required
-                minLength={8}
-                inputMode="tel"
-                pattern="[+0-9 ()-]{8,}"
-                title="Enter a valid phone number with at least 8 digits."
-                placeholder="+91"
-              />
-            </label>
-            <label>
-              Business email *
-              <input name="email" type="email" autoComplete="email" required placeholder="you@business.com" />
-            </label>
-            <label>
-              Number of locations *
-              <input name="locations" type="number" required min={1} step={1} defaultValue={1} />
-            </label>
-            <label>
-              Quantity to explore *
-              <select name="quantity" required value={selectedQuantity} onChange={e => setSelectedQuantity(e.target.value)}>
-                {['10', '25', '50', '100', '500+'].map(qty => (
-                  <option key={qty} value={qty}>{qty} units</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-full">
-              Product or plan *
-              <select name="product" required value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)}>
-                <option value="" disabled>Select a product or plan</option>
-                {products.map(prod => (
-                  <option key={prod.name} value={prod.name}>{prod.name}</option>
-                ))}
-                {softwarePlans.map(plan => (
-                  <option key={plan.name} value={`${plan.name} software plan`}>{plan.name} software plan</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-full">
-              A little more about your needs
-              <textarea name="message" rows={3} maxLength={500} placeholder="Locations, product choices or anything else to discuss" />
-            </label>
-          </div>
-
-          <button type="submit" className="rr-button inquiry-submit">
-            {formStatus === 'ready' ? 'Inquiry details ready' : 'Prepare my enquiry'}
-            <ArrowRight size={16} />
-          </button>
-
-          {formStatus === 'ready' && (
-            <p className="form-notice" role="status">
-              <CheckCircle2 size={15} /> Your required details are complete. This preview can’t send your enquiry or store your personal details yet.
-            </p>
-          )}
-
-          <span className="form-safe-note">
-            <span className="tiny-green-dot" /> Nothing is sent or saved by this form.
-          </span>
-        </form>
       </section>
 
-      {/* 11. FAQS SECTION */}
+      {/* 11. FAQS SECTION (CLEAN 2-COLUMN LAYOUT - ZERO OVERLAP) */}
       <section className="faq-section section-wrap screen-snap-section reveal-on-scroll" id="faq">
-        <div className="faq-heading">
-          <span className="eyebrow">Good questions deserve clear answers</span>
-          <h2>Everything you need to <span>know.</span></h2>
-          <p>See anything that depends on product launch or setup? We’ll keep it clearly marked for confirmation.</p>
-          <a href="#bulk-inquiry" className="text-link">
-            Ask about ReviewQR <ArrowRight size={15} />
-          </a>
-        </div>
-
-        <div className="faq-list">
-          {primaryFaqs.map((faq, idx) => (
-            <FaqItem key={faq.q} faq={faq} index={idx} />
-          ))}
-          <details className="faq-more">
-            <summary>
-              More questions <Plus size={18} />
-            </summary>
-            <div>
-              {extraFaqs.map((faq, idx) => (
-                <FaqItem key={faq.q} faq={faq} index={idx + primaryFaqs.length} />
-              ))}
+        <div className="faq-grid-layout">
+          {/* Left Column: Heading & Support Box */}
+          <div className="faq-heading-col">
+            <span className="eyebrow">CLEAR ANSWERS · NO JARGON</span>
+            <h2>Everything you <span>need to know.</span></h2>
+            <p>Common questions about ReviewQR acrylic standees, contactless NFC tap, and honest Google reviews.</p>
+            <div className="faq-support-box">
+              <span className="faq-support-badge">💬 Have a specific question?</span>
+              <p>Our India-based product team is ready to help you choose the right standees.</p>
+              <a href="#bulk-inquiry" className="text-link">
+                Ask about ReviewQR <ArrowRight size={15} />
+              </a>
             </div>
-          </details>
+          </div>
+
+          {/* Right Column: Clean Accordion Items */}
+          <div className="faq-items-col">
+            {primaryFaqs.slice(0, 5).map((faq, idx) => (
+              <FaqItem key={faq.q} faq={faq} index={idx} />
+            ))}
+          </div>
         </div>
       </section>
 

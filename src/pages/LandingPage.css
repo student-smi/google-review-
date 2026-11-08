@@ -3762,3 +3762,603 @@ html {
     gap: 8px;
   }
 }
+
+
+/* ==========================================================================
+   LATEST 5 CRITICAL FIXES REQUESTED BY USER
+   1. Growth Section (Enlarged, bolder 4 cards + Proof/CTA row)
+   2. Pricing Section (High-converting, polished cards with elevated bestseller)
+   3. Bulk Inquiry Section (2-Column layout, ZERO cutoff, submit button 100% visible)
+   4. FAQ Section (2-Column layout, ZERO overlap between heading & accordion)
+   5. Footer Scrolling Fix (Smooth scroll-snap proximity + footer snap target)
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  /* 5. FOOTER SCROLLING FIX: Proximity snap so user can freely scroll to footer */
+  html {
+    scroll-snap-type: y proximity !important;
+    scroll-behavior: smooth !important;
+  }
+
+  .site-footer {
+    scroll-snap-align: start !important;
+    scroll-snap-stop: normal !important;
+    display: block !important;
+    width: 100% !important;
+    background: #04143c !important;
+    color: #ffffff !important;
+    padding-top: 50px !important;
+    padding-bottom: 40px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 1. ENLARGED & BOLDER EVERYDAY BUSINESS GROWTH SECTION */
+  .growth-full-section {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 16px max(30px, 50% - 580px) !important;
+  }
+  .growth-full-section .section-heading {
+    margin-bottom: 12px !important;
+  }
+  .growth-full-section h2 {
+    font-size: clamp(24px, 2.5vw, 34px) !important;
+    margin: 4px 0 6px !important;
+  }
+  .growth-action-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 14px !important;
+    max-width: 1140px !important;
+    width: 100% !important;
+    margin: 0 auto 14px !important;
+  }
+  .growth-action-card {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    padding: 14px 16px !important;
+    box-shadow: 0 4px 16px rgba(4, 20, 60, 0.04) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    min-height: 120px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  .growth-action-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 10px 24px rgba(4, 20, 60, 0.09) !important;
+    border-color: #0284c7 !important;
+  }
+  .growth-action-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .growth-action-icon.star-icon { background: #eff6ff !important; color: #2563eb !important; }
+  .growth-action-icon.msg-icon { background: #f0fdf4 !important; color: #16a34a !important; }
+  .growth-action-icon.zap-icon { background: #faf5ff !important; color: #9333ea !important; }
+  .growth-action-icon.chart-icon { background: #fff7ed !important; color: #ea580c !important; }
+  .growth-action-card h3 {
+    font-size: 14.5px !important;
+    font-weight: 700 !important;
+    color: var(--foreground) !important;
+    margin: 0 0 3px !important;
+  }
+  .growth-action-card p {
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    color: #64748b !important;
+    margin: 0 !important;
+  }
+  .growth-metric-pill {
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: #0284c7 !important;
+    background: #f0f9ff !important;
+    padding: 2px 7px !important;
+    border-radius: 10px !important;
+    width: fit-content !important;
+  }
+
+  .proof-cta-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1.25fr !important;
+    gap: 18px !important;
+    width: 100% !important;
+    max-width: 1140px !important;
+    margin: 0 auto !important;
+    align-items: stretch !important;
+  }
+  .owner-testimonial-card {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    padding: 16px 18px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 16px !important;
+    align-items: center !important;
+    box-shadow: 0 6px 20px rgba(4, 20, 60, 0.05) !important;
+  }
+  .owner-testimonial-img-wrap {
+    width: 120px !important;
+    min-width: 120px !important;
+    height: 140px !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    background: #f1f5f9 !important;
+  }
+  .owner-testimonial-img-wrap img {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 20% !important;
+  }
+  .owner-testimonial-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 0 !important;
+  }
+  .owner-star-rating {
+    color: #f59e0b !important;
+    font-size: 14px !important;
+    letter-spacing: 2px !important;
+  }
+  .owner-quote-text {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
+    color: #1e293b !important;
+    font-style: italic !important;
+    margin: 0 !important;
+  }
+  .owner-author-info strong {
+    font-size: 12.5px !important;
+    color: #0f172a !important;
+  }
+  .owner-author-info span {
+    font-size: 11px !important;
+    color: #64748b !important;
+  }
+  .owner-badge-verified {
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: #059669 !important;
+    background: #ecfdf5 !important;
+    padding: 2px 7px !important;
+    border-radius: 5px !important;
+    width: fit-content !important;
+  }
+
+  .growth-final-cta-card {
+    background: linear-gradient(145deg, #04143c 0%, #0a2560 100%) !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+    padding: 16px 22px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-shadow: 0 14px 35px rgba(4, 20, 60, 0.16) !important;
+  }
+  .growth-final-cta-visual {
+    height: 80px !important;
+    margin-bottom: 6px !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+  }
+  .growth-final-cta-visual img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .growth-final-cta-card h2 {
+    font-size: 17px !important;
+    color: #ffffff !important;
+    margin: 0 0 3px !important;
+    line-height: 1.25 !important;
+  }
+  .growth-final-cta-card p {
+    font-size: 12px !important;
+    color: #cbd5e1 !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
+  }
+  .growth-final-cta-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-top: 8px !important;
+    gap: 12px !important;
+  }
+  .growth-guarantee-note {
+    font-size: 11px !important;
+    color: #94a3b8 !important;
+  }
+
+  /* 2. UPGRADED & HIGH-CONVERTING PRICING SECTION */
+  .pricing-section {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  .price-product-list {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+    max-width: 1140px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    align-items: stretch !important;
+  }
+  .price-product-row {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 6px 18px rgba(4, 20, 60, 0.05) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  .price-product-row:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 12px 28px rgba(4, 20, 60, 0.1) !important;
+  }
+  .price-product-row.is-recommended {
+    border: 2px solid var(--primary) !important;
+    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%) !important;
+    box-shadow: 0 12px 36px rgba(0, 60, 183, 0.14) !important;
+  }
+  .price-product-photo {
+    height: 80px !important;
+    max-height: 80px !important;
+    background: #f8fafc !important;
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .price-product-photo img {
+    height: 80px !important;
+    width: auto !important;
+    object-fit: contain !important;
+  }
+  .price-photo-badge {
+    position: absolute !important;
+    bottom: 6px !important;
+    right: 8px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #04143c !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .price-card-content {
+    padding: 12px 14px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+  .price-recommendation {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    background: #eff6ff !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    width: fit-content !important;
+    display: inline-block !important;
+  }
+  .price-product-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--foreground) !important;
+    margin: 0 !important;
+  }
+  .price-product-intro {
+    font-size: 11.5px !important;
+    color: #64748b !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+  }
+  .hardware-price strong {
+    font-size: 22px !important;
+    color: #04143c !important;
+  }
+  .hardware-price span {
+    font-size: 11px !important;
+    color: #64748b !important;
+    margin-left: 6px !important;
+  }
+  .hardware-features {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 3px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+  }
+  .hardware-features li {
+    font-size: 11.5px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    color: #334155 !important;
+  }
+  .hardware-features li svg {
+    color: #16a34a !important;
+    flex-shrink: 0 !important;
+  }
+  .price-select-button {
+    width: 100% !important;
+    min-height: 36px !important;
+    padding: 7px 12px !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    margin-top: 4px !important;
+  }
+  .price-recommended-btn {
+    background: linear-gradient(135deg, #003cb7 0%, #00a4f4 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(0, 60, 183, 0.25) !important;
+  }
+
+  /* 3. BULK INQUIRY 2-COLUMN BALANCED LAYOUT (ZERO CUTOFF) */
+  .inquiry-grid-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 1.35fr !important;
+    gap: 36px !important;
+    max-width: 1140px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    align-items: center !important;
+  }
+  .inquiry-left-col {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  .inquiry-left-col h2 {
+    font-size: clamp(24px, 2.4vw, 32px) !important;
+    margin: 6px 0 10px !important;
+    line-height: 1.2 !important;
+  }
+  .inquiry-left-col p {
+    font-size: 13.5px !important;
+    color: #64748b !important;
+    margin-bottom: 18px !important;
+  }
+  .inquiry-trust-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .inquiry-trust-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    box-shadow: 0 2px 8px rgba(4, 20, 60, 0.03) !important;
+  }
+  .inquiry-trust-icon {
+    font-size: 20px !important;
+  }
+  .inquiry-trust-item strong {
+    display: block !important;
+    font-size: 13px !important;
+    color: var(--foreground) !important;
+  }
+  .inquiry-trust-item span {
+    font-size: 11.5px !important;
+    color: #64748b !important;
+  }
+
+  .inquiry-form-card {
+    background: #ffffff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    padding: 18px 22px !important;
+    box-shadow: 0 8px 28px rgba(4, 20, 60, 0.06) !important;
+  }
+  .inquiry-form-card .form-heading {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 12px !important;
+  }
+  .inquiry-form-card .form-heading strong {
+    font-size: 15px !important;
+    color: #0f172a !important;
+  }
+  .inquiry-form-card .form-heading span {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #059669 !important;
+    background: #ecfdf5 !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+  }
+  .selected-product-badge {
+    font-size: 11.5px !important;
+    background: #eff6ff !important;
+    color: var(--primary) !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    margin-bottom: 10px !important;
+  }
+  .inquiry-fields-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px 12px !important;
+  }
+  .inquiry-fields-grid label {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+  }
+  .inquiry-fields-grid input,
+  .inquiry-fields-grid select {
+    height: 34px !important;
+    padding: 5px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    background: #f8fafc !important;
+  }
+  .inquiry-fields-grid input:focus,
+  .inquiry-fields-grid select:focus {
+    background: #ffffff !important;
+    border-color: #0284c7 !important;
+    outline: none !important;
+  }
+  .inquiry-full-field {
+    grid-column: span 2 !important;
+  }
+  .inquiry-submit-btn {
+    width: 100% !important;
+    min-height: 38px !important;
+    padding: 8px 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    margin-top: 10px !important;
+  }
+  .inquiry-privacy-pill {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    font-size: 11px !important;
+    color: #64748b !important;
+    margin-top: 6px !important;
+  }
+
+  /* 4. FAQS 2-COLUMN BALANCED LAYOUT (ZERO OVERLAP) */
+  .faq-grid-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 1.45fr !important;
+    gap: 44px !important;
+    max-width: 1140px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    align-items: start !important;
+  }
+  .faq-heading-col {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+  .faq-heading-col h2 {
+    font-size: clamp(24px, 2.4vw, 32px) !important;
+    margin: 6px 0 10px !important;
+    line-height: 1.2 !important;
+  }
+  .faq-heading-col p {
+    font-size: 13.5px !important;
+    color: #64748b !important;
+    margin-bottom: 16px !important;
+  }
+  .faq-support-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+  }
+  .faq-support-badge {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    display: block !important;
+    margin-bottom: 4px !important;
+  }
+  .faq-support-box p {
+    font-size: 12px !important;
+    color: #475569 !important;
+    margin-bottom: 8px !important;
+  }
+  .faq-items-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .faq-item {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    box-shadow: 0 2px 6px rgba(4, 20, 60, 0.03) !important;
+    transition: all 0.2s ease !important;
+  }
+  .faq-item:hover {
+    border-color: #0284c7 !important;
+  }
+  .faq-item summary {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    list-style: none !important;
+    border: none !important;
+  }
+  .faq-item summary::-webkit-details-marker {
+    display: none !important;
+  }
+  .faq-number {
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    margin-right: 10px !important;
+  }
+  .faq-icon {
+    color: var(--primary) !important;
+  }
+  .faq-item p {
+    font-size: 12.5px !important;
+    line-height: 1.45 !important;
+    color: #475569 !important;
+    margin: 8px 0 0 24px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .inquiry-grid-layout,
+  .faq-grid-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .growth-action-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .proof-cta-row {
+    grid-template-columns: 1fr !important;
+  }
+}
