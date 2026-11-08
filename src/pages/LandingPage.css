@@ -898,3 +898,96 @@ html {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ========================================================
+   SCROLL REVEAL ANIMATIONS (60/120FPS HARDWARE ACCELERATED)
+   ======================================================== */
+
+/* Reading Progress Bar under Sticky Header */
+.scroll-progress-track {
+  position: fixed;
+  top: 72px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 100;
+  background: transparent;
+  pointer-events: none;
+}
+.scroll-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #003cb7 0%, #00a4f4 100%);
+  width: 0%;
+  transition: width 0.1s ease-out;
+  box-shadow: 0 0 10px rgba(0, 164, 244, 0.6);
+}
+
+/* Base Reveal on Scroll (Fade up + Glide) */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(38px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Scale-in for Hero, Images & Laptop Mockup */
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.96) translateY(24px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-scale.is-visible {
+  opacity: 1 !important;
+  transform: scale(1) translateY(0) !important;
+}
+
+/* Staggered Children Animation */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal-stagger > *.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* Stagger Delays (Wave / Domino Effect) */
+.reveal-stagger > *:nth-child(1) { transition-delay: 0.05s; }
+.reveal-stagger > *:nth-child(2) { transition-delay: 0.16s; }
+.reveal-stagger > *:nth-child(3) { transition-delay: 0.28s; }
+.reveal-stagger > *:nth-child(4) { transition-delay: 0.40s; }
+.reveal-stagger > *:nth-child(5) { transition-delay: 0.52s; }
+.reveal-stagger > *:nth-child(6) { transition-delay: 0.64s; }
+
+/* Interactive Hover Lift for Cards */
+.process-flow-card,
+.growth-action-card,
+.feature-pill-card,
+.price-product-row,
+.owner-testimonial-card,
+.growth-final-cta-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+}
+.process-flow-card:hover,
+.growth-action-card:hover,
+.feature-pill-card:hover {
+  transform: translateY(-4px) !important;
+}
+
+/* Subtle Shimmer for AI Reply Card */
+@keyframes aiShimmer {
+  0% { box-shadow: 0 10px 30px rgba(0, 60, 183, 0.06); }
+  50% { box-shadow: 0 10px 35px rgba(0, 164, 244, 0.16); }
+  100% { box-shadow: 0 10px 30px rgba(0, 60, 183, 0.06); }
+}
+.ai-reply-card-comparison.is-visible {
+  animation: aiShimmer 4s ease-in-out infinite;
+}

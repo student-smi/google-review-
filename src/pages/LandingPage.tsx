@@ -1,4 +1,4 @@
-import React, { useState, useRef, Fragment } from 'react';
+import React, { useState, useRef, useEffect, Fragment } from 'react';
 import {
   ArrowDown,
   ArrowRight,
@@ -233,7 +233,45 @@ export function LandingPage() {
   const [formStatus, setFormStatus] = useState<'idle' | 'ready'>('idle');
   const [aiCopierStatus, setAiCopierStatus] = useState(false);
   const [draftTone, setDraftTone] = useState<'Warm tone' | 'Professional'>('Warm tone');
+  const [scrollProgress, setScrollProgress] = useState(0);
   const formRef = useRef<HTMLFormElement | null>(null);
+
+  useEffect(() => {
+    // 60/120fps GPU Scroll Reveal Observer
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '0px 0px -40px 0px'
+      }
+    );
+
+    const revealElements = document.querySelectorAll('.reveal-on-scroll, .reveal-scale, .reveal-stagger > *');
+    revealElements.forEach((el) => observer.observe(el));
+
+    // Scroll Reading Progress
+    const handleScroll = () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll > 0) {
+        setScrollProgress((window.scrollY / totalScroll) * 100);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [pricingTab]);
 
   function handleSelectProduct(productName: string) {
     setSelectedProduct(productName);
@@ -327,10 +365,13 @@ export function LandingPage() {
           </button>
         </div>
       </header>
+      <div className="scroll-progress-track">
+        <div className="scroll-progress-fill" style={{ width: `${scrollProgress}%` }} />
+      </div>
 
       {/* 1. HERO SECTION (MAIN PRODUCT + CUSTOMER PHONE) */}
       <section className="hero-section">
-        <div className="hero-copy">
+        <div className="hero-copy reveal-on-scroll">
           <span className="eyebrow">LOCTIMIZE REVIEW QR</span>
           <h1>
             Turn Happy Customers Into <span>Google Reviews.</span>
@@ -352,7 +393,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="hero-visual">
+        <div className="hero-visual reveal-scale">
           <div className="hero-image-wrap">
             <img
               src={heroImage}
@@ -368,7 +409,7 @@ export function LandingPage() {
       </section>
 
       {/* 2. A SIMPLE WAY SECTION (PRODUCT CLOSE-UP + MODERN FEATURE PILLS) */}
-      <section className="product-section section-wrap" id="products">
+      <section className="product-section section-wrap reveal-on-scroll" id="products">
         <div className="section-heading product-section-heading">
           <div>
             <span className="eyebrow">THE PRODUCT</span>
@@ -462,7 +503,7 @@ export function LandingPage() {
           <p>Make your review link easy to find, without deciding what customers say.</p>
         </div>
 
-        <div className="process-flow-wrap">
+        <div className="process-flow-wrap reveal-stagger">
           {/* Step 1 */}
           <article className="process-flow-card">
             <div className="process-flow-img-wrap">
@@ -506,14 +547,14 @@ export function LandingPage() {
       </section>
 
       {/* 4. REAL-LIFE USAGE SETTING SECTION (NEW LIFESTYLE BANNER) */}
-      <section className="lifestyle-section section-wrap" id="real-life">
+      <section className="lifestyle-section section-wrap reveal-on-scroll" id="real-life">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>REAL-WORLD EXPERIENCE</span>
           <h2>From the Counter to <span>Your Customer's Phone.</span></h2>
           <p>A natural, effortless touchpoint at checkout that turns everyday customer satisfaction into verified 5-star Google reviews.</p>
         </div>
 
-        <div className="lifestyle-card">
+        <div className="lifestyle-card reveal-scale">
           <img
             src={lifestyleImg}
             alt="Real life counter setting: barista and customer interacting with Loctimize standee on counter"
@@ -539,7 +580,7 @@ export function LandingPage() {
         </div>
 
         {/* Retina Vector Laptop Showcase (Infinitely Crisp - Zero Blur) */}
-        <div className="mac-laptop-mockup">
+        <div className="mac-laptop-mockup reveal-scale">
           <div className="mac-laptop-camera" />
           <div className="mac-laptop-screen">
             <div className="mac-laptop-topbar">
@@ -696,7 +737,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="demo-workspace" id="live-demo">
+        <div className="demo-workspace reveal-on-scroll" id="live-demo">
           <div className="demo-steps" role="tablist" aria-label="Customer review demo steps">
             {['Scan or tap', 'Share your experience', 'Choose what’s next'].map((label, idx) => (
               <button
@@ -826,7 +867,7 @@ export function LandingPage() {
         </div>
 
         {/* AI WRITING ASSISTANT FOR CUSTOMERS */}
-        <div className="assistant-workspace" style={{ marginTop: '48px' }}>
+        <div className="assistant-workspace reveal-on-scroll" style={{ marginTop: '48px' }}>
           <div className="assistant-form">
             <div className="assistant-card-heading">
               <span className="assistant-orb"><PenLine size={20} /></span>
@@ -935,7 +976,7 @@ export function LandingPage() {
           </div>
 
           {/* Interactive Comparison Card from Blueprint Panel 6 */}
-          <div className="ai-reply-card-comparison">
+          <div className="ai-reply-card-comparison reveal-on-scroll">
             {/* Left: Customer Review Card */}
             <div className="review-incoming-card">
               <div className="review-incoming-header">
@@ -1045,7 +1086,7 @@ export function LandingPage() {
         </div>
 
         {/* 4 Feature Action Cards matching Blueprint */}
-        <div className="growth-action-grid">
+        <div className="growth-action-grid reveal-stagger">
           <div className="growth-action-card">
             <span className="growth-action-icon"><Star size={24} /></span>
             <h3>Get More Reviews</h3>
@@ -1069,7 +1110,7 @@ export function LandingPage() {
         </div>
 
         {/* Testimonial & Final CTA Side-by-Side Row */}
-        <div className="proof-cta-row">
+        <div className="proof-cta-row reveal-stagger">
           {/* Real Merchant Testimonial Card */}
           <div className="owner-testimonial-card">
             <div className="owner-testimonial-img-wrap">
@@ -1103,7 +1144,7 @@ export function LandingPage() {
       </section>
 
       {/* 8. PRICING SECTION */}
-      <section className="pricing-section section-wrap" id="pricing">
+      <section className="pricing-section section-wrap reveal-on-scroll" id="pricing">
         <div className="pricing-top">
           <div>
             <span className="eyebrow">Plans that can grow with you</span>
@@ -1134,7 +1175,7 @@ export function LandingPage() {
 
         {pricingTab === 'products' ? (
           <Fragment>
-            <div className="price-product-list">
+            <div className="price-product-list reveal-stagger">
               {products.map(prod => (
                 <article
                   key={prod.name}
@@ -1190,7 +1231,7 @@ export function LandingPage() {
           </Fragment>
         ) : (
           <Fragment>
-            <div className="software-plan-grid">
+            <div className="software-plan-grid reveal-stagger">
               {softwarePlans.map(plan => (
                 <article
                   key={plan.name}
@@ -1242,7 +1283,7 @@ export function LandingPage() {
       </section>
 
       {/* 9. BULK / CORPORATE INQUIRY FORM */}
-      <section className="inquiry-section section-wrap" id="bulk-inquiry">
+      <section className="inquiry-section section-wrap reveal-on-scroll" id="bulk-inquiry">
         <div className="inquiry-copy">
           <span className="eyebrow">Bulk, multi-location & product enquiries</span>
           <h2>Let's talk about <span>your business.</span></h2>
@@ -1342,7 +1383,7 @@ export function LandingPage() {
       </section>
 
       {/* 10. FAQS SECTION */}
-      <section className="faq-section section-wrap" id="faq">
+      <section className="faq-section section-wrap reveal-on-scroll" id="faq">
         <div className="faq-heading">
           <span className="eyebrow">Good questions deserve clear answers</span>
           <h2>Everything you need to <span>know.</span></h2>
