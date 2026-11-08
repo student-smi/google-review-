@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
+import { isAuthenticated } from '@/lib/auth';
 import {
   ArrowDown,
   ArrowRight,
@@ -320,6 +322,8 @@ const cardVariant: Variants = {
 };
 
 export function LandingPage() {
+  const navigate = useNavigate();
+  const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
   const [activeIndustry, setActiveIndustry] = useState(0);
   const [activeScenario, setActiveScenario] = useState(0);
@@ -359,6 +363,28 @@ export function LandingPage() {
       clearInterval(ticker);
     };
   }, []);
+
+  useEffect(() => {
+    setUserLoggedIn(isAuthenticated());
+  }, []);
+
+  function handleCtaClick(e?: React.MouseEvent) {
+    if (e) e.preventDefault();
+    closeMobileNav();
+    if (isAuthenticated()) {
+      navigate('/dashboard');
+    } else {
+      navigate('/signup');
+    }
+  }
+
+  function handleChooseSoftwarePlan(planName: string) {
+    if (isAuthenticated()) {
+      navigate('/dashboard/billing');
+    } else {
+      navigate('/signup');
+    }
+  }
 
   function handleSelectProduct(productName: string) {
     setSelectedProduct(productName);
@@ -418,12 +444,30 @@ export function LandingPage() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <a href="/login" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-blue-600 transition">
-            Login <ArrowUpRight size={14} />
-          </a>
-          <a href="#pricing" className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5">
-            Get Your Review QR <ArrowRight size={15} />
-          </a>
+          {userLoggedIn ? (
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-blue-600 transition cursor-pointer"
+            >
+              Dashboard <ArrowUpRight size={14} />
+            </button>
+          ) : (
+            <a href="/login" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-blue-600 transition">
+              Login <ArrowUpRight size={14} />
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={handleCtaClick}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            {userLoggedIn ? (
+              <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
+            ) : (
+              <Fragment>Get Your Review QR <ArrowRight size={15} /></Fragment>
+            )}
+          </button>
           <button
             type="button"
             className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer"
@@ -450,12 +494,28 @@ export function LandingPage() {
             <a href="#pricing" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Pricing</a>
             <a href="#faq" onClick={closeMobileNav} className="py-2 border-b border-slate-100">FAQ</a>
             <div className="pt-2 flex flex-col gap-2">
-              <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl">
-                Login to Account
-              </a>
-              <a href="#pricing" onClick={closeMobileNav} className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs">
-                Get Your Review QR
-              </a>
+              {userLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={() => { closeMobileNav(); navigate('/dashboard'); }}
+                  className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  Go to Dashboard
+                </button>
+              ) : (
+                <Fragment>
+                  <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl">
+                    Login to Account
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCtaClick}
+                    className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                  >
+                    Get Your Review QR
+                  </button>
+                </Fragment>
+              )}
             </div>
           </motion.div>
         )}
@@ -490,9 +550,17 @@ export function LandingPage() {
               Make it effortless for customers to share their experiences with a simple QR scan or contactless NFC tap. Build unbeatable local Google Maps trust with Loctimize.
             </p>
             <div className="mt-8 flex flex-wrap gap-4 items-center">
-              <a href="#pricing" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm sm:text-base">
-                Get Your Review QR <ArrowRight size={16} />
-              </a>
+              <button
+                type="button"
+                onClick={handleCtaClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm sm:text-base cursor-pointer"
+              >
+                {userLoggedIn ? (
+                  <Fragment>Go to Dashboard <ArrowRight size={16} /></Fragment>
+                ) : (
+                  <Fragment>Get Your Review QR <ArrowRight size={16} /></Fragment>
+                )}
+              </button>
               <a href="#how-it-works" className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs">
                 See How It Works <ArrowDown size={16} />
               </a>
@@ -572,9 +640,17 @@ export function LandingPage() {
               </div>
             </div>
             <div className="mt-8 flex items-center gap-4">
-              <a href="#pricing" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-xs transition inline-flex items-center gap-2 text-sm">
-                Get Your Review QR <ArrowRight size={15} />
-              </a>
+              <button
+                type="button"
+                onClick={handleCtaClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-xs transition inline-flex items-center gap-2 text-sm cursor-pointer"
+              >
+                {userLoggedIn ? (
+                  <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
+                ) : (
+                  <Fragment>Get Your Review QR <ArrowRight size={15} /></Fragment>
+                )}
+              </button>
               <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
                 <Check size={14} className="text-emerald-600" /> No app needed to scan
               </span>
@@ -645,12 +721,17 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
-                href="#pricing"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition inline-flex items-center gap-2 shadow-xs"
+              <button
+                type="button"
+                onClick={handleCtaClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition inline-flex items-center gap-2 shadow-xs cursor-pointer"
               >
-                Get Review QR for {industries[activeIndustry].name} <ArrowRight size={15} />
-              </a>
+                {userLoggedIn ? (
+                  <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
+                ) : (
+                  <Fragment>Get Review QR for {industries[activeIndustry].name} <ArrowRight size={15} /></Fragment>
+                )}
+              </button>
             </div>
             <div className="relative rounded-2xl overflow-hidden shadow-md border border-slate-200 h-64 sm:h-80">
               <img
@@ -1109,9 +1190,17 @@ export function LandingPage() {
                 <h3 className="text-lg font-bold mb-1">Make Every Customer Experience Easier to Share.</h3>
                 <p className="text-xs text-slate-300">Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
               </div>
-              <a href="#pricing" className="bg-white text-slate-900 hover:bg-slate-100 font-bold px-5 py-3 rounded-xl text-xs sm:text-sm shrink-0 transition inline-flex items-center gap-1.5 shadow-sm">
-                Get Your Review QR <ArrowRight size={14} />
-              </a>
+              <button
+                type="button"
+                onClick={handleCtaClick}
+                className="bg-white text-slate-900 hover:bg-slate-100 font-bold px-5 py-3 rounded-xl text-xs sm:text-sm shrink-0 transition inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                {userLoggedIn ? (
+                  <Fragment>Go to Dashboard <ArrowRight size={14} /></Fragment>
+                ) : (
+                  <Fragment>Get Your Review QR <ArrowRight size={14} /></Fragment>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -1272,7 +1361,7 @@ export function LandingPage() {
                   <button
                     type="button"
                     className="w-full py-3 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition cursor-pointer"
-                    onClick={() => handleSelectProduct(`${plan.name} software plan`)}
+                    onClick={() => handleChooseSoftwarePlan(plan.name)}
                   >
                     Choose {plan.name}
                   </button>
