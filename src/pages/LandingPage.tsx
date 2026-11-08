@@ -18,13 +18,31 @@ import {
   QrCode,
   Smartphone,
   Wifi,
-  X
+  X,
+  Star,
+  Zap,
+  BarChart3,
+  Sparkles,
+  Laptop,
+  Link as LinkIcon
 } from 'lucide-react';
 import './LandingPage.css';
 
+// Brand Assets
 const headerLogo = '/loctimize-logo-header.png';
 const footerLogo = '/loctimize-logo-footer.png';
-const standeeImage = '/loctimize-reviewqr-counter.jpg';
+const counterBase = '/loctimize-reviewqr-counter.jpg';
+
+// Visual Blueprint Assets
+const heroImage = '/landing/hero-standee-phone.jpg';
+const standeeCloseup = '/landing/standee-closeup.jpg';
+const step1Img = '/landing/step-1-unboxing.jpg';
+const step2Img = '/landing/step-2-counter.jpg';
+const step3Img = '/landing/step-3-mobile-review.jpg';
+const lifestyleImg = '/landing/real-life-counter-usage.jpg';
+const dashboardImg = '/landing/dashboard-laptop-overview.jpg';
+const ownerImg = '/landing/restaurant-owner.jpg';
+const finalCtaImg = '/landing/final-cta-laptop-standee.jpg';
 
 interface Product {
   name: string;
@@ -168,50 +186,6 @@ const allFaqs = [
 const primaryFaqs = [allFaqs[0], allFaqs[1], allFaqs[2], allFaqs[3], allFaqs[9], allFaqs[6]];
 const extraFaqs = allFaqs.filter(faq => !primaryFaqs.some(p => p.q === faq.q));
 
-const benefits = [
-  {
-    icon: QrCode,
-    title: 'Make review access easier',
-    detail: 'A visible QR or NFC touchpoint puts your review destination within reach.'
-  },
-  {
-    icon: MessageSquareText,
-    title: 'Keep feedback genuine',
-    detail: 'Every customer gets the same review path, whatever their experience.'
-  },
-  {
-    icon: PenLine,
-    title: 'Fit your everyday workflow',
-    detail: 'Keep review access close to checkout, reception or the end of an appointment.'
-  },
-  {
-    icon: MoveRight,
-    title: 'Offer a familiar experience',
-    detail: 'Customers can open your review link without downloading a scanning app.'
-  }
-];
-
-const steps = [
-  {
-    number: '01',
-    title: 'Get your Review QR',
-    detail: 'Choose the standee and review destination for your business.',
-    icon: Globe
-  },
-  {
-    number: '02',
-    title: 'Place it where customers see it',
-    detail: 'Set your QR or NFC + QR standee at a counter, reception or checkout.',
-    icon: QrCode
-  },
-  {
-    number: '03',
-    title: 'Customers scan and share',
-    detail: 'Customers can share honest feedback in their own words, on their own terms.',
-    icon: Smartphone
-  }
-];
-
 const languages = ['English', 'Hindi', 'Gujarati', 'Hinglish'];
 
 function getSuggestions(text: string): string[] {
@@ -253,6 +227,8 @@ export function LandingPage() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedQuantity, setSelectedQuantity] = useState('25');
   const [formStatus, setFormStatus] = useState<'idle' | 'ready'>('idle');
+  const [aiCopierStatus, setAiCopierStatus] = useState(false);
+  const [draftTone, setDraftTone] = useState<'Warm tone' | 'Professional'>('Warm tone');
   const formRef = useRef<HTMLFormElement | null>(null);
 
   function handleSelectProduct(productName: string) {
@@ -287,6 +263,17 @@ export function LandingPage() {
       window.setTimeout(() => setCopiedIndex(null), 1800);
     } catch {
       setCopiedIndex(null);
+    }
+  }
+
+  async function handleUseReplyCopy() {
+    const replyText = "Thank you, Ritu! We're glad you had a great experience. We look forward to serving you again!";
+    try {
+      await navigator.clipboard.writeText(replyText);
+      setAiCopierStatus(true);
+      window.setTimeout(() => setAiCopierStatus(false), 2200);
+    } catch {
+      setAiCopierStatus(false);
     }
   }
 
@@ -337,7 +324,7 @@ export function LandingPage() {
         </div>
       </header>
 
-      {/* HERO SECTION */}
+      {/* 1. HERO SECTION (MAIN PRODUCT + CUSTOMER PHONE) */}
       <section className="hero-section">
         <div className="hero-copy">
           <span className="eyebrow">LOCTIMIZE REVIEW QR</span>
@@ -364,9 +351,9 @@ export function LandingPage() {
         <div className="hero-visual">
           <div className="hero-image-wrap">
             <img
-              src={standeeImage}
+              src={heroImage}
               className="hero-product-image"
-              alt="QR and NFC review standee prominently displayed on a bright business counter beside a phone"
+              alt="QR and NFC review standee prominently displayed on a bright business counter beside a customer's phone"
               width={1024}
               height={1024}
               fetchPriority="high"
@@ -376,7 +363,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* PRODUCTS SECTION */}
+      {/* 2. A SIMPLE WAY SECTION (PRODUCT CLOSE-UP + MODERN FEATURE PILLS) */}
       <section className="product-section section-wrap" id="products">
         <div className="section-heading product-section-heading">
           <div>
@@ -392,8 +379,8 @@ export function LandingPage() {
           <div className="product-gallery">
             <div className="product-image-large product-detail-crop">
               <img
-                src={standeeImage}
-                alt="Loctimize ReviewQR acrylic standee and smartphone product concept"
+                src={standeeCloseup}
+                alt="Loctimize ReviewQR acrylic standee close-up detail"
                 loading="lazy"
                 width={1024}
                 height={1024}
@@ -417,20 +404,32 @@ export function LandingPage() {
             <span className="eyebrow">ON THE COUNTER. WITHIN REACH.</span>
             <h3>A simple invitation to share.</h3>
             <p>At your checkout, reception or table, a Review QR standee gives customers a direct path to your review destination.</p>
-            <ul className="product-benefit-list">
-              <li>
-                <Check size={20} />
-                <span><strong>Easy to display</strong>Place it where customers naturally pause.</span>
-              </li>
-              <li>
-                <Check size={20} />
-                <span><strong>Easy to access</strong>Choose QR scanning or NFC + QR access.</span>
-              </li>
-              <li>
-                <Check size={20} />
-                <span><strong>Always their choice</strong>Every customer can share honest feedback.</span>
-              </li>
-            </ul>
+            
+            {/* 3 Modern Feature Pills matching the Blueprint */}
+            <div className="feature-pills-list">
+              <div className="feature-pill-card">
+                <span className="feature-pill-icon"><Laptop size={22} /></span>
+                <div className="feature-pill-content">
+                  <strong>Easy to display</strong>
+                  <span>Place it naturally where customers pause at checkout or tables.</span>
+                </div>
+              </div>
+              <div className="feature-pill-card">
+                <span className="feature-pill-icon"><QrCode size={22} /></span>
+                <div className="feature-pill-content">
+                  <strong>Simple for customers to scan</strong>
+                  <span>Instantly opens via phone camera scan or fast NFC tap.</span>
+                </div>
+              </div>
+              <div className="feature-pill-card">
+                <span className="feature-pill-icon"><LinkIcon size={22} /></span>
+                <div className="feature-pill-content">
+                  <strong>Direct access to your review destination</strong>
+                  <span>Zero middle apps. Ungated direct Google review landing page.</span>
+                </div>
+              </div>
+            </div>
+
             <a href="#pricing" className="rr-button">
               Get Your Review QR <ArrowRight size={18} />
             </a>
@@ -451,40 +450,123 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+      {/* 3. THREE STEPS SECTION (VISUAL 3-PHOTO PROCESS FLOW) */}
       <section className="how-section section-wrap" id="how-it-works">
         <div className="section-heading centered-heading">
           <span className="eyebrow">Small step. Simple share.</span>
           <h2>Three Steps. <span>One Simple Experience.</span></h2>
           <p>Make your review link easy to find, without deciding what customers say.</p>
         </div>
-        <div className="step-grid">
-          {steps.map((step, idx) => {
-            const StepIcon = step.icon;
-            return (
-              <article key={step.number} className="step-item">
-                <div className="step-top">
-                  <span className="step-icon"><StepIcon size={20} /></span>
-                  <span className="step-index">{step.number}</span>
-                  {idx < steps.length - 1 && <span className="step-track" />}
-                </div>
-                <h3>{step.title}</h3>
-                <p>{step.detail}</p>
-                {idx === 1 && (
-                  <span className="step-demo-visual">
-                    <QrCode size={20} />
-                    <Wifi size={18} />
-                    <span>SCAN OR TAP</span>
-                  </span>
-                )}
-              </article>
-            );
-          })}
+
+        <div className="process-flow-wrap">
+          {/* Step 1 */}
+          <article className="process-flow-card">
+            <div className="process-flow-img-wrap">
+              <img src={step1Img} alt="Unboxing Loctimize Review QR Standee" loading="lazy" />
+            </div>
+            <div className="process-flow-body">
+              <span className="process-step-badge">1</span>
+              <h3>Get your Review QR</h3>
+              <p>Choose the standee and review destination for your business.</p>
+            </div>
+          </article>
+
+          <span className="process-flow-arrow"><MoveRight size={28} /></span>
+
+          {/* Step 2 */}
+          <article className="process-flow-card">
+            <div className="process-flow-img-wrap">
+              <img src={step2Img} alt="Placing Review QR on counter" loading="lazy" />
+            </div>
+            <div className="process-flow-body">
+              <span className="process-step-badge">2</span>
+              <h3>Place it at your counter</h3>
+              <p>Set your QR or NFC + QR standee at checkout, counter, or reception.</p>
+            </div>
+          </article>
+
+          <span className="process-flow-arrow"><MoveRight size={28} /></span>
+
+          {/* Step 3 */}
+          <article className="process-flow-card">
+            <div className="process-flow-img-wrap">
+              <img src={step3Img} alt="Customer scanning and sharing Google feedback" loading="lazy" />
+            </div>
+            <div className="process-flow-body">
+              <span className="process-step-badge">3</span>
+              <h3>Customers scan and share feedback</h3>
+              <p>Customers share honest feedback in their own words, on their own terms.</p>
+            </div>
+          </article>
         </div>
       </section>
 
-      {/* INTERACTIVE DEMO (PHONE SIMULATOR) */}
-      <section className="demo-section section-wrap" id="live-demo">
+      {/* 4. REAL-LIFE USAGE SETTING SECTION (NEW LIFESTYLE BANNER) */}
+      <section className="lifestyle-section section-wrap">
+        <div className="section-heading centered-heading">
+          <span className="eyebrow">REAL-WORLD EXPERIENCE</span>
+          <h2>From the Counter to <span>Your Customer's Phone.</span></h2>
+          <p>A natural, effortless touchpoint at checkout that turns everyday customer satisfaction into verified 5-star Google reviews.</p>
+        </div>
+
+        <div className="lifestyle-card">
+          <img
+            src={lifestyleImg}
+            alt="Real life counter setting: barista and customer interacting with Loctimize standee on counter"
+            loading="lazy"
+          />
+          <div className="lifestyle-overlay-badge">
+            <div className="lifestyle-badge-title">
+              <span className="tiny-green-dot" /> LIVE AT CHECKOUT
+            </div>
+            <div className="lifestyle-badge-text">
+              Fits effortlessly into cafes, restaurants, clinics, salons, and retail counters.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. SAAS ECOSYSTEM & DASHBOARD SHOWCASE */}
+      <section className="assistant-section section-wrap" id="features">
+        <span id="ai-assistant" className="anchor-point" />
+        <div className="assistant-heading">
+          <div>
+            <span className="eyebrow">AI & SOFTWARE ECOSYSTEM · BEYOND HARDWARE</span>
+            <h2>Your Review QR Is <span>Just the Beginning.</span></h2>
+          </div>
+          <p>Pair your physical standees with Loctimize’s central review management, growth analytics, and AI response assistant.</p>
+        </div>
+
+        {/* Laptop Dashboard Showcase with KPI Badges */}
+        <div className="dashboard-showcase-wrap">
+          <img src={dashboardImg} alt="Loctimize Reviews Overview Dashboard on Laptop" loading="lazy" />
+        </div>
+
+        <div className="dashboard-metrics-row">
+          <div className="dashboard-metric-pill">
+            <span className="dashboard-metric-icon"><Star size={20} /></span>
+            <div className="dashboard-metric-data">
+              <strong>248</strong>
+              <span>Total Reviews Tracked</span>
+            </div>
+          </div>
+          <div className="dashboard-metric-pill">
+            <span className="dashboard-metric-icon"><CheckCircle2 size={20} /></span>
+            <div className="dashboard-metric-data">
+              <strong>4.6 ★</strong>
+              <span>Average Google Rating</span>
+            </div>
+          </div>
+          <div className="dashboard-metric-pill">
+            <span className="dashboard-metric-icon"><BarChart3 size={20} /></span>
+            <div className="dashboard-metric-data">
+              <strong>+32</strong>
+              <span>New Reviews This Month</span>
+            </div>
+          </div>
+        </div>
+
+        {/* INTERACTIVE WORKSPACE (PHONE SIMULATOR & ASSISTANT) */}
         <div className="demo-intro">
           <div>
             <span className="eyebrow">TRY THE INTERACTIVE EXPERIENCE</span>
@@ -505,7 +587,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="demo-workspace">
+        <div className="demo-workspace" id="live-demo">
           <div className="demo-steps" role="tablist" aria-label="Customer review demo steps">
             {['Scan or tap', 'Share your experience', 'Choose what’s next'].map((label, idx) => (
               <button
@@ -633,20 +715,9 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
 
-      {/* AI ASSISTANT SECTION */}
-      <section className="assistant-section section-wrap" id="features">
-        <span id="ai-assistant" className="anchor-point" />
-        <div className="assistant-heading">
-          <div>
-            <span className="eyebrow">AI writing assistance · a customer-led tool</span>
-            <h2>Your Review QR Is <span>Just the Beginning.</span></h2>
-          </div>
-          <p>Explore optional writing help in the preview below. Your words stay editable; nothing is posted or sent.</p>
-        </div>
-
-        <div className="assistant-workspace">
+        {/* AI WRITING ASSISTANT FOR CUSTOMERS */}
+        <div className="assistant-workspace" style={{ marginTop: '48px' }}>
           <div className="assistant-form">
             <div className="assistant-card-heading">
               <span className="assistant-orb"><PenLine size={20} /></span>
@@ -746,13 +817,60 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* AI REPLIES COMPONENT */}
+        {/* 6. AI REPLY COPILOT (INTERACTIVE REVIEW -> AI REPLY CARD) */}
         <div className="reply-section" id="ai-replies">
+          <div className="section-heading centered-heading" style={{ marginBottom: '24px' }}>
+            <span className="eyebrow">A draft, never an autopilot</span>
+            <h2>Respond Thoughtfully. <span>Save time.</span></h2>
+            <p>Explore an interactive owner-reply example. Review every draft; nothing posts automatically.</p>
+          </div>
+
+          {/* Interactive Comparison Card from Blueprint Panel 6 */}
+          <div className="ai-reply-card-comparison">
+            {/* Left: Customer Review Card */}
+            <div className="review-incoming-card">
+              <div className="review-incoming-header">
+                <span className="review-avatar-badge">R</span>
+                <div className="review-incoming-info">
+                  <strong>Ritu Sharma</strong>
+                  <small>2 days ago</small>
+                  <div className="review-stars-gold">★★★★★</div>
+                </div>
+              </div>
+              <p className="review-incoming-text">
+                “Great service and friendly staff!”
+              </p>
+            </div>
+
+            {/* Middle: Flow Arrow */}
+            <div className="ai-comparison-arrow">
+              <MoveRight size={32} />
+            </div>
+
+            {/* Right: AI Reply Card with 1-click Use Reply Button */}
+            <div className="ai-reply-suggested-card">
+              <div className="ai-reply-header-badge">
+                <Sparkles size={14} /> AI Reply (Suggested)
+              </div>
+              <p className="ai-reply-body-text">
+                Thank you, Ritu! We're glad you had a great experience. We look forward to serving you again!
+              </p>
+              <button
+                type="button"
+                className={`ai-use-reply-btn ${aiCopierStatus ? 'copied' : ''}`}
+                onClick={handleUseReplyCopy}
+              >
+                {aiCopierStatus ? (
+                  <Fragment><Check size={16} /> Copied to Clipboard!</Fragment>
+                ) : (
+                  <Fragment><Sparkles size={16} /> Use Reply</Fragment>
+                )}
+              </button>
+            </div>
+          </div>
+
           <div className="reply-layout">
             <div>
-              <span className="eyebrow">A draft, never an autopilot</span>
-              <h2>Respond thoughtfully. <span>Save time.</span></h2>
-              <p>Explore an editable owner-reply example. Review every draft; nothing posts automatically.</p>
               <div className="reply-points">
                 <span><Check size={14} /> Tone is yours to choose</span>
                 <span><Check size={14} /> Every reply stays editable</span>
@@ -787,18 +905,19 @@ export function LandingPage() {
                 <button
                   type="button"
                   className="draft-tone-button"
-                  onClick={e => {
-                    e.currentTarget.textContent = e.currentTarget.textContent?.includes('Warm tone')
-                      ? 'Professional'
-                      : 'Warm tone';
-                  }}
+                  onClick={() => setDraftTone(prev => prev === 'Warm tone' ? 'Professional' : 'Warm tone')}
                 >
-                  Warm tone <ChevronRight size={13} />
+                  {draftTone} <ChevronRight size={13} />
                 </button>
               </div>
               <textarea
                 aria-label="Editable example business reply"
-                defaultValue="Thank you for sharing your experience with us. We're glad you enjoyed the food and welcoming service, and appreciate you letting us know about the wait. Your feedback helps us reflect on the experience we provide."
+                value={
+                  draftTone === 'Warm tone'
+                    ? "Thank you for sharing your experience with us! We're glad you enjoyed the food and welcoming service, and appreciate you letting us know about the wait. Your feedback helps us reflect on the experience we provide."
+                    : "Dear Customer, thank you for your valuable feedback. We appreciate your commendation of our culinary quality and service staff. Your note regarding delivery timing has been recorded for operational enhancement."
+                }
+                readOnly
               />
               <span className="draft-approval-note">
                 <CheckCircle2 size={14} /> Please review and edit before posting.
@@ -808,30 +927,73 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* BENEFITS SECTION */}
+      {/* 7. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + TESTIMONIAL + FINAL CTA) */}
       <section className="benefits-section section-wrap" id="businesses">
         <div className="section-heading benefits-heading">
-          <span className="eyebrow">A connected customer feedback experience</span>
+          <span className="eyebrow">A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
           <h2>Designed for Everyday <span>Business Growth.</span></h2>
-          <p>Less friction for your customers. More thoughtful conversations for your business.</p>
+          <p>Less friction for your customers. More thoughtful conversations and higher rankings for your business.</p>
         </div>
 
-        <div className="benefits-grid">
-          {benefits.map(({ icon: BenefitIcon, title, detail }, idx) => (
-            <article key={title} className="benefit-row">
-              <span className="benefit-icon"><BenefitIcon size={20} /></span>
-              <span className="benefit-number">0{idx + 1}</span>
-              <div>
-                <h3>{title}</h3>
-                <p>{detail}</p>
+        {/* 4 Feature Action Cards matching Blueprint */}
+        <div className="growth-action-grid">
+          <div className="growth-action-card">
+            <span className="growth-action-icon"><Star size={24} /></span>
+            <h3>Get More Reviews</h3>
+            <p>Put review access directly in front of happy customers right at checkout.</p>
+          </div>
+          <div className="growth-action-card">
+            <span className="growth-action-icon"><MessageSquareText size={24} /></span>
+            <h3>Manage Feedback Easily</h3>
+            <p>One unified inbox for all Google reviews across single or multiple locations.</p>
+          </div>
+          <div className="growth-action-card">
+            <span className="growth-action-icon"><Zap size={24} /></span>
+            <h3>Save Time with AI Replies</h3>
+            <p>Generate polite, SEO-optimized owner responses in 1-click without typing fatigue.</p>
+          </div>
+          <div className="growth-action-card">
+            <span className="growth-action-icon"><BarChart3 size={24} /></span>
+            <h3>Understand Customer Insights</h3>
+            <p>Identify rating trends, customer sentiment, and operational highlights easily.</p>
+          </div>
+        </div>
+
+        {/* Testimonial & Final CTA Side-by-Side Row */}
+        <div className="proof-cta-row">
+          {/* Real Merchant Testimonial Card */}
+          <div className="owner-testimonial-card">
+            <div className="owner-testimonial-img-wrap">
+              <img src={ownerImg} alt="Smiling Restaurant Owner in front of cafe" loading="lazy" />
+            </div>
+            <div className="owner-testimonial-content">
+              <span className="owner-quote-mark">“</span>
+              <p className="owner-quote-text">
+                The Review QR made it so easy for our customers to leave Google reviews. We've seen more feedback than ever before.
+              </p>
+              <span className="owner-author-name">Restaurant Owner</span>
+            </div>
+          </div>
+
+          {/* High-Converting Final CTA Card */}
+          <div className="growth-final-cta-card">
+            <div>
+              <div className="growth-final-cta-visual">
+                <img src={finalCtaImg} alt="Loctimize Standee and Dashboard on Laptop" loading="lazy" />
               </div>
-              <ArrowUpRight size={17} className="benefit-arrow" />
-            </article>
-          ))}
+              <h2>Make Every Customer Experience Easier to Share.</h2>
+              <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
+            </div>
+            <div>
+              <a href="#pricing" className="rr-button rr-button-invert" style={{ display: 'inline-flex' }}>
+                Get Your Review QR <ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* PRICING SECTION */}
+      {/* 8. PRICING SECTION */}
       <section className="pricing-section section-wrap" id="pricing">
         <div className="pricing-top">
           <div>
@@ -874,7 +1036,7 @@ export function LandingPage() {
                 >
                   <div className={`price-product-photo ${prod.view}`}>
                     <img
-                      src={standeeImage}
+                      src={counterBase}
                       alt={`Illustrative ${prod.viewLabel.toLowerCase()} detail; not a confirmed variant photograph`}
                       loading="lazy"
                       width={1024}
@@ -970,7 +1132,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* BULK / CORPORATE INQUIRY FORM */}
+      {/* 9. BULK / CORPORATE INQUIRY FORM */}
       <section className="inquiry-section section-wrap" id="bulk-inquiry">
         <div className="inquiry-copy">
           <span className="eyebrow">Bulk, multi-location & product enquiries</span>
@@ -1070,7 +1232,7 @@ export function LandingPage() {
         </form>
       </section>
 
-      {/* FAQS SECTION */}
+      {/* 10. FAQS SECTION */}
       <section className="faq-section section-wrap" id="faq">
         <div className="faq-heading">
           <span className="eyebrow">Good questions deserve clear answers</span>
@@ -1095,40 +1257,6 @@ export function LandingPage() {
               ))}
             </div>
           </details>
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="final-cta-section">
-        <div className="final-cta-inner section-wrap">
-          <div>
-            <span className="eyebrow eyebrow-light">A simpler way to invite a real review</span>
-            <h2>Make Every Customer Experience <span>Easier to Share.</span></h2>
-            <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
-            <div className="final-cta-buttons">
-              <a href="#pricing" className="rr-button rr-button-invert">
-                Get Your Review QR <ArrowRight size={16} />
-              </a>
-              <a href="#live-demo" className="rr-button rr-button-outline rr-button-on-dark">
-                Try the live demo <ArrowRight size={16} />
-              </a>
-            </div>
-          </div>
-          <div className="final-product usage-detail-crop">
-            <img
-              src={standeeImage}
-              alt="ReviewQR acrylic QR and NFC standee and a review page on a phone"
-              loading="lazy"
-              width={1024}
-              height={1024}
-            />
-            <span>
-              <span className="tiny-green-dot" /> LOCTIMIZE REVIEWQR · PRODUCT PREVIEW
-            </span>
-          </div>
-        </div>
-        <div className="final-cta-index">
-          REVIEWQR <span>01 / 01</span>
         </div>
       </section>
 
