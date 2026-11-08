@@ -129,12 +129,14 @@ export function AuthPage() {
 
           {/* Google Sign-in */}
           <div className="space-y-3">
-            <GoogleAuthButton
-              forceButton
-              onSuccess={async () => {
-                await handlePostAuthSync(true);
-              }}
-            />
+            <div className="w-full flex justify-center items-center py-0.5">
+              <GoogleAuthButton
+                forceButton
+                onSuccess={async () => {
+                  await handlePostAuthSync(true);
+                }}
+              />
+            </div>
             <div className="relative flex items-center justify-center">
               <div className="border-t border-slate-200 w-full" />
               <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider absolute">

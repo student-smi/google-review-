@@ -17,11 +17,12 @@ interface GoogleAuthButtonProps {
   className?: string;
   compact?: boolean;
   forceButton?: boolean;
+  width?: number;
 }
 
 export const GOOGLE_CLIENT_ID = '91010309450-5ohei09bcft5tgnhp9e3e0q641djftnf.apps.googleusercontent.com';
 
-export function GoogleAuthButton({ onSuccess, className = '', compact = false, forceButton = false }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ onSuccess, className = '', compact = false, forceButton = false, width }: GoogleAuthButtonProps) {
   const navigate = useNavigate();
   const [user, setUser] = useState<GoogleUserProfile | null>(() => {
     if (forceButton) return null;
@@ -91,7 +92,8 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false, f
             size: compact ? 'medium' : 'large',
             shape: 'pill',
             text: 'continue_with',
-            logo_alignment: 'left'
+            logo_alignment: 'left',
+            width: width || (compact ? undefined : 300)
           });
         }
       }
@@ -103,7 +105,7 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false, f
       const timer = setTimeout(initGsi, 500);
       return () => clearTimeout(timer);
     }
-  }, [user, compact]);
+  }, [user, compact, width]);
 
   const handleSignOut = async () => {
     try {
@@ -177,8 +179,8 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false, f
   }
 
   return (
-    <div className={`inline-block ${className}`}>
-      <div ref={buttonRef} />
+    <div className={compact ? `inline-block ${className}` : `w-full flex justify-center items-center ${className}`}>
+      <div ref={buttonRef} className="flex justify-center" />
     </div>
   );
 }
