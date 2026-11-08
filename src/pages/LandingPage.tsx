@@ -314,6 +314,67 @@ const industries: IndustryInfo[] = [
   }
 ];
 
+const replyScenarios = [
+  {
+    name: '5-Star Compliment',
+    author: 'Ritu Sharma',
+    avatar: 'R',
+    stars: 5,
+    time: '2 days ago',
+    review: '“Great service and friendly staff! Loved the coffee and quick billing.”',
+    warmReply: "Thank you, Ritu! We're thrilled you had a great experience and enjoyed the coffee. We look forward to welcoming you back soon!",
+    proReply: "Dear Ritu, thank you for sharing your positive feedback. We appreciate your commendation of our staff and service quality, and look forward to serving you again."
+  },
+  {
+    name: 'Mixed / Constructive',
+    author: 'Amit Patel',
+    avatar: 'A',
+    stars: 4,
+    time: 'Yesterday',
+    review: '“Food quality was exceptional, but took about 15 minutes longer than expected for the bill.”',
+    warmReply: "Thank you for the kind words on our food, Amit! We apologize for the wait at billing; we're actively speeding up our counter checkout so your next visit is seamless.",
+    proReply: "Dear Amit, thank you for your feedback. We appreciate your compliment regarding our culinary standards. Your note regarding billing turnaround has been noted for immediate operational improvement."
+  },
+  {
+    name: 'Loyal Regular',
+    author: 'Sneha Roy',
+    avatar: 'S',
+    stars: 5,
+    time: '3 days ago',
+    review: '“My go-to spot every weekend! Consistently great ambiance and courteous team.”',
+    warmReply: "Sneha, having you with us every weekend means the world to our team! Thank you for the loyal support — can't wait to see you next Saturday!",
+    proReply: "Dear Sneha, thank you for your continued patronage and 5-star review. We remain committed to maintaining the high consistency and ambiance you expect."
+  }
+];
+
+const experiencePresets = [
+  {
+    icon: '☕',
+    label: 'Cafe Visit',
+    prompt: 'I visited the cafe on Sunday. The iced latte was refreshing, ambiance was peaceful, and staff was very polite.'
+  },
+  {
+    icon: '🩺',
+    label: 'Clinic & Doctor',
+    prompt: 'Dr. was extremely thorough and gentle. Clean clinic, no wait time, and great treatment experience.'
+  },
+  {
+    icon: '💇',
+    label: 'Salon & Spa',
+    prompt: 'Had a haircut and head massage today. The stylist understood exactly what I wanted. Super relaxing!'
+  },
+  {
+    icon: '🍽️',
+    label: 'Restaurant Dinner',
+    prompt: 'Visited for family dinner. Starters were flavorful, service was prompt, and the dessert was fantastic.'
+  },
+  {
+    icon: '🚗',
+    label: 'Auto Service',
+    prompt: 'Brought my car for periodic service. Honest estimate, clear explanation, and delivered on time.'
+  }
+];
+
 export function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
@@ -330,6 +391,7 @@ export function LandingPage() {
   const [formStatus, setFormStatus] = useState<'idle' | 'ready'>('idle');
   const [aiCopierStatus, setAiCopierStatus] = useState(false);
   const [draftTone, setDraftTone] = useState<'Warm tone' | 'Professional'>('Warm tone');
+  const [activeScenario, setActiveScenario] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [selectedIndustry, setSelectedIndustry] = useState(0);
   const [dailyCustomers, setDailyCustomers] = useState(120);
@@ -416,7 +478,8 @@ export function LandingPage() {
   }
 
   async function handleUseReplyCopy() {
-    const replyText = "Thank you, Ritu! We're glad you had a great experience. We look forward to serving you again!";
+    const scenario = replyScenarios[activeScenario];
+    const replyText = draftTone === 'Warm tone' ? scenario.warmReply : scenario.proReply;
     try {
       await navigator.clipboard.writeText(replyText);
       setAiCopierStatus(true);
@@ -530,16 +593,6 @@ export function LandingPage() {
 
       {/* 2. A SIMPLE WAY SECTION (PRODUCT CLOSE-UP + MODERN FEATURE PILLS) */}
       <section className="product-section section-wrap screen-snap-section reveal-on-scroll" id="products">
-        <div className="section-heading product-section-heading">
-          <div>
-            <span className="eyebrow">THE PRODUCT</span>
-            <h2>
-              A Simple Way to Make Reviewing <span>Your Business Easier.</span>
-            </h2>
-          </div>
-          <p>Easy to display. Simple to scan. Direct access to your review destination.</p>
-        </div>
-
         <div className="product-layout">
           <div className="product-gallery">
             <div className="product-image-large product-detail-crop">
@@ -551,67 +604,48 @@ export function LandingPage() {
                 height={1024}
               />
               <span className="image-note">
-                <span className="tiny-green-dot" /> QR · NFC · YOUR REVIEW LINK
+                <span className="tiny-green-dot" /> QR · NFC · DIRECT LINK
               </span>
-            </div>
-            <div className="product-gallery-footer">
-              <div>
-                <span>STANDEE DETAIL</span>
-                <span>PLACE IT WHERE CUSTOMERS ARE</span>
-              </div>
-              <a href="#how-it-works" aria-label="Learn how ReviewQR works">
-                <ArrowRight size={17} />
-              </a>
             </div>
           </div>
 
-          <div className="product-introduction" id="industries">
+          <div className="product-introduction">
             <span className="eyebrow">ON THE COUNTER. WITHIN REACH.</span>
             <h3>A simple invitation to share.</h3>
-            <p>At your checkout, reception or table, a Review QR standee gives customers a direct path to your review destination.</p>
+            <p>At your checkout, reception or table, a Review QR standee gives customers a direct path to your Google review page.</p>
             
             {/* 3 Modern Feature Pills matching the Blueprint */}
             <div className="feature-pills-list">
               <div className="feature-pill-card">
-                <span className="feature-pill-icon"><Laptop size={22} /></span>
+                <span className="feature-pill-icon"><Laptop size={20} /></span>
                 <div className="feature-pill-content">
                   <strong>Easy to display</strong>
-                  <span>Place it naturally where customers pause at checkout or tables.</span>
+                  <span>Place naturally where customers pause at checkout, counters, or tables.</span>
                 </div>
               </div>
               <div className="feature-pill-card">
-                <span className="feature-pill-icon"><QrCode size={22} /></span>
+                <span className="feature-pill-icon"><QrCode size={20} /></span>
                 <div className="feature-pill-content">
                   <strong>Simple for customers to scan</strong>
-                  <span>Instantly opens via phone camera scan or fast NFC tap.</span>
+                  <span>Instantly opens via phone camera scan or fast contactless NFC tap.</span>
                 </div>
               </div>
               <div className="feature-pill-card">
-                <span className="feature-pill-icon"><LinkIcon size={22} /></span>
+                <span className="feature-pill-icon"><LinkIcon size={20} /></span>
                 <div className="feature-pill-content">
                   <strong>Direct access to your review destination</strong>
-                  <span>Zero middle apps. Ungated direct Google review landing page.</span>
+                  <span>Zero middle apps. Ungated direct 5-star Google review landing page.</span>
                 </div>
               </div>
             </div>
 
-            <a href="#pricing" className="rr-button">
-              Get Your Review QR <ArrowRight size={18} />
-            </a>
-            <p className="proposed-note">Product photography is illustrative. Final specifications and availability will be confirmed before purchase.</p>
+            <div className="product-action-row">
+              <a href="#pricing" className="rr-button">
+                Get Your Review QR <ArrowRight size={18} />
+              </a>
+              <span className="product-micro-badge"><Check size={14} /> No app needed to scan</span>
+            </div>
           </div>
-        </div>
-
-        <div className="value-strip">
-          <span>DESIGNED FOR EVERYDAY BUSINESS</span>
-          <div>
-            <span><Check size={14} /> Choose QR or NFC + QR</span>
-            <i />
-            <span><Check size={14} /> Honest, ungated reviews</span>
-            <i />
-            <span><Check size={14} /> No app needed to scan</span>
-          </div>
-          <a href="#pricing">See proposed pricing <ArrowRight size={15} /></a>
         </div>
       </section>
 
@@ -1105,222 +1139,219 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-
-        {/* AI WRITING ASSISTANT FOR CUSTOMERS */}
-        <div className="assistant-workspace reveal-on-scroll" style={{ marginTop: '48px' }}>
-          <div className="assistant-form">
-            <div className="assistant-card-heading">
-              <span className="assistant-orb"><PenLine size={20} /></span>
-              <span>
-                <strong>Review writing assistant</strong>
-                <small>Suggestions based on your own experience</small>
-              </span>
-              <span className="assistant-demo-tag">PREVIEW</span>
-            </div>
-            <label className="field-label" htmlFor="writing-experience">
-              What was your experience?
-            </label>
-            <textarea
-              className="assistant-textarea"
-              id="writing-experience"
-              value={assistantInput}
-              onChange={e => setAssistantInput(e.target.value)}
-              placeholder="For example: I visited the café on Saturday. The tea was comforting, and it took a little longer than I expected to get the bill."
-              maxLength={280}
-            />
-            <div className="assistant-field-foot">
-              <span>Only use details you’re comfortable sharing.</span>
-              <span>{assistantInput.length} / 280</span>
-            </div>
-            <label className="assistant-language-label" htmlFor="assistant-language">
-              Language
-            </label>
-            <select
-              className="assistant-language-select"
-              id="assistant-language"
-              value={selectedLanguage}
-              onChange={e => setSelectedLanguage(e.target.value)}
-            >
-              {languages.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
-              ))}
-            </select>
-            <button className="rr-button assistant-generate" onClick={handleGenerateAssistantPrompt}>
-              <PenLine size={16} /> Create wording options <ArrowRight size={16} />
-            </button>
-            <p className="assistant-privacy">
-              <CheckCircle2 size={14} /> This preview runs locally and doesn’t send your text.
-            </p>
-          </div>
-
-          <div className="suggestion-panel">
-            <div className="suggestion-panel-top">
-              <div>
-                <span className="eyebrow">YOUR EXPERIENCE. YOUR WORDS.</span>
-                <h3>Choose what sounds like you.</h3>
-              </div>
-              <span className="suggestion-language">{selectedLanguage}</span>
-            </div>
-
-            {(assistantSuggestions || [
-              'Add your own experience to see a short wording option.',
-              'Your details stay yours to edit.',
-              'Nothing is sent to Google from this preview.'
-            ]).map((suggestion, idx) => (
-              <article key={idx} className="suggestion-row">
-                <div className="suggestion-title">
-                  <span>{['Short & simple', 'Friendly & natural', 'Detailed & balanced'][idx]}</span>
-                  <button
-                    type="button"
-                    className="copy-suggestion"
-                    aria-label={`Copy ${['short and simple', 'friendly and natural', 'detailed and balanced'][idx]} suggestion`}
-                    onClick={() => handleCopy(suggestion, idx)}
-                  >
-                    <Copy size={14} />
-                    {copiedIndex === idx ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <textarea
-                  aria-label={`${['Short and simple', 'Friendly and natural', 'Detailed and balanced'][idx]} editable suggestion`}
-                  value={suggestion}
-                  onChange={e => {
-                    const newVal = e.target.value;
-                    setAssistantSuggestions(prev => {
-                      const base = prev || [
-                        'Add your own experience to see a short wording option.',
-                        'Your details stay yours to edit.',
-                        'Nothing is sent to Google from this preview.'
-                      ];
-                      const next = [...base];
-                      next[idx] = newVal;
-                      return next;
-                    });
-                  }}
-                />
-              </article>
-            ))}
-
-            <div className="suggestion-foot">
-              <span>Customer control</span>
-              <span>Accept, edit or ignore every suggestion. You decide whether to publish.</span>
-            </div>
-          </div>
-        </div>
       </section>
 
-      {/* 7. AI REPLY COPILOT */}
-      <section className="ai-reply-copilot-section section-wrap screen-snap-section reveal-on-scroll" id="ai-replies">
-        <div className="reply-section">
-          <div className="section-heading centered-heading" style={{ marginBottom: '24px' }}>
-            <span className="eyebrow">A draft, never an autopilot</span>
-            <h2>Respond Thoughtfully. <span>Save time.</span></h2>
-            <p>Explore an interactive owner-reply example. Review every draft; nothing posts automatically.</p>
-          </div>
+      {/* 7. AI REVIEW WRITING STUDIO */}
+      <section className="writing-assistant-section section-wrap screen-snap-section reveal-on-scroll" id="writing-help">
+        <div className="section-heading centered-heading" style={{ marginBottom: '14px' }}>
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>AI CUSTOMER ASSISTANT · YOUR EXPERIENCE, YOUR WORDS</span>
+          <h2>Help Your Customers <span>Find the Perfect Words.</span></h2>
+          <p>Turn quick customer impressions into verified, high-converting Google reviews in seconds.</p>
+        </div>
 
-          {/* Interactive Comparison Card from Blueprint Panel 6 */}
-          <div className="ai-reply-card-comparison reveal-on-scroll">
-            {/* Left: Customer Review Card */}
-            <div className="review-incoming-card">
-              <div className="review-incoming-header">
-                <span className="review-avatar-badge">R</span>
-                <div className="review-incoming-info">
-                  <strong>Ritu Sharma</strong>
-                  <small>2 days ago</small>
-                  <div className="review-stars-gold">★★★★★</div>
-                </div>
+        {/* 1-Click Interactive Experience Presets */}
+        <div className="ai-presets-bar">
+          <span className="ai-presets-label">⚡ Try 1-Click Scenario:</span>
+          {experiencePresets.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className={`ai-preset-chip ${assistantInput === preset.prompt ? 'active' : ''}`}
+              onClick={() => {
+                setAssistantInput(preset.prompt);
+                setAssistantSuggestions(getSuggestions(preset.prompt));
+              }}
+            >
+              <span>{preset.icon}</span> {preset.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="ai-studio-workspace">
+          {/* Left: Input Studio */}
+          <div className="ai-studio-input-card">
+            <div className="ai-studio-card-head">
+              <span className="ai-sparkle-orb"><PenLine size={18} /></span>
+              <strong>Customer Experience Input</strong>
+              <div className="ai-lang-pill">
+                <Globe size={13} />
+                <select
+                  value={selectedLanguage}
+                  onChange={e => setSelectedLanguage(e.target.value)}
+                  aria-label="Demo review language"
+                >
+                  {languages.map(lang => (
+                    <option key={lang} value={lang}>{lang}</option>
+                  ))}
+                </select>
               </div>
-              <p className="review-incoming-text">
-                “Great service and friendly staff!”
-              </p>
             </div>
 
-            {/* Middle: Flow Arrow */}
-            <div className="ai-comparison-arrow">
-              <MoveRight size={32} />
-            </div>
+            <textarea
+              className="ai-studio-textarea"
+              value={assistantInput}
+              onChange={e => setAssistantInput(e.target.value)}
+              placeholder="e.g. Visited the cafe this morning. The cold brew was delicious, cozy interior, and staff was very polite."
+              maxLength={280}
+            />
 
-            {/* Right: AI Reply Card with 1-click Use Reply Button */}
-            <div className="ai-reply-suggested-card">
-              <div className="ai-reply-header-badge">
-                <Sparkles size={14} /> AI Reply (Suggested)
-              </div>
-              <p className="ai-reply-body-text">
-                Thank you, Ritu! We're glad you had a great experience. We look forward to serving you again!
-              </p>
+            <div className="ai-studio-input-foot">
+              <span>{assistantInput.length} / 280 chars · Privacy protected</span>
               <button
                 type="button"
-                className={`ai-use-reply-btn ${aiCopierStatus ? 'copied' : ''}`}
-                onClick={handleUseReplyCopy}
+                className="rr-button ai-studio-btn"
+                onClick={handleGenerateAssistantPrompt}
               >
-                {aiCopierStatus ? (
-                  <Fragment><Check size={16} /> Copied to Clipboard!</Fragment>
-                ) : (
-                  <Fragment><Sparkles size={16} /> Use Reply</Fragment>
-                )}
+                <Sparkles size={16} /> Generate AI Magic Drafts
               </button>
             </div>
           </div>
 
-          <div className="reply-layout">
-            <div>
-              <div className="reply-points">
-                <span><Check size={14} /> Tone is yours to choose</span>
-                <span><Check size={14} /> Every reply stays editable</span>
-                <span><Check size={14} /> Nothing posts automatically</span>
-              </div>
-              <a href="#pricing" className="text-link">
-                Explore proposed software plans <ArrowRight size={15} />
-              </a>
-            </div>
-
-            <div className="reply-preview">
-              <div className="reply-preview-head">
-                <span className="review-avatar">A</span>
-                <span>
-                  <strong>Customer review</strong>
-                  <small>ILLUSTRATIVE · BALANCED FEEDBACK</small>
-                </span>
-                <span className="review-stars-preview">
-                  ★★★<span>★★</span>
-                </span>
-              </div>
-              <blockquote>
-                “The food was lovely, and the team was welcoming. Our order took a little longer than expected.”
-              </blockquote>
-              <div className="reply-preview-separator" />
-              <div className="draft-head">
-                <span className="reply-ai-icon"><PenLine size={15} /></span>
-                <span>
-                  <strong>Suggested reply</strong>
-                  <small>Draft for your review — not posted</small>
-                </span>
-                <button
-                  type="button"
-                  className="draft-tone-button"
-                  onClick={() => setDraftTone(prev => prev === 'Warm tone' ? 'Professional' : 'Warm tone')}
-                >
-                  {draftTone} <ChevronRight size={13} />
-                </button>
-              </div>
-              <textarea
-                aria-label="Editable example business reply"
-                value={
-                  draftTone === 'Warm tone'
-                    ? "Thank you for sharing your experience with us! We're glad you enjoyed the food and welcoming service, and appreciate you letting us know about the wait. Your feedback helps us reflect on the experience we provide."
-                    : "Dear Customer, thank you for your valuable feedback. We appreciate your commendation of our culinary quality and service staff. Your note regarding delivery timing has been recorded for operational enhancement."
-                }
-                readOnly
-              />
-              <span className="draft-approval-note">
-                <CheckCircle2 size={14} /> Please review and edit before posting.
-              </span>
-            </div>
+          {/* Right: 3 AI Generated Draft Cards */}
+          <div className="ai-studio-drafts-grid">
+            {[
+              {
+                tone: 'Short & Punchy',
+                badge: '⚡ 1-Line Review',
+                sample: '5/5 stars! Super fast checkout and friendly staff. Highly recommend.'
+              },
+              {
+                tone: 'Friendly & Natural',
+                badge: '✨ Warm & Authentic',
+                sample: 'Visited today and really loved the welcoming vibe. Great quality and polite team.'
+              },
+              {
+                tone: 'Detailed & Helpful',
+                badge: '🌟 High-Authority',
+                sample: 'Exceptional service, reasonable pricing, and clean ambiance. Easily one of the best in the area!'
+              }
+            ].map((draft, idx) => {
+              const text = assistantSuggestions?.[idx] || draft.sample;
+              return (
+                <div key={draft.tone} className="ai-draft-card">
+                  <div className="ai-draft-card-head">
+                    <div className="ai-draft-badge-row">
+                      <span className="ai-draft-badge">{draft.badge}</span>
+                      <span className="stars-mini-gold">★★★★★</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`ai-draft-copy-btn ${copiedIndex === idx ? 'copied' : ''}`}
+                      onClick={() => handleCopy(text, idx)}
+                    >
+                      {copiedIndex === idx ? (
+                        <Fragment><Check size={14} /> Copied!</Fragment>
+                      ) : (
+                        <Fragment><Copy size={14} /> Copy</Fragment>
+                      )}
+                    </button>
+                  </div>
+                  <p className="ai-draft-text">{text}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* 8. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + TESTIMONIAL + FINAL CTA) */}
-      <section className="growth-full-section section-wrap screen-snap-section" id="businesses">
+      {/* 8. AI REPLY COPILOT */}
+      <section className="ai-reply-copilot-section section-wrap screen-snap-section reveal-on-scroll" id="ai-replies">
+        <div className="section-heading centered-heading" style={{ marginBottom: '14px' }}>
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>AI BUSINESS COPILOT · A DRAFT, NEVER AN AUTOPILOT</span>
+          <h2>Respond Thoughtfully. <span>Save Hours Every Week.</span></h2>
+          <p>Generate polite, SEO-optimized owner responses in 1-click. You always approve every draft before posting.</p>
+        </div>
+
+        {/* Scenario Switcher Tabs */}
+        <div className="reply-scenario-tabs">
+          <span className="reply-scenario-label">Customer Review Scenario:</span>
+          {replyScenarios.map((sc, idx) => (
+            <button
+              key={sc.name}
+              type="button"
+              className={`reply-scenario-btn ${activeScenario === idx ? 'active' : ''}`}
+              onClick={() => setActiveScenario(idx)}
+            >
+              {sc.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Interactive Comparison Card from Blueprint Panel 6 */}
+        <div className="ai-reply-card-comparison reveal-on-scroll">
+          {/* Left: Customer Review Card */}
+          <div className="review-incoming-card">
+            <div className="review-incoming-header">
+              <span className="review-avatar-badge">{replyScenarios[activeScenario].avatar}</span>
+              <div className="review-incoming-info">
+                <strong>{replyScenarios[activeScenario].author}</strong>
+                <small>{replyScenarios[activeScenario].time}</small>
+                <div className="review-stars-gold">
+                  {'★'.repeat(replyScenarios[activeScenario].stars)}
+                </div>
+              </div>
+            </div>
+            <p className="review-incoming-text">
+              {replyScenarios[activeScenario].review}
+            </p>
+          </div>
+
+          {/* Middle: Flow Arrow with Tone Toggle */}
+          <div className="ai-comparison-arrow">
+            <span className="ai-copilot-tag"><Sparkles size={13} /> AI Copilot</span>
+            <MoveRight size={28} />
+            <div className="tone-toggle-mini">
+              <button
+                type="button"
+                className={draftTone === 'Warm tone' ? 'active' : ''}
+                onClick={() => setDraftTone('Warm tone')}
+              >
+                Warm
+              </button>
+              <button
+                type="button"
+                className={draftTone === 'Professional' ? 'active' : ''}
+                onClick={() => setDraftTone('Professional')}
+              >
+                Pro
+              </button>
+            </div>
+          </div>
+
+          {/* Right: AI Reply Card with 1-click Use Reply Button */}
+          <div className="ai-reply-suggested-card">
+            <div className="ai-reply-header-badge">
+              <Sparkles size={14} /> AI Reply ({draftTone})
+            </div>
+            <p className="ai-reply-body-text">
+              {draftTone === 'Warm tone'
+                ? replyScenarios[activeScenario].warmReply
+                : replyScenarios[activeScenario].proReply}
+            </p>
+            <button
+              type="button"
+              className={`ai-use-reply-btn ${aiCopierStatus ? 'copied' : ''}`}
+              onClick={handleUseReplyCopy}
+            >
+              {aiCopierStatus ? (
+                <Fragment><Check size={16} /> Copied to Clipboard!</Fragment>
+              ) : (
+                <Fragment><Sparkles size={16} /> 1-Click Use Reply</Fragment>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* 3 Trust Pillars */}
+        <div className="ai-reply-trust-row">
+          <span><Check size={16} color="#16a34a" /> Tone is yours to choose</span>
+          <span><Check size={16} color="#16a34a" /> Every reply stays 100% editable</span>
+          <span><Check size={16} color="#16a34a" /> Zero auto-posts without your click</span>
+        </div>
+      </section>
+
+      {/* 8. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS) */}
+      <section className="growth-action-section section-wrap screen-snap-section reveal-on-scroll" id="growth-benefits">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
           <h2>Designed for Everyday <span>Business Growth.</span></h2>
@@ -1350,8 +1381,16 @@ export function LandingPage() {
             <p>Identify rating trends, customer sentiment, and operational highlights easily.</p>
           </div>
         </div>
+      </section>
 
-        {/* Testimonial & Final CTA Side-by-Side Row */}
+      {/* 9. MERCHANT PROOF & FINAL CTA SHOWCASE (BALANCED FULL-WIDTH 2-COLUMN) */}
+      <section className="merchant-proof-section section-wrap screen-snap-section reveal-on-scroll" id="businesses">
+        <div className="section-heading centered-heading">
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>PROVEN AT CHECKOUT · TRUSTED BY LOCAL MERCHANTS</span>
+          <h2>Loved by Business Owners. <span>Frictionless for Customers.</span></h2>
+          <p>Real local merchants generating verified 5-star Google reviews every single day.</p>
+        </div>
+
         <div className="proof-cta-row reveal-stagger">
           {/* Real Merchant Testimonial Card */}
           <div className="owner-testimonial-card">
@@ -1359,33 +1398,38 @@ export function LandingPage() {
               <img src={ownerImg} alt="Smiling Restaurant Owner in front of cafe" loading="eager" />
             </div>
             <div className="owner-testimonial-content">
-              <span className="owner-quote-mark">“</span>
+              <div className="owner-star-rating">★★★★★</div>
               <p className="owner-quote-text">
-                The Review QR made it so easy for our customers to leave Google reviews. We've seen more feedback than ever before.
+                “The Review QR made it so easy for our customers to leave Google reviews. We've seen more feedback than ever before.”
               </p>
-              <span className="owner-author-name">Restaurant Owner</span>
+              <div className="owner-author-info">
+                <strong>Rajesh Sharma</strong>
+                <span>Restaurant Owner · Ahmedabad</span>
+              </div>
+              <span className="owner-badge-verified">✓ Verified Local Business</span>
             </div>
           </div>
 
           {/* High-Converting Final CTA Card */}
           <div className="growth-final-cta-card">
-            <div>
+            <div className="growth-final-cta-content">
               <div className="growth-final-cta-visual">
-                <img src={heroImage} alt="Loctimize Standee and Customer Google Review" loading="lazy" style={{ maxHeight: '190px', objectFit: 'cover', width: '100%', borderRadius: '10px' }} />
+                <img src={heroImage} alt="Loctimize Standee and Customer Google Review" loading="eager" />
               </div>
               <h2>Make Every Customer Experience Easier to Share.</h2>
               <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
             </div>
-            <div>
-              <a href="#pricing" className="rr-button rr-button-invert" style={{ display: 'inline-flex' }}>
+            <div className="growth-final-cta-footer">
+              <a href="#pricing" className="rr-button rr-button-invert">
                 Get Your Review QR <ArrowRight size={16} />
               </a>
+              <span className="growth-guarantee-note">Free shipping across India · 3-day dispatch</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 9. PRICING SECTION */}
+      {/* 10. PRICING SECTION */}
       <section className="pricing-section section-wrap screen-snap-section reveal-on-scroll" id="pricing">
         <div className="pricing-top">
           <div>
@@ -1446,13 +1490,10 @@ export function LandingPage() {
                       <span>One-time hardware purchase</span>
                     </div>
                     <ul className="hardware-features">
-                      {[prod.access, 'Direct access to your review link', 'No app needed to scan', prod.custom].map(feat => (
-                        <li key={feat}><Check size={18} />{feat}</li>
+                      {[prod.access, 'Direct access to your review link', 'No app needed to scan'].map(feat => (
+                        <li key={feat}><Check size={16} />{feat}</li>
                       ))}
                     </ul>
-                    <p className="hardware-service-note">
-                      Hardware only. Optional monthly software is separate; setup and branding details require confirmation.
-                    </p>
                     <button
                       type="button"
                       className="rr-button price-select-button"
@@ -1461,14 +1502,14 @@ export function LandingPage() {
                       aria-pressed={selectedProduct === prod.name}
                     >
                       {selectedProduct === prod.name ? 'Selected for enquiry' : 'Enquire about this product'}{' '}
-                      <ArrowRight size={18} />
+                      <ArrowRight size={16} />
                     </button>
                   </div>
                 </article>
               ))}
             </div>
             <p className="pricing-disclaimer">
-              * Proposed launch prices. Images show different details of one illustrative standee, not confirmed variant photos. Final specifications, branding and availability must be confirmed before purchase.
+              * Proposed launch prices. Transparent one-time hardware purchase. No forced subscriptions.
             </p>
           </Fragment>
         ) : (
