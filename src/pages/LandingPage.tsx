@@ -1,800 +1,1205 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { isAuthenticated } from '@/lib/auth';
+import React, { useState, useRef, Fragment } from 'react';
 import {
-  Sparkles,
-  QrCode,
-  ShieldCheck,
-  TrendingUp,
-  MessageSquareQuote,
+  ArrowDown,
   ArrowRight,
+  ArrowUpRight,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
-  ExternalLink,
-  Store,
-  Layers,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Bell,
-  Settings,
-  Plus,
-  Inbox,
-  User,
-  Calendar,
-  Star,
-  Users,
-  Building2,
-  MapPin,
-  Flame,
-  CheckSquare,
+  Copy,
+  Globe,
   Menu,
+  MessageSquareText,
+  Minus,
+  MoveRight,
+  PenLine,
+  Plus,
+  QrCode,
+  Smartphone,
+  Wifi,
   X
 } from 'lucide-react';
+import './LandingPage.css';
 
-interface CategoryTemplate {
-  id: string;
-  label: string;
-  businessName: string;
-  location: string;
-  doneCount: number;
-  progressCount: number;
-  recentCustomer: string;
-  highlight: string;
-  rating: string;
+const headerLogo = '/loctimize-logo-header.png';
+const footerLogo = '/loctimize-logo-footer.png';
+const standeeImage = '/loctimize-reviewqr-counter.jpg';
+
+interface Product {
+  name: string;
+  price: string;
+  intro: string;
+  access: string;
+  custom: string;
+  index: string;
+  view: string;
+  viewLabel: string;
+  recommended?: boolean;
 }
 
-const CATEGORIES: CategoryTemplate[] = [
+const products: Product[] = [
   {
-    id: 'restaurants',
-    label: 'Restaurants & Cafes',
-    businessName: 'Royal Sweets & Restaurant',
-    location: 'Kalupur, Ahmedabad',
-    doneCount: 14,
-    progressCount: 3,
-    recentCustomer: 'Deep Patel',
-    highlight: 'Crispy Dhokla & Soft Kaju Katli',
-    rating: '5.0'
+    name: 'QR Review Standee',
+    price: '₹499',
+    intro: 'A simple scan-and-go way to share your review link.',
+    access: 'QR scan',
+    custom: 'Ask about custom branding',
+    index: '01',
+    view: 'qr-detail',
+    viewLabel: 'QR access'
   },
   {
-    id: 'retail',
-    label: 'Retail & Sweets',
-    businessName: 'Shivalik Jewellers & Gems',
-    location: 'C.G. Road, Ahmedabad',
-    doneCount: 18,
-    progressCount: 2,
-    recentCustomer: 'Priya Sharma',
-    highlight: 'Hallmarked Gold & Polite Staff',
-    rating: '4.9'
+    name: 'NFC + QR Smart Review Standee',
+    price: '₹999',
+    intro: 'Two easy ways for customers to reach your review page.',
+    access: 'QR scan + NFC tap',
+    custom: 'Ask about custom branding',
+    index: '02',
+    view: 'scan-and-tap',
+    viewLabel: 'Scan + tap access',
+    recommended: true
   },
   {
-    id: 'clinics',
-    label: 'Clinics & Doctors',
-    businessName: 'Apex Dental & Smile Care',
-    location: 'Navrangpura, Ahmedabad',
-    doneCount: 22,
-    progressCount: 4,
-    recentCustomer: 'Rajesh Shah',
-    highlight: 'Painless Root Canal & Clean Clinic',
-    rating: '5.0'
-  },
-  {
-    id: 'salons',
-    label: 'Salons & Spas',
-    businessName: 'Bliss Luxury Hair Studio',
-    location: 'Bodakdev, Ahmedabad',
-    doneCount: 11,
-    progressCount: 2,
-    recentCustomer: 'Ananya Mehta',
-    highlight: 'Trendy Haircut & Relaxing Facial',
-    rating: '4.9'
-  },
-  {
-    id: 'services',
-    label: 'Professional Services',
-    businessName: 'Rapid Auto Diagnostics',
-    location: 'S.G. Highway, Ahmedabad',
-    doneCount: 9,
-    progressCount: 3,
-    recentCustomer: 'Ketan Trivedi',
-    highlight: 'Prompt AC Repair & Genuine Spares',
-    rating: '4.8'
+    name: 'Premium Branded NFC Review Standee',
+    price: '₹1,499',
+    intro: 'A branded touchpoint with convenient QR and NFC access.',
+    access: 'QR scan + NFC tap',
+    custom: 'Branded finish available by inquiry',
+    index: '03',
+    view: 'standee-detail',
+    viewLabel: 'Branding by enquiry'
   }
 ];
 
-export function LandingPage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [activeCategory, setActiveCategory] = useState<string>('restaurants');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+interface SoftwarePlan {
+  name: string;
+  price: string;
+  cadence: string;
+  description: string;
+  features: string[];
+  recommended?: boolean;
+}
 
-  const selectedTemplate =
-    CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
+const softwarePlans: SoftwarePlan[] = [
+  {
+    name: 'Starter',
+    price: '₹199',
+    cadence: '/ month',
+    description: 'For one business location getting started.',
+    features: ['1 location', 'QR engagement analytics', 'Entry-level AI assistance']
+  },
+  {
+    name: 'Growth',
+    price: '₹499',
+    cadence: '/ month',
+    description: 'For growing teams and up to three locations.',
+    features: ['Up to 3 locations', 'Expanded analytics', 'AI-assisted owner replies'],
+    recommended: true
+  },
+  {
+    name: 'Business',
+    price: '₹999',
+    cadence: '/ month',
+    description: 'For teams managing up to ten locations.',
+    features: ['Up to 10 locations', 'Central location management', 'Team access']
+  }
+];
 
-  const faqs = [
-    {
-      q: 'Does ReviewQR violate Google Review policies?',
-      a: 'Absolutely not. ReviewQR strictly follows all Google Contributed Content policies. We do not gate negative reviews, we never offer incentives or rewards for reviews, and every single customer is given an immediate, direct link to post on Google.'
-    },
-    {
-      q: 'Can the AI invent details about my business?',
-      a: 'No. ReviewQR has strict anti-fabrication guardrails. The AI only formats facts the customer explicitly selects or types (e.g., crispy dosa, quick service). It is strictly forbidden from hallucinating staff names, prices, dates, or amenities.'
-    },
-    {
-      q: 'Is it really 100% free forever?',
-      a: 'Yes. ReviewQR is engineered specifically to run entirely within Cloudflare’s generous Free Tier (Cloudflare Workers, D1 database, KV cache, R2 storage, and Workers AI). We have zero infrastructure costs to pass on to small businesses.'
-    },
-    {
-      q: 'Do customers need to download an app or log in?',
-      a: 'Never. Customers simply scan the QR code with their default camera app or Google Lens. It loads instantly in their mobile browser without any signup or passwords.'
-    }
+const allFaqs = [
+  {
+    q: 'What is Loctimize ReviewQR?',
+    a: 'ReviewQR is a QR and NFC review-collection product concept paired with optional tools for writing assistance and review management. Product availability and software capabilities should be confirmed before purchase.'
+  },
+  {
+    q: 'How does the QR review standee work?',
+    a: 'A customer scans the QR code to open the review destination configured for the business. An NFC-enabled version also lets customers tap a compatible phone.'
+  },
+  {
+    q: 'What is the difference between QR and NFC?',
+    a: 'A QR code is opened by scanning with a phone camera. NFC allows a compatible phone to open the configured destination with a tap. A product may support one or both methods.'
+  },
+  {
+    q: 'Do customers need to install an app?',
+    a: 'No app download is needed for a QR scan or NFC tap that opens a web link. The destination and any account requirements depend on the service that opens.'
+  },
+  {
+    q: 'Can customers write reviews in Hindi or Gujarati?',
+    a: 'The live demo includes English, Hindi, Gujarati and Hinglish language choices. The available language options in a production service depend on its configured capabilities.'
+  },
+  {
+    q: 'How does AI-assisted review writing work?',
+    a: 'The assistant can help customers express only the details they provide. Customers can edit or ignore every suggestion and choose independently whether to share a review.'
+  },
+  {
+    q: 'Can customers leave an honest negative review?',
+    a: 'Yes. The experience should offer the same Google review path to everyone, regardless of rating or whether their experience was positive, mixed or negative.'
+  },
+  {
+    q: 'Can I connect multiple business locations?',
+    a: 'Multi-location management is part of the proposed software plans. Which locations and account capabilities are available should be confirmed before signup.'
+  },
+  {
+    q: 'Does the software connect to Google Business Profile?',
+    a: 'A live Google Business Profile connection has not been configured for this homepage. Account connection and supported management features must be verified before subscribing.'
+  },
+  {
+    q: 'Are software subscriptions separate from hardware?',
+    a: 'Yes. The displayed physical-product and monthly software prices are separate proposed prices; hardware is purchased separately from any software plan.'
+  },
+  {
+    q: 'Can I change the connected review link?',
+    a: 'A business would use its configured review destination. Link-changing controls in the production app have not been verified here.'
+  },
+  {
+    q: 'How do corporate bulk orders work?',
+    a: "Share the company, location count and quantity you're exploring using the inquiry form. The form is a preview and does not send a message until contact handling is connected."
+  },
+  {
+    q: 'What happens if my subscription expires?',
+    a: 'Subscription status, renewal and the treatment of data after a plan ends have not been confirmed. Please confirm the applicable terms before purchasing.'
+  },
+  {
+    q: 'How are review suggestions and customer data handled?',
+    a: 'This preview does not send demo input to an AI service. Privacy, retention and data-handling terms for any live service must be confirmed in the published product policies.'
+  }
+];
+
+const primaryFaqs = [allFaqs[0], allFaqs[1], allFaqs[2], allFaqs[3], allFaqs[9], allFaqs[6]];
+const extraFaqs = allFaqs.filter(faq => !primaryFaqs.some(p => p.q === faq.q));
+
+const benefits = [
+  {
+    icon: QrCode,
+    title: 'Make review access easier',
+    detail: 'A visible QR or NFC touchpoint puts your review destination within reach.'
+  },
+  {
+    icon: MessageSquareText,
+    title: 'Keep feedback genuine',
+    detail: 'Every customer gets the same review path, whatever their experience.'
+  },
+  {
+    icon: PenLine,
+    title: 'Fit your everyday workflow',
+    detail: 'Keep review access close to checkout, reception or the end of an appointment.'
+  },
+  {
+    icon: MoveRight,
+    title: 'Offer a familiar experience',
+    detail: 'Customers can open your review link without downloading a scanning app.'
+  }
+];
+
+const steps = [
+  {
+    number: '01',
+    title: 'Get your Review QR',
+    detail: 'Choose the standee and review destination for your business.',
+    icon: Globe
+  },
+  {
+    number: '02',
+    title: 'Place it where customers see it',
+    detail: 'Set your QR or NFC + QR standee at a counter, reception or checkout.',
+    icon: QrCode
+  },
+  {
+    number: '03',
+    title: 'Customers scan and share',
+    detail: 'Customers can share honest feedback in their own words, on their own terms.',
+    icon: Smartphone
+  }
+];
+
+const languages = ['English', 'Hindi', 'Gujarati', 'Hinglish'];
+
+function getSuggestions(text: string): string[] {
+  const t = text.trim();
+  return [
+    `My experience: ${t}`,
+    `In my own words, ${t}`,
+    `Here’s what I’d like to share: ${t}`
   ];
+}
+
+function FaqItem({ faq, index }: { faq: { q: string; a: string }; index: number }) {
+  return (
+    <details className="faq-item">
+      <summary>
+        <span className="faq-number">{String(index + 1).padStart(2, '0')}</span>
+        <span>{faq.q}</span>
+        <span className="faq-icon">
+          <Plus className="faq-plus" size={17} />
+          <Minus className="faq-minus" size={17} />
+        </span>
+      </summary>
+      <p>{faq.a}</p>
+    </details>
+  );
+}
+
+export function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
+  const [demoStep, setDemoStep] = useState(0);
+  const [demoRating, setDemoRating] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState('English');
+  const [demoFeedback, setDemoFeedback] = useState('');
+  const [demoSuggestions, setDemoSuggestions] = useState<string[] | null>(null);
+  const [assistantInput, setAssistantInput] = useState('');
+  const [assistantSuggestions, setAssistantSuggestions] = useState<string[] | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [selectedQuantity, setSelectedQuantity] = useState('25');
+  const [formStatus, setFormStatus] = useState<'idle' | 'ready'>('idle');
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  function handleSelectProduct(productName: string) {
+    setSelectedProduct(productName);
+    setFormStatus('idle');
+    document.getElementById('bulk-inquiry')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (e.currentTarget.reportValidity()) {
+      setFormStatus('ready');
+    }
+  }
+
+  function handleGenerateDemoPrompt() {
+    if (demoFeedback.trim()) {
+      setDemoSuggestions(getSuggestions(demoFeedback));
+    }
+  }
+
+  function handleGenerateAssistantPrompt() {
+    if (assistantInput.trim()) {
+      setAssistantSuggestions(getSuggestions(assistantInput));
+    }
+  }
+
+  async function handleCopy(text: string, index: number) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex(null), 1800);
+    } catch {
+      setCopiedIndex(null);
+    }
+  }
+
+  function closeMobileNav() {
+    setIsMobileMenuOpen(false);
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans selection:bg-blue-500/20 selection:text-blue-600">
-      {/* 1. TOP ANNOUNCEMENT RIBBON */}
-      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 text-indigo-900 text-xs py-2 px-4 text-center font-semibold flex items-center justify-center gap-1.5 border-b border-indigo-100/80">
-        <span>Meet Loctimize™: AI-Powered Google Reviews, Multi-Branch QR Standees & Local SEO.</span>
-        <NavLink
-          to="/signup"
-          className="text-[#2563EB] font-bold underline underline-offset-2 hover:text-[#1D4ED8] transition-colors ml-1 inline-flex items-center"
-        >
-          <span>Try 2.0 now</span>
-          <span className="ml-1 text-[10px]">›</span>
-        </NavLink>
-      </div>
+    <main className="rr-home" id="home">
+      {/* HEADER */}
+      <header className="site-header">
+        <a className="brand-lockup" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
+          <img src={headerLogo} className="header-logo" alt="Loctimize — Optimize Local. Grow Global." />
+        </a>
 
-      {/* 2. TOP NAVBAR */}
-      <header className="border-b border-slate-200/80 sticky top-0 bg-white/95 backdrop-blur-md z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Left: Brand Logo & Navigation */}
-          <div className="flex items-center gap-8">
-            <NavLink to="/" className="flex items-center gap-2">
-              <img
-                src="/loctimize-logo.jpg"
-                alt="Loctimize"
-                className="h-10 w-auto object-contain rounded"
-              />
-            </NavLink>
+        <nav className={isMobileMenuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
+          <a href="#products" onClick={closeMobileNav}>Review QR</a>
+          <a href="#how-it-works" onClick={closeMobileNav}>How It Works</a>
+          <a href="#features" onClick={closeMobileNav}>Features</a>
+          <a href="#pricing" onClick={closeMobileNav}>Pricing</a>
 
-            {/* Menu Links with Dropdowns */}
-            <nav className="hidden lg:flex items-center gap-6 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-              <a
-                href="#features"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
-              >
-                <span>AI Reviews</span>
-                <span className="text-[10px] text-slate-400">▾</span>
-              </a>
-              <a
-                href="#how-it-works"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
-              >
-                <span>Product</span>
-                <span className="text-[10px] text-slate-400">▾</span>
-              </a>
-              <a
-                href="#trust"
-                className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1"
-              >
-                <span>Google Policy</span>
-                <span className="text-[10px] text-slate-400">▾</span>
-              </a>
-              <a
-                href="#pricing"
-                className="hover:text-slate-900 transition-colors"
-              >
-                Free Forever
-              </a>
-            </nav>
+          <div className="mobile-nav-actions">
+            <a className="mobile-login-link" href="/login" onClick={closeMobileNav}>
+              Open ReviewQR <ArrowUpRight size={15} />
+            </a>
+            <a href="#pricing" onClick={closeMobileNav} className="rr-button">
+              Get Your Review QR <ArrowRight size={16} />
+            </a>
           </div>
+        </nav>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isAuthenticated() ? (
-              <NavLink to="/dashboard">
-                <button className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold transition-all shadow-sm">
-                  Dashboard
-                </button>
-              </NavLink>
-            ) : (
-              <>
-                <NavLink
-                  to="/login"
-                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 py-1.5 transition-colors hidden sm:block"
-                >
-                  Login
-                </NavLink>
-
-                <NavLink to="/signup">
-                  <button className="h-9 px-3.5 sm:px-4 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-bold transition-all shadow-sm">
-                    Get Started Free
-                  </button>
-                </NavLink>
-              </>
-            )}
-
-            {/* Mobile Nav Toggle Button */}
-            <button
-              onClick={() => setMobileNavOpen(!mobileNavOpen)}
-              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Toggle mobile menu"
-            >
-              {mobileNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
-          </div>
+        <div className="header-actions">
+          <a href="/login" className="login-link">
+            Login <ArrowUpRight size={14} />
+          </a>
+          <a href="#pricing" className="rr-button header-cta">
+            Get Your Review QR <ArrowRight size={15} />
+          </a>
+          <button
+            type="button"
+            className="mobile-menu-toggle"
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={21} /> : <Menu size={21} />}
+          </button>
         </div>
-
-        {/* Mobile Navigation Dropdown */}
-        {mobileNavOpen && (
-          <div className="lg:hidden border-t border-slate-200/80 bg-white px-4 py-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150 shadow-md">
-            <a
-              href="#features"
-              onClick={() => setMobileNavOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
-            >
-              AI Reviews & Templates
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setMobileNavOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
-            >
-              How It Works
-            </a>
-            <a
-              href="#trust"
-              onClick={() => setMobileNavOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
-            >
-              Google Policy & Compliance
-            </a>
-            <a
-              href="#pricing"
-              onClick={() => setMobileNavOpen(false)}
-              className="block px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
-            >
-              Free Forever Guarantee
-            </a>
-            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
-              <NavLink
-                to="/login"
-                onClick={() => setMobileNavOpen(false)}
-                className="flex-1 text-center py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                Sign In
-              </NavLink>
-              <NavLink
-                to="/signup"
-                onClick={() => setMobileNavOpen(false)}
-                className="flex-1 text-center py-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
-              >
-                Sign Up Free
-              </NavLink>
-            </div>
-          </div>
-        )}
       </header>
 
-      {/* 3. HERO SECTION (ClickUp 4.0 Exact Two-Column Layout) */}
-      <section className="relative pt-12 sm:pt-16 pb-16 lg:pb-24 overflow-hidden border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-            {/* Left Hero Column */}
-            <div className="lg:col-span-5 space-y-6 text-left">
-              {/* ClickUp Capsule Badge */}
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-purple-300/60 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-950/30 px-3 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300 shadow-xs">
-                <span>Introducing ReviewQR 2.0</span>
-                <span className="text-[10px]">›</span>
-              </div>
-
-              {/* ClickUp Signature Huge Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.08]">
-                Maximize genuine customer reviews
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-                Replace manual asking. Every real customer, AI review draft, and Google review in one place.
-              </p>
-
-              {/* ClickUp CTA Button Row */}
-              <div className="flex flex-wrap items-center gap-4 pt-1">
-                <NavLink to={isAuthenticated() ? '/dashboard' : '/signup'}>
-                  <button className="h-12 px-7 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl transition-all duration-150 transform hover:-translate-y-0.5 cursor-pointer">
-                    {isAuthenticated() ? 'Open Dashboard' : "Get started. It's FREE!"}
-                  </button>
-                </NavLink>
-
-                <div className="text-xs text-slate-500 leading-tight">
-                  <div className="font-semibold text-slate-700">Free forever.</div>
-                  <div>No credit card required.</div>
-                </div>
-              </div>
-
-              {/* Category Pills Header & Pills */}
-              <div className="pt-6 space-y-3">
-                <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase font-mono">
-                  GET 400% MORE REVIEWS • CUSTOMIZE YOUR WORKSPACE
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((cat) => {
-                    const isActive = activeCategory === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setActiveCategory(cat.id)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
-                          isActive
-                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs ring-2 ring-blue-500/20'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
-                        }`}
-                      >
-                        {isActive && <Check className="h-3 w-3 text-blue-600 stroke-[3]" />}
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Hero Column: LIGHT MODERN APP WINDOW MOCKUP */}
-            <div className="lg:col-span-7">
-              <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-indigo-100/70 overflow-hidden text-left transition-all duration-300">
-                {/* Window Top Navigation & Controls */}
-                <div className="h-10 bg-slate-50 border-b border-slate-200/80 px-4 flex items-center justify-between text-xs">
-                  {/* Left Workspace Switcher */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-800 shadow-xs">
-                      <span className="text-amber-500">⭐</span>
-                      <span className="truncate max-w-[160px]">{selectedTemplate.businessName}</span>
-                      <span className="text-[10px] text-slate-400">▾</span>
-                    </div>
-                  </div>
-
-                  {/* Center Search Pill */}
-                  <div className="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-0.5 text-[11px] text-slate-400 w-52 shadow-xs">
-                    <Search className="h-3 w-3 text-slate-400" />
-                    <span>Search reviews, staff...</span>
-                  </div>
-
-                  {/* Right Window Icons */}
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <Bell className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
-                    <Settings className="h-3.5 w-3.5 hover:text-slate-600 cursor-pointer" />
-                    <div className="h-5 w-5 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white font-bold text-[9px] flex items-center justify-center">
-                      RS
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inner Window Split View */}
-                <div className="grid grid-cols-12 min-h-[380px] sm:min-h-[420px]">
-                  {/* Left Inner Sidebar */}
-                  <div className="hidden md:block col-span-4 border-r border-slate-200 bg-slate-50/80 p-3 text-xs space-y-3 font-medium select-none">
-                    <div className="flex items-center justify-between font-bold text-slate-800 px-2 py-1 rounded-lg">
-                      <span className="flex items-center gap-1.5">
-                        <HomeIcon className="h-3.5 w-3.5 text-slate-500" /> Home
-                      </span>
-                      <span className="text-[10px] text-slate-400">+ ▾</span>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold">
-                        <span className="flex items-center gap-2">
-                          <Inbox className="h-3.5 w-3.5" />
-                          <span>Inbox</span>
-                        </span>
-                        <span className="h-4 px-1.5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                          3
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
-                        <CheckSquare className="h-3.5 w-3.5" />
-                        <span>My Reviews</span>
-                      </div>
-                      <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>Scan Analytics</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
-                        Active Standees
-                      </div>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
-                          <QrCode className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">Main Billing Counter</span>
-                        </div>
-                        <div className="flex items-center justify-between px-2 py-1 rounded-lg text-slate-600 hover:bg-slate-100">
-                          <span className="flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                            <span>AI Reply Agent</span>
-                          </span>
-                          <span className="h-3.5 px-1.5 rounded-full bg-indigo-50 text-indigo-600 text-[9px] font-bold">
-                            Live
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
-                        Location
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2 py-1 text-slate-600 font-semibold truncate">
-                        <MapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                        <span className="truncate">{selectedTemplate.location}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Inner Content: Tasks / Reviews Table */}
-                  <div className="col-span-12 md:col-span-8 p-3 sm:p-4 space-y-4 bg-white">
-                    {/* View Switcher Tabs */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                          <span>Google Reviews</span>
-                        </span>
-                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 ml-2">
-                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 font-semibold">
-                            Tasks
-                          </span>
-                          <span className="px-1.5 py-0.5 text-slate-400">Feed</span>
-                          <span className="px-1.5 py-0.5 text-slate-400 hidden sm:inline">Stats</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold">
-                        ★ {selectedTemplate.rating} Rating
-                      </span>
-                    </div>
-
-                    {/* Table Column Labels */}
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 px-2">
-                      <span>CUSTOMER REVIEW TASK</span>
-                      <span className="hidden sm:inline">ASSIGNEE / STATUS</span>
-                    </div>
-
-                    {/* SECTION 1: DONE (Green Group) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="h-5 px-2 rounded-md bg-emerald-600 text-white font-bold text-[10px] uppercase flex items-center gap-1">
-                          <Check className="h-3 w-3 stroke-[3]" />
-                          <span>DONE</span>
-                          <span className="ml-1 opacity-80">{selectedTemplate.doneCount}</span>
-                        </span>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1 text-xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 font-semibold text-slate-800">
-                            <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                              ✓
-                            </span>
-                            <span>{selectedTemplate.recentCustomer} • 5-Star Review</span>
-                          </div>
-                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Posted on Google
-                          </span>
-                        </div>
-
-                        <div className="pl-6 text-[11px] text-slate-500">
-                          "{selectedTemplate.highlight}. Prompt service and friendly staff."
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 font-semibold text-slate-800">
-                          <span className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]">
-                            ✓
-                          </span>
-                          <span>Counter Standee Scanned & Verified</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-mono">100% Policy Compliant</span>
-                      </div>
-                    </div>
-
-                    {/* SECTION 2: IN PROGRESS (Blue Group) */}
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center gap-2">
-                        <span className="h-5 px-2 rounded-md bg-blue-600 text-white font-bold text-[10px] uppercase flex items-center gap-1">
-                          <span>IN PROGRESS</span>
-                          <span className="ml-1 opacity-80">{selectedTemplate.progressCount}</span>
-                        </span>
-                      </div>
-
-                      <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 font-semibold text-slate-800">
-                          <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                          <span>Customer scanning QR at Main Counter</span>
-                        </div>
-                        <span className="text-[10px] text-blue-600 font-semibold bg-blue-100/70 px-2 py-0.5 rounded-md">
-                          AI Drafts Generating
-                        </span>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <span className="h-2 w-2 rounded-full bg-slate-400" />
-                          <span>Owner 1-Click AI Reply Drafted</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-mono">Ready to Post</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* HERO SECTION */}
+      <section className="hero-section">
+        <div className="hero-copy">
+          <span className="eyebrow">LOCTIMIZE REVIEW QR</span>
+          <h1>
+            Turn Happy Customers Into <span>Google Reviews.</span>
+          </h1>
+          <p className="hero-description">
+            Make it easy for customers to share their experiences with a simple QR scan. Build a stronger online reputation with Loctimize.
+          </p>
+          <div className="hero-ctas">
+            <a href="#pricing" className="rr-button rr-button-large hero-purchase-button">
+              Get Your Review QR <ArrowRight size={20} />
+            </a>
+            <a href="#how-it-works" className="rr-button rr-button-outline rr-button-large">
+              See How It Works <ArrowDown size={20} />
+            </a>
           </div>
+          <div className="hero-note">
+            <span><Check size={18} /> QR scan & NFC tap</span>
+            <span><Check size={18} /> No app needed to scan</span>
+          </div>
+        </div>
+
+        <div className="hero-visual">
+          <div className="hero-image-wrap">
+            <img
+              src={standeeImage}
+              className="hero-product-image"
+              alt="QR and NFC review standee prominently displayed on a bright business counter beside a phone"
+              width={1024}
+              height={1024}
+              fetchPriority="high"
+            />
+          </div>
+          <span className="hero-photo-caption">A small touchpoint. An easier way to share.</span>
         </div>
       </section>
 
-      {/* 4. TRUSTED BY THE BEST */}
-      <section className="py-12 border-b border-slate-200/80 bg-slate-50/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center space-y-6">
-            <div className="text-xs font-bold text-slate-400 tracking-widest uppercase font-mono">
-              TRUSTED BY THE BEST LOCAL BUSINESSES ACROSS INDIA
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 opacity-75 grayscale hover:grayscale-0 transition-all duration-300">
-              <span className="font-extrabold text-lg tracking-tighter text-slate-800">
-                ROYAL SWEETS
-              </span>
-              <span className="font-bold text-lg tracking-wide text-slate-800">
-                havmor<span className="text-pink-500 font-black">.</span>
-              </span>
-              <span className="font-black text-lg tracking-tight text-slate-800">
-                CHAI POINT
-              </span>
-              <span className="font-extrabold text-lg tracking-wider text-slate-800">
-                SANKALP
-              </span>
-              <span className="font-serif font-bold text-lg text-slate-800">
-                KALYAN
-              </span>
-              <span className="font-sans font-bold text-lg text-slate-800">
-                APOLLO
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. HONEST TRUST & INTEGRITY SECTION */}
-      <section id="trust" className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>100% Policy Integrity (Non-Negotiable)</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-              Real reviews only. Zero review gating.
+      {/* PRODUCTS SECTION */}
+      <section className="product-section section-wrap" id="products">
+        <div className="section-heading product-section-heading">
+          <div>
+            <span className="eyebrow">THE PRODUCT</span>
+            <h2>
+              A Simple Way to Make Reviewing <span>Your Business Easier.</span>
             </h2>
-            <p className="text-sm text-slate-600">
-              ReviewQR strictly opposes review manipulation, star pushing, or gating negative feedback.
-            </p>
+          </div>
+          <p>Easy to display. Simple to scan. Direct access to your review destination.</p>
+        </div>
+
+        <div className="product-layout">
+          <div className="product-gallery">
+            <div className="product-image-large product-detail-crop">
+              <img
+                src={standeeImage}
+                alt="Loctimize ReviewQR acrylic standee and smartphone product concept"
+                loading="lazy"
+                width={1024}
+                height={1024}
+              />
+              <span className="image-note">
+                <span className="tiny-green-dot" /> QR · NFC · YOUR REVIEW LINK
+              </span>
+            </div>
+            <div className="product-gallery-footer">
+              <div>
+                <span>STANDEE DETAIL</span>
+                <span>PLACE IT WHERE CUSTOMERS ARE</span>
+              </div>
+              <a href="#how-it-works" aria-label="Learn how ReviewQR works">
+                <ArrowRight size={17} />
+              </a>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-                01
-              </div>
-              <h3 className="font-bold text-base text-slate-900">Zero Review Gating</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Every customer who scans the QR code is immediately provided a direct link to your official Google review page. We never route unhappy customers away or filter responses.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold">
-                02
-              </div>
-              <h3 className="font-bold text-base text-slate-900">No Hallucinated Details</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                AI is strictly a wording helper. It only structures details the customer selects or types. It is programmed never to invent dishes, staff names, prices, or dates.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 space-y-3 shadow-xs">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-                03
-              </div>
-              <h3 className="font-bold text-base text-slate-900">Real Google Cloud Integration</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Integrated directly with Google Places API and Google Identity Services for instant place discovery and verified owner login.
-              </p>
-            </div>
+          <div className="product-introduction" id="industries">
+            <span className="eyebrow">ON THE COUNTER. WITHIN REACH.</span>
+            <h3>A simple invitation to share.</h3>
+            <p>At your checkout, reception or table, a Review QR standee gives customers a direct path to your review destination.</p>
+            <ul className="product-benefit-list">
+              <li>
+                <Check size={20} />
+                <span><strong>Easy to display</strong>Place it where customers naturally pause.</span>
+              </li>
+              <li>
+                <Check size={20} />
+                <span><strong>Easy to access</strong>Choose QR scanning or NFC + QR access.</span>
+              </li>
+              <li>
+                <Check size={20} />
+                <span><strong>Always their choice</strong>Every customer can share honest feedback.</span>
+              </li>
+            </ul>
+            <a href="#pricing" className="rr-button">
+              Get Your Review QR <ArrowRight size={18} />
+            </a>
+            <p className="proposed-note">Product photography is illustrative. Final specifications and availability will be confirmed before purchase.</p>
           </div>
+        </div>
+
+        <div className="value-strip">
+          <span>DESIGNED FOR EVERYDAY BUSINESS</span>
+          <div>
+            <span><Check size={14} /> Choose QR or NFC + QR</span>
+            <i />
+            <span><Check size={14} /> Honest, ungated reviews</span>
+            <i />
+            <span><Check size={14} /> No app needed to scan</span>
+          </div>
+          <a href="#pricing">See proposed pricing <ArrowRight size={15} /></a>
         </div>
       </section>
 
-      {/* 6. HOW IT WORKS SECTION */}
-      <section id="how-it-works" className="py-20 bg-slate-50/70 border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              How ReviewQR Works
-            </h2>
-            <p className="text-sm text-slate-600">
-              3 simple steps to genuine customer reviews in seconds
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <QrCode className="h-7 w-7" />
-              </div>
-              <h3 className="font-bold text-lg text-slate-900">1. Customer Scans QR</h3>
-              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
-                Print dynamic table-tents or counter posters using our browser export tool. Customers scan with any camera.
-              </p>
-            </div>
-
-            <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <Sparkles className="h-7 w-7" />
-              </div>
-              <h3 className="font-bold text-lg text-slate-900">2. Taps Real Experience</h3>
-              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
-                Customer taps chips or speaks in Hindi/Gujarati/English. Our AI formats their exact words into 3 calibrated options.
-              </p>
-            </div>
-
-            <div className="space-y-3 flex flex-col items-center">
-              <div className="h-14 w-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <ExternalLink className="h-7 w-7" />
-              </div>
-              <h3 className="font-bold text-lg text-slate-900">3. Posts on Google</h3>
-              <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
-                1-tap clipboard copy automatically opens the official Google review box. The customer edits and submits with 1 click.
-              </p>
-            </div>
-          </div>
+      {/* HOW IT WORKS */}
+      <section className="how-section section-wrap" id="how-it-works">
+        <div className="section-heading centered-heading">
+          <span className="eyebrow">Small step. Simple share.</span>
+          <h2>Three Steps. <span>One Simple Experience.</span></h2>
+          <p>Make your review link easy to find, without deciding what customers say.</p>
         </div>
-      </section>
-
-      {/* 7. PRICING & CLOUDFLARE FREE TIER SECTION */}
-      <section id="pricing" className="py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-wider font-mono">
-              ZERO INFRASTRUCTURE BILLS
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-              100% Free Forever
-            </h2>
-            <p className="text-sm text-slate-600">
-              Built on Cloudflare Free Tier edge technology without bloated server bills.
-            </p>
-          </div>
-
-          <div className="rounded-3xl border-2 border-blue-600 bg-white max-w-md mx-auto shadow-xl shadow-blue-500/10 p-8 space-y-6 text-left">
-            <div className="space-y-1">
-              <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
-                Independent Business Plan
-              </div>
-              <div className="text-4xl font-black tracking-tight text-slate-900">
-                ₹0 <span className="text-sm font-normal text-slate-500">/ forever</span>
-              </div>
-              <div className="text-xs text-slate-500">For Indian local shops, restaurants, salons & clinics</div>
-            </div>
-
-            <div className="space-y-2.5 text-xs text-slate-700">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Unlimited QR scans (Edge KV cached)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Google Places API & Autocomplete included</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>English, Hindi & Gujarati 3-option review drafts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Client-side high-res poster downloads (PNG/PDF)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                <span>Google Sign-In & Owner Dashboard</span>
-              </div>
-            </div>
-
-            <NavLink to={isAuthenticated() ? '/dashboard' : '/signup'} className="block w-full">
-              <button className="w-full h-12 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer">
-                {isAuthenticated() ? 'Open Dashboard' : 'Get Started Free'}
-              </button>
-            </NavLink>
-          </div>
-        </div>
-      </section>
-
-      {/* 8. FAQ SECTION */}
-      <section className="py-20 max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            Frequently Asked Questions
-          </h2>
-        </div>
-
-        <div className="space-y-3">
-          {faqs.map((faq, idx) => {
-            const isOpen = openFaq === idx;
+        <div className="step-grid">
+          {steps.map((step, idx) => {
+            const StepIcon = step.icon;
             return (
-              <div
-                key={idx}
-                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 transition-all"
-              >
-                <button
-                  onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full flex items-center justify-between text-left font-bold text-sm text-slate-900 cursor-pointer"
-                >
-                  <span>{faq.q}</span>
-                  {isOpen ? (
-                    <ChevronUp className="h-4 w-4 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  )}
-                </button>
-                {isOpen && (
-                  <p className="mt-2 text-xs text-slate-600 leading-relaxed animate-in fade-in">
-                    {faq.a}
-                  </p>
+              <article key={step.number} className="step-item">
+                <div className="step-top">
+                  <span className="step-icon"><StepIcon size={20} /></span>
+                  <span className="step-index">{step.number}</span>
+                  {idx < steps.length - 1 && <span className="step-track" />}
+                </div>
+                <h3>{step.title}</h3>
+                <p>{step.detail}</p>
+                {idx === 1 && (
+                  <span className="step-demo-visual">
+                    <QrCode size={20} />
+                    <Wifi size={18} />
+                    <span>SCAN OR TAP</span>
+                  </span>
                 )}
-              </div>
+              </article>
             );
           })}
         </div>
       </section>
 
-      {/* 9. FOOTER */}
-      <footer className="border-t border-slate-200/80 py-8 bg-slate-50 text-slate-500 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/loctimize-logo.jpg"
-              alt="Loctimize"
-              className="h-8 w-auto object-contain rounded"
-            />
-            <span className="font-extrabold text-slate-900">Loctimize™</span>
-            <span>• Optimize Local. Grow Global.</span>
+      {/* INTERACTIVE DEMO (PHONE SIMULATOR) */}
+      <section className="demo-section section-wrap" id="live-demo">
+        <div className="demo-intro">
+          <div>
+            <span className="eyebrow">TRY THE INTERACTIVE EXPERIENCE</span>
+            <h2>See What Your Customers <span>Experience.</span></h2>
           </div>
-          <div>100% Cloudflare Free Tier • DPDP Act & Google Policy Compliant</div>
+          <p>Try the customer journey below. This preview runs entirely in your browser; no real review is submitted.</p>
+          <div className="language-control">
+            <label htmlFor="demo-language">Select customer demo language</label>
+            <select
+              id="demo-language"
+              value={selectedLanguage}
+              onChange={e => setSelectedLanguage(e.target.value)}
+            >
+              {languages.map(lang => (
+                <option key={lang} value={lang}>{lang}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="demo-workspace">
+          <div className="demo-steps" role="tablist" aria-label="Customer review demo steps">
+            {['Scan or tap', 'Share your experience', 'Choose what’s next'].map((label, idx) => (
+              <button
+                key={label}
+                type="button"
+                role="tab"
+                aria-selected={demoStep === idx}
+                className={demoStep === idx ? 'demo-step active' : 'demo-step'}
+                onClick={() => setDemoStep(idx)}
+              >
+                <span>{String(idx + 1).padStart(2, '0')}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="phone-preview-wrap">
+            <div className="phone-device">
+              <div className="phone-camera" />
+              <div className="phone-screen">
+                <div className="phone-status">
+                  <span>9:41</span>
+                  <span>•••　◖</span>
+                </div>
+                <div className="phone-brand">
+                  Loctimize<span>ReviewQR</span>
+                </div>
+
+                {demoStep === 0 && (
+                  <div className="phone-stage phone-stage-scan">
+                    <span className="phone-eyebrow">WELCOME TO YOUR DEMO</span>
+                    <h3>Make feedback feel easy.</h3>
+                    <p>A quick scan, a clear choice and an experience that's yours to share.</p>
+                    <div className="phone-review-stamp">
+                      <QrCode size={43} />
+                      <span>SCAN OR TAP</span>
+                    </div>
+                    <div className="phone-language-pill">
+                      <Globe size={13} /> {selectedLanguage}
+                    </div>
+                    <button type="button" className="rr-button phone-button" onClick={() => setDemoStep(1)}>
+                      Start the demo <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {demoStep === 1 && (
+                  <div className="phone-stage">
+                    <span className="phone-eyebrow">YOUR EXPERIENCE, YOUR WORDS</span>
+                    <h3>How was your experience?</h3>
+                    <p>All feedback is welcome. Your rating will never change your next step.</p>
+                    <div className="rating-picker" aria-label="Choose an optional rating">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button
+                          key={star}
+                          type="button"
+                          className={demoRating >= star ? 'rating-star selected' : 'rating-star'}
+                          onClick={() => setDemoRating(star)}
+                          aria-label={`Rate ${star} out of 5`}
+                          aria-pressed={demoRating === star}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <label className="phone-input-label" htmlFor="customer-experience">
+                      What would you like to share?
+                    </label>
+                    <textarea
+                      id="customer-experience"
+                      value={demoFeedback}
+                      onChange={e => setDemoFeedback(e.target.value)}
+                      placeholder="Share your real experience..."
+                      maxLength={280}
+                    />
+                    <span className="character-count">{demoFeedback.length} / 280</span>
+                    {demoSuggestions && (
+                      <div className="demo-output">
+                        <span>YOUR DRAFT · {selectedLanguage.toUpperCase()}</span>
+                        <p>{demoSuggestions[0]}</p>
+                      </div>
+                    )}
+                    <button type="button" className="demo-help-link" onClick={handleGenerateDemoPrompt}>
+                      <PenLine size={14} /> {demoSuggestions ? 'Refresh wording suggestion' : 'Help me find the words'}
+                    </button>
+                    <button type="button" className="rr-button phone-button" onClick={() => setDemoStep(2)}>
+                      Continue <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {demoStep === 2 && (
+                  <div className="phone-stage phone-stage-done">
+                    <span className="phone-success-icon"><Check size={25} /></span>
+                    <span className="phone-eyebrow">DEMO · YOUR CHOICE</span>
+                    <h3>Your feedback. Your next step.</h3>
+                    <p>Reviews can be honest, mixed or positive. You decide what to share.</p>
+                    <div className="review-direct-note">
+                      <Globe size={18} />
+                      <span>Google is available to everyone, regardless of rating.</span>
+                    </div>
+                    <a href="https://www.google.com/" target="_blank" rel="noreferrer" className="rr-button google-demo-link">
+                      Continue to Google <ArrowUpRight size={14} />
+                    </a>
+                    <button
+                      type="button"
+                      className="start-over-link"
+                      onClick={() => {
+                        setDemoStep(0);
+                        setDemoRating(0);
+                        setDemoFeedback('');
+                        setDemoSuggestions(null);
+                      }}
+                    >
+                      Start over <ChevronLeft size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="demo-workspace-foot">
+              <span><span className="tiny-green-dot" /> SIMULATED CUSTOMER EXPERIENCE</span>
+              <span>No review is created, stored or submitted.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI ASSISTANT SECTION */}
+      <section className="assistant-section section-wrap" id="features">
+        <span id="ai-assistant" className="anchor-point" />
+        <div className="assistant-heading">
+          <div>
+            <span className="eyebrow">AI writing assistance · a customer-led tool</span>
+            <h2>Your Review QR Is <span>Just the Beginning.</span></h2>
+          </div>
+          <p>Explore optional writing help in the preview below. Your words stay editable; nothing is posted or sent.</p>
+        </div>
+
+        <div className="assistant-workspace">
+          <div className="assistant-form">
+            <div className="assistant-card-heading">
+              <span className="assistant-orb"><PenLine size={20} /></span>
+              <span>
+                <strong>Review writing assistant</strong>
+                <small>Suggestions based on your own experience</small>
+              </span>
+              <span className="assistant-demo-tag">PREVIEW</span>
+            </div>
+            <label className="field-label" htmlFor="writing-experience">
+              What was your experience?
+            </label>
+            <textarea
+              className="assistant-textarea"
+              id="writing-experience"
+              value={assistantInput}
+              onChange={e => setAssistantInput(e.target.value)}
+              placeholder="For example: I visited the café on Saturday. The tea was comforting, and it took a little longer than I expected to get the bill."
+              maxLength={280}
+            />
+            <div className="assistant-field-foot">
+              <span>Only use details you’re comfortable sharing.</span>
+              <span>{assistantInput.length} / 280</span>
+            </div>
+            <label className="assistant-language-label" htmlFor="assistant-language">
+              Language
+            </label>
+            <select
+              className="assistant-language-select"
+              id="assistant-language"
+              value={selectedLanguage}
+              onChange={e => setSelectedLanguage(e.target.value)}
+            >
+              {languages.map(lang => (
+                <option key={lang} value={lang}>{lang}</option>
+              ))}
+            </select>
+            <button className="rr-button assistant-generate" onClick={handleGenerateAssistantPrompt}>
+              <PenLine size={16} /> Create wording options <ArrowRight size={16} />
+            </button>
+            <p className="assistant-privacy">
+              <CheckCircle2 size={14} /> This preview runs locally and doesn’t send your text.
+            </p>
+          </div>
+
+          <div className="suggestion-panel">
+            <div className="suggestion-panel-top">
+              <div>
+                <span className="eyebrow">YOUR EXPERIENCE. YOUR WORDS.</span>
+                <h3>Choose what sounds like you.</h3>
+              </div>
+              <span className="suggestion-language">{selectedLanguage}</span>
+            </div>
+
+            {(assistantSuggestions || [
+              'Add your own experience to see a short wording option.',
+              'Your details stay yours to edit.',
+              'Nothing is sent to Google from this preview.'
+            ]).map((suggestion, idx) => (
+              <article key={idx} className="suggestion-row">
+                <div className="suggestion-title">
+                  <span>{['Short & simple', 'Friendly & natural', 'Detailed & balanced'][idx]}</span>
+                  <button
+                    type="button"
+                    className="copy-suggestion"
+                    aria-label={`Copy ${['short and simple', 'friendly and natural', 'detailed and balanced'][idx]} suggestion`}
+                    onClick={() => handleCopy(suggestion, idx)}
+                  >
+                    <Copy size={14} />
+                    {copiedIndex === idx ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <textarea
+                  aria-label={`${['Short and simple', 'Friendly and natural', 'Detailed and balanced'][idx]} editable suggestion`}
+                  value={suggestion}
+                  onChange={e => {
+                    const newVal = e.target.value;
+                    setAssistantSuggestions(prev => {
+                      const base = prev || [
+                        'Add your own experience to see a short wording option.',
+                        'Your details stay yours to edit.',
+                        'Nothing is sent to Google from this preview.'
+                      ];
+                      const next = [...base];
+                      next[idx] = newVal;
+                      return next;
+                    });
+                  }}
+                />
+              </article>
+            ))}
+
+            <div className="suggestion-foot">
+              <span>Customer control</span>
+              <span>Accept, edit or ignore every suggestion. You decide whether to publish.</span>
+            </div>
+          </div>
+        </div>
+
+        {/* AI REPLIES COMPONENT */}
+        <div className="reply-section" id="ai-replies">
+          <div className="reply-layout">
+            <div>
+              <span className="eyebrow">A draft, never an autopilot</span>
+              <h2>Respond thoughtfully. <span>Save time.</span></h2>
+              <p>Explore an editable owner-reply example. Review every draft; nothing posts automatically.</p>
+              <div className="reply-points">
+                <span><Check size={14} /> Tone is yours to choose</span>
+                <span><Check size={14} /> Every reply stays editable</span>
+                <span><Check size={14} /> Nothing posts automatically</span>
+              </div>
+              <a href="#pricing" className="text-link">
+                Explore proposed software plans <ArrowRight size={15} />
+              </a>
+            </div>
+
+            <div className="reply-preview">
+              <div className="reply-preview-head">
+                <span className="review-avatar">A</span>
+                <span>
+                  <strong>Customer review</strong>
+                  <small>ILLUSTRATIVE · BALANCED FEEDBACK</small>
+                </span>
+                <span className="review-stars-preview">
+                  ★★★<span>★★</span>
+                </span>
+              </div>
+              <blockquote>
+                “The food was lovely, and the team was welcoming. Our order took a little longer than expected.”
+              </blockquote>
+              <div className="reply-preview-separator" />
+              <div className="draft-head">
+                <span className="reply-ai-icon"><PenLine size={15} /></span>
+                <span>
+                  <strong>Suggested reply</strong>
+                  <small>Draft for your review — not posted</small>
+                </span>
+                <button
+                  type="button"
+                  className="draft-tone-button"
+                  onClick={e => {
+                    e.currentTarget.textContent = e.currentTarget.textContent?.includes('Warm tone')
+                      ? 'Professional'
+                      : 'Warm tone';
+                  }}
+                >
+                  Warm tone <ChevronRight size={13} />
+                </button>
+              </div>
+              <textarea
+                aria-label="Editable example business reply"
+                defaultValue="Thank you for sharing your experience with us. We're glad you enjoyed the food and welcoming service, and appreciate you letting us know about the wait. Your feedback helps us reflect on the experience we provide."
+              />
+              <span className="draft-approval-note">
+                <CheckCircle2 size={14} /> Please review and edit before posting.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BENEFITS SECTION */}
+      <section className="benefits-section section-wrap" id="businesses">
+        <div className="section-heading benefits-heading">
+          <span className="eyebrow">A connected customer feedback experience</span>
+          <h2>Designed for Everyday <span>Business Growth.</span></h2>
+          <p>Less friction for your customers. More thoughtful conversations for your business.</p>
+        </div>
+
+        <div className="benefits-grid">
+          {benefits.map(({ icon: BenefitIcon, title, detail }, idx) => (
+            <article key={title} className="benefit-row">
+              <span className="benefit-icon"><BenefitIcon size={20} /></span>
+              <span className="benefit-number">0{idx + 1}</span>
+              <div>
+                <h3>{title}</h3>
+                <p>{detail}</p>
+              </div>
+              <ArrowUpRight size={17} className="benefit-arrow" />
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* PRICING SECTION */}
+      <section className="pricing-section section-wrap" id="pricing">
+        <div className="pricing-top">
+          <div>
+            <span className="eyebrow">Plans that can grow with you</span>
+            <h2>Choose the Right Review QR <span>for Your Business.</span></h2>
+            <p>One-time hardware purchases. Separate optional software plans. All displayed prices remain proposed.</p>
+          </div>
+          <div className="pricing-toggle" role="tablist" aria-label="View proposed pricing">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pricingTab === 'products'}
+              className={pricingTab === 'products' ? 'price-tab is-active' : 'price-tab'}
+              onClick={() => setPricingTab('products')}
+            >
+              Physical products
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pricingTab === 'software'}
+              className={pricingTab === 'software' ? 'price-tab is-active' : 'price-tab'}
+              onClick={() => setPricingTab('software')}
+            >
+              Software plans
+            </button>
+          </div>
+        </div>
+
+        {pricingTab === 'products' ? (
+          <Fragment>
+            <div className="price-product-list">
+              {products.map(prod => (
+                <article
+                  key={prod.name}
+                  className={
+                    (prod.recommended ? 'price-product-row is-recommended' : 'price-product-row') +
+                    (selectedProduct === prod.name ? ' is-selected' : '')
+                  }
+                >
+                  <div className={`price-product-photo ${prod.view}`}>
+                    <img
+                      src={standeeImage}
+                      alt={`Illustrative ${prod.viewLabel.toLowerCase()} detail; not a confirmed variant photograph`}
+                      loading="lazy"
+                      width={1024}
+                      height={1024}
+                    />
+                    <span>{prod.viewLabel}</span>
+                  </div>
+
+                  <div className="price-card-content">
+                    {prod.recommended && <span className="price-recommendation">RECOMMENDED</span>}
+                    <h3 className="price-product-name">{prod.name}</h3>
+                    <p className="price-product-intro">{prod.intro}</p>
+                    <div className="hardware-price">
+                      <strong>{prod.price}<small> *</small></strong>
+                      <span>One-time hardware purchase</span>
+                    </div>
+                    <ul className="hardware-features">
+                      {[prod.access, 'Direct access to your review link', 'No app needed to scan', prod.custom].map(feat => (
+                        <li key={feat}><Check size={18} />{feat}</li>
+                      ))}
+                    </ul>
+                    <p className="hardware-service-note">
+                      Hardware only. Optional monthly software is separate; setup and branding details require confirmation.
+                    </p>
+                    <button
+                      type="button"
+                      className="rr-button price-select-button"
+                      onClick={() => handleSelectProduct(prod.name)}
+                      aria-label={`Select ${prod.name} for enquiry`}
+                      aria-pressed={selectedProduct === prod.name}
+                    >
+                      {selectedProduct === prod.name ? 'Selected for enquiry' : 'Enquire about this product'}{' '}
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <p className="pricing-disclaimer">
+              * Proposed launch prices. Images show different details of one illustrative standee, not confirmed variant photos. Final specifications, branding and availability must be confirmed before purchase.
+            </p>
+          </Fragment>
+        ) : (
+          <Fragment>
+            <div className="software-plan-grid">
+              {softwarePlans.map(plan => (
+                <article
+                  key={plan.name}
+                  className={plan.recommended ? 'software-card is-recommended' : 'software-card'}
+                >
+                  {plan.recommended && <span className="software-recommended">RECOMMENDED PLAN</span>}
+                  <span className="software-plan-name">{plan.name}</span>
+                  <p>{plan.description}</p>
+                  <div className="software-price">
+                    {plan.price}<small> {plan.cadence}</small>
+                  </div>
+                  <span className="proposed-plan-badge">PROPOSED · SUBJECT TO CONFIRMATION</span>
+                  <ul>
+                    {plan.features.map(feat => (
+                      <li key={feat}><Check size={18} />{feat}</li>
+                    ))}
+                    <li><Check size={18} />Usage limits to be confirmed</li>
+                  </ul>
+                  <button
+                    className="rr-button software-plan-cta"
+                    type="button"
+                    onClick={() => handleSelectProduct(`${plan.name} software plan`)}
+                  >
+                    Select this plan <ArrowRight size={18} />
+                  </button>
+                </article>
+              ))}
+            </div>
+            <p className="pricing-disclaimer">
+              Subscriptions and features remain proposed. Monthly software is separate from hardware; no billing is connected here.
+            </p>
+          </Fragment>
+        )}
+
+        <div className="purchase-information">
+          <div>
+            <h3>Setup</h3>
+            <p>Choose your business review destination. Final configuration and setup assistance will be confirmed before purchase.</p>
+          </div>
+          <div>
+            <h3>Delivery & support</h3>
+            <p>Delivery areas, shipping charges, timelines and support arrangements are not yet confirmed.</p>
+          </div>
+          <div>
+            <h3>Before you pay</h3>
+            <p>Select a product to prepare an enquiry. Checkout and enquiry delivery are not connected; no payment or order is created.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* BULK / CORPORATE INQUIRY FORM */}
+      <section className="inquiry-section section-wrap" id="bulk-inquiry">
+        <div className="inquiry-copy">
+          <span className="eyebrow">Bulk, multi-location & product enquiries</span>
+          <h2>Let's talk about <span>your business.</span></h2>
+          <p>Tell us what you’re exploring. This preview doesn’t send or store your details: live inquiry delivery isn’t configured yet.</p>
+          <div className="inquiry-response-card">
+            <span className="inquiry-note-icon"><MessageSquareText size={18} /></span>
+            <span>
+              <strong>Product and bulk enquiries</strong>
+              <small>Share an item, location count or quantity to explore.</small>
+            </span>
+          </div>
+        </div>
+
+        <form className="inquiry-form" ref={formRef} onSubmit={handleFormSubmit}>
+          <div className="form-heading">
+            <strong>Explore a business enquiry</strong>
+            <span>Fields marked * are required</span>
+          </div>
+
+          {selectedProduct && (
+            <p className="selected-product-note" role="status">
+              Your selected product or plan<strong>{selectedProduct}</strong>
+            </p>
+          )}
+
+          <div className="form-two-column">
+            <label>
+              Company name *
+              <input name="company" autoComplete="organization" required minLength={2} placeholder="Your company" />
+            </label>
+            <label>
+              Contact person *
+              <input name="contact" autoComplete="name" required minLength={2} placeholder="Your name" />
+            </label>
+            <label>
+              Mobile number *
+              <input
+                name="mobile"
+                autoComplete="tel"
+                required
+                minLength={8}
+                inputMode="tel"
+                pattern="[+0-9 ()-]{8,}"
+                title="Enter a valid phone number with at least 8 digits."
+                placeholder="+91"
+              />
+            </label>
+            <label>
+              Business email *
+              <input name="email" type="email" autoComplete="email" required placeholder="you@business.com" />
+            </label>
+            <label>
+              Number of locations *
+              <input name="locations" type="number" required min={1} step={1} defaultValue={1} />
+            </label>
+            <label>
+              Quantity to explore *
+              <select name="quantity" required value={selectedQuantity} onChange={e => setSelectedQuantity(e.target.value)}>
+                {['10', '25', '50', '100', '500+'].map(qty => (
+                  <option key={qty} value={qty}>{qty} units</option>
+                ))}
+              </select>
+            </label>
+            <label className="form-full">
+              Product or plan *
+              <select name="product" required value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)}>
+                <option value="" disabled>Select a product or plan</option>
+                {products.map(prod => (
+                  <option key={prod.name} value={prod.name}>{prod.name}</option>
+                ))}
+                {softwarePlans.map(plan => (
+                  <option key={plan.name} value={`${plan.name} software plan`}>{plan.name} software plan</option>
+                ))}
+              </select>
+            </label>
+            <label className="form-full">
+              A little more about your needs
+              <textarea name="message" rows={3} maxLength={500} placeholder="Locations, product choices or anything else to discuss" />
+            </label>
+          </div>
+
+          <button type="submit" className="rr-button inquiry-submit">
+            {formStatus === 'ready' ? 'Inquiry details ready' : 'Prepare my enquiry'}
+            <ArrowRight size={16} />
+          </button>
+
+          {formStatus === 'ready' && (
+            <p className="form-notice" role="status">
+              <CheckCircle2 size={15} /> Your required details are complete. This preview can’t send your enquiry or store your personal details yet.
+            </p>
+          )}
+
+          <span className="form-safe-note">
+            <span className="tiny-green-dot" /> Nothing is sent or saved by this form.
+          </span>
+        </form>
+      </section>
+
+      {/* FAQS SECTION */}
+      <section className="faq-section section-wrap" id="faq">
+        <div className="faq-heading">
+          <span className="eyebrow">Good questions deserve clear answers</span>
+          <h2>Everything you need to <span>know.</span></h2>
+          <p>See anything that depends on product launch or setup? We’ll keep it clearly marked for confirmation.</p>
+          <a href="#bulk-inquiry" className="text-link">
+            Ask about ReviewQR <ArrowRight size={15} />
+          </a>
+        </div>
+
+        <div className="faq-list">
+          {primaryFaqs.map((faq, idx) => (
+            <FaqItem key={faq.q} faq={faq} index={idx} />
+          ))}
+          <details className="faq-more">
+            <summary>
+              More questions <Plus size={18} />
+            </summary>
+            <div>
+              {extraFaqs.map((faq, idx) => (
+                <FaqItem key={faq.q} faq={faq} index={idx + primaryFaqs.length} />
+              ))}
+            </div>
+          </details>
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="final-cta-section">
+        <div className="final-cta-inner section-wrap">
+          <div>
+            <span className="eyebrow eyebrow-light">A simpler way to invite a real review</span>
+            <h2>Make Every Customer Experience <span>Easier to Share.</span></h2>
+            <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
+            <div className="final-cta-buttons">
+              <a href="#pricing" className="rr-button rr-button-invert">
+                Get Your Review QR <ArrowRight size={16} />
+              </a>
+              <a href="#live-demo" className="rr-button rr-button-outline rr-button-on-dark">
+                Try the live demo <ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
+          <div className="final-product usage-detail-crop">
+            <img
+              src={standeeImage}
+              alt="ReviewQR acrylic QR and NFC standee and a review page on a phone"
+              loading="lazy"
+              width={1024}
+              height={1024}
+            />
+            <span>
+              <span className="tiny-green-dot" /> LOCTIMIZE REVIEWQR · PRODUCT PREVIEW
+            </span>
+          </div>
+        </div>
+        <div className="final-cta-index">
+          REVIEWQR <span>01 / 01</span>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="site-footer">
+        <div className="footer-top">
+          <div className="footer-brand">
+            <a href="#home" aria-label="Loctimize home">
+              <img src={footerLogo} className="footer-logo" alt="Loctimize — Optimize Local. Grow Global." />
+            </a>
+            <p>ReviewQR makes it easier for customers to find your review link — on their own terms.</p>
+            <span className="footer-disclosure">
+              Loctimize is an independent product and is not affiliated with, endorsed by or sponsored by Google.
+            </span>
+          </div>
+
+          <div className="footer-column">
+            <h3>Products</h3>
+            {products.map(prod => (
+              <button key={prod.name} type="button" className="footer-product-link" onClick={() => handleSelectProduct(prod.name)}>
+                {prod.name}
+              </button>
+            ))}
+            <a href="#pricing">Proposed plans</a>
+          </div>
+
+          <div className="footer-column">
+            <h3>Solutions</h3>
+            <a href="#ai-assistant">Review writing help</a>
+            <a href="#ai-replies">AI-assisted replies</a>
+            <a href="#features">Review QR features</a>
+            <a href="#businesses">Business benefits</a>
+          </div>
+
+          <div className="footer-column">
+            <h3>Explore</h3>
+            <a href="#how-it-works">How it works</a>
+            <a href="#live-demo">Try the demo</a>
+            <a href="#bulk-inquiry">Business enquiries</a>
+            <a href="#faq">FAQs</a>
+          </div>
+
+          <div className="footer-column footer-company">
+            <h3>Loctimize</h3>
+            <a href="#home">About Loctimize</a>
+            <a href="#bulk-inquiry">Contact & bulk orders</a>
+            <span>Product information available here is illustrative and subject to confirmation.</span>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} Loctimize ReviewQR. All rights reserved.</span>
+          <span>Optimize Local. Grow Global.</span>
+          <a href="#home">Back to the top <ArrowUpRight size={13} /></a>
         </div>
       </footer>
-    </div>
+
+      {/* STICKY MOBILE PURCHASE BAR */}
+      <div className={selectedProduct ? 'mobile-purchase-bar has-selection' : 'mobile-purchase-bar'}>
+        <span>
+          <small>REVIEWQR</small>
+          <strong>{selectedProduct || 'Choose a standee'}</strong>
+        </span>
+        <a href={selectedProduct ? '#bulk-inquiry' : '#pricing'} className="rr-button">
+          {selectedProduct ? 'Your enquiry' : 'Get Review QR'} <ArrowRight size={15} />
+        </a>
+      </div>
+
+      <span className="section-target" id="products-target" aria-hidden="true" />
+    </main>
   );
 }
 
-function HomeIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
+export default LandingPage;
