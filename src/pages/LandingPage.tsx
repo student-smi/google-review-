@@ -402,9 +402,9 @@ export function LandingPage() {
   const estimatedMonthlyReviews = Math.round(dailyCustomers * 30 * 0.08);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
-      {/* 1. TOP STICKY NAVBAR */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 relative">
+      {/* 1. TOP FIXED NAVBAR (ALWAYS PINNED TO TOP ON SCROLL) */}
+      <header className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between shadow-2xs">
         <a className="flex items-center gap-2" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
           <img src={headerLogo} className="h-8 w-auto object-contain" alt="Loctimize — Optimize Local. Grow Global." />
         </a>
@@ -442,7 +442,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-40 flex flex-col gap-4 text-base font-semibold text-slate-800"
+            className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-50 flex flex-col gap-4 text-base font-semibold text-slate-800"
           >
             <a href="#products" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Review QR</a>
             <a href="#how-it-works" onClick={closeMobileNav} className="py-2 border-b border-slate-100">How It Works</a>
@@ -473,7 +473,7 @@ export function LandingPage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
         variants={fadeInUp}
-        className="scroll-mt-20 pt-10 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center"
+        className="scroll-mt-20 pt-24 pb-16 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center"
       >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <div>
