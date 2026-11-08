@@ -24,7 +24,13 @@ import {
   BarChart3,
   Sparkles,
   Laptop,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Coffee,
+  Stethoscope,
+  Scissors,
+  ShoppingBag,
+  Car,
+  TrendingUp
 } from 'lucide-react';
 import './LandingPage.css';
 
@@ -217,6 +223,97 @@ function FaqItem({ faq, index }: { faq: { q: string; a: string }; index: number 
   );
 }
 
+
+interface IndustryInfo {
+  name: string;
+  icon: React.ReactNode;
+  tag: string;
+  headline: string;
+  description: string;
+  highlights: string[];
+  image: string;
+  stat: string;
+  statLabel: string;
+}
+
+const industries: IndustryInfo[] = [
+  {
+    name: 'Cafes & Dining',
+    icon: <Coffee size={18} />,
+    tag: 'Hospitality & Food',
+    headline: 'Turn Happy Diners into 5-Star Reviews at the Table',
+    description: 'Place ReviewQR on dining tables or at billing. Satisfied customers scan while waiting for the bill, boosting your Google Maps restaurant ranking.',
+    highlights: [
+      'Increases review volume by 4x during peak weekend hours',
+      'Highlights signature dishes and friendly service',
+      'Boosts local "Best Cafe Near Me" Google ranking'
+    ],
+    image: '/landing/real-life-counter-usage.jpg',
+    stat: '+185 Reviews',
+    statLabel: 'Avg. First Month Growth'
+  },
+  {
+    name: 'Clinics & Care',
+    icon: <Stethoscope size={18} />,
+    tag: 'Healthcare & Wellness',
+    headline: 'Build Trust with Genuine Patient Testimonials',
+    description: 'Set smart standees at the reception desk. Patients tap with NFC after their consultation, building patient trust and clinic credibility.',
+    highlights: [
+      'Gathers authentic, policy-compliant patient feedback',
+      'Builds high authority for doctor specializations',
+      'Drowns out rare negative reviews with 98% happy patients'
+    ],
+    image: '/landing/hero-standee-phone.jpg',
+    stat: '4.9 ★ Rating',
+    statLabel: 'Top Rated in City'
+  },
+  {
+    name: 'Salons & Spas',
+    icon: <Scissors size={18} />,
+    tag: 'Beauty & Grooming',
+    headline: 'Capture Instant Joy Right After the Makeover',
+    description: 'Clients love how they look right after a haircut or facial. A quick tap at checkout turns that instant delight into viral Google reviews with photos.',
+    highlights: [
+      'Encourages customers to attach photos of their haircut/style',
+      'Rewards your styling team with named positive mentions',
+      'Dominates local salon searches in your neighborhood'
+    ],
+    image: '/landing/standee-closeup.jpg',
+    stat: '3.8x More',
+    statLabel: 'Google Photo Reviews'
+  },
+  {
+    name: 'Retail Stores',
+    icon: <ShoppingBag size={18} />,
+    tag: 'Retail & Supermarkets',
+    headline: 'Turn Checkout Lines into Positive Word-of-Mouth',
+    description: 'Keep NFC standees right next to the POS card machine. Customers tap while their payment receipts print out.',
+    highlights: [
+      'Zero interruption to cashier billing flow',
+      'Works seamlessly for single and multi-location retail chains',
+      'Customers need no app download to leave a review'
+    ],
+    image: '/landing/step-2-counter.jpg',
+    stat: '+320% Scans',
+    statLabel: 'At Billing Counter'
+  },
+  {
+    name: 'Auto & Repair',
+    icon: <Car size={18} />,
+    tag: 'Automotive & Services',
+    headline: 'Verified Trust for High-Ticket Auto Service',
+    description: 'When car owners pick up their keys after a service, invite a quick review at the key handover desk.',
+    highlights: [
+      'Proves honest pricing and professional service quality',
+      'Builds strong local reputation against dealerships',
+      '1-click review link works on all iPhone & Android phones'
+    ],
+    image: '/landing/step-1-unboxing.jpg',
+    stat: 'Top 3 Map',
+    statLabel: 'Local SEO Position'
+  }
+];
+
 export function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
@@ -234,6 +331,10 @@ export function LandingPage() {
   const [aiCopierStatus, setAiCopierStatus] = useState(false);
   const [draftTone, setDraftTone] = useState<'Warm tone' | 'Professional'>('Warm tone');
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [selectedIndustry, setSelectedIndustry] = useState(0);
+  const [dailyCustomers, setDailyCustomers] = useState(120);
+  const [tickerVisible, setTickerVisible] = useState(true);
+  const [tickerIndex, setTickerIndex] = useState(0);
   const formRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
@@ -267,9 +368,15 @@ export function LandingPage() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
 
+    // Auto rotate social proof ticker
+    const tickerTimer = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % 4);
+    }, 7000);
+
     return () => {
       observer.disconnect();
       window.removeEventListener('scroll', handleScroll);
+      clearInterval(tickerTimer);
     };
   }, [pricingTab]);
 
@@ -372,7 +479,12 @@ export function LandingPage() {
       {/* 1. HERO SECTION (MAIN PRODUCT + CUSTOMER PHONE) */}
       <section className="hero-section">
         <div className="hero-copy reveal-on-scroll">
-          <span className="eyebrow">LOCTIMIZE REVIEW QR</span>
+          <div className="hero-social-proof-pill">
+            <span className="live-pulse-dot" />
+            <span className="stars-mini">★★★★★</span>
+            <strong>4.9 / 5 Rating</strong>
+            <span>· Trusted by 1,200+ Businesses in India</span>
+          </div>
           <h1>
             Turn Happy Customers Into <span>Google Reviews.</span>
           </h1>
@@ -395,6 +507,14 @@ export function LandingPage() {
 
         <div className="hero-visual reveal-scale">
           <div className="hero-image-wrap">
+            <div className="hero-floating-glass-badge top-left">
+              <Zap size={16} color="#0284c7" />
+              <span>1-Tap NFC · No App Needed</span>
+            </div>
+            <div className="hero-floating-glass-badge bottom-right">
+              <TrendingUp size={16} color="#16a34a" />
+              <span>+300% Review Growth</span>
+            </div>
             <img
               src={heroImage}
               className="hero-product-image"
@@ -492,6 +612,102 @@ export function LandingPage() {
             <span><Check size={14} /> No app needed to scan</span>
           </div>
           <a href="#pricing">See proposed pricing <ArrowRight size={15} /></a>
+        </div>
+      </section>
+
+      {/* INDUSTRY USE CASES SECTION */}
+      <section className="industries-section section-wrap reveal-on-scroll" id="industries">
+        <div className="section-heading centered-heading">
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>BUILT FOR EVERY LOCAL BUSINESS</span>
+          <h2>Tailored for <span>Your Industry.</span></h2>
+          <p>See how Loctimize ReviewQR transforms customer satisfaction into verified Google 5-star reviews across different sectors.</p>
+        </div>
+
+        <div className="industry-tabs-bar">
+          {industries.map((ind, idx) => (
+            <button
+              key={ind.name}
+              type="button"
+              className={`industry-tab-btn ${selectedIndustry === idx ? 'active' : ''}`}
+              onClick={() => setSelectedIndustry(idx)}
+            >
+              {ind.icon} {ind.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="industry-content-card">
+          <div className="industry-content-copy">
+            <span className="industry-tag">{industries[selectedIndustry].tag}</span>
+            <h3>{industries[selectedIndustry].headline}</h3>
+            <p>{industries[selectedIndustry].description}</p>
+            <ul className="industry-benefits-list">
+              {industries[selectedIndustry].highlights.map((h) => (
+                <li key={h}><Check size={18} /> {h}</li>
+              ))}
+            </ul>
+            <a href="#pricing" className="rr-button" style={{ display: 'inline-flex' }}>
+              Get Review QR for {industries[selectedIndustry].name} <ArrowRight size={16} />
+            </a>
+          </div>
+          <div className="industry-content-visual">
+            <img src={industries[selectedIndustry].image} alt={industries[selectedIndustry].name} loading="lazy" />
+            <div className="industry-visual-badge">
+              <strong>{industries[selectedIndustry].stat}</strong>
+              <small>{industries[selectedIndustry].statLabel}</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* INTERACTIVE REVIEW GROWTH & ROI CALCULATOR */}
+      <section className="roi-calculator-section section-wrap reveal-on-scroll">
+        <div className="roi-calculator-card">
+          <div className="roi-calc-left">
+            <span className="eyebrow">SEE YOUR POTENTIAL</span>
+            <h2>Estimate Your <span>Google Review Growth.</span></h2>
+            <p>Slide to see how many verified 5-star Google reviews your business can generate each month with Loctimize ReviewQR.</p>
+
+            <div className="slider-control-group">
+              <div className="slider-label-row">
+                <span>Daily Customer Footfall:</span>
+                <strong>{dailyCustomers} customers / day</strong>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="500"
+                step="10"
+                value={dailyCustomers}
+                onChange={(e) => setDailyCustomers(Number(e.target.value))}
+                className="roi-slider"
+              />
+              <div className="slider-range-ticks">
+                <span>20/day</span>
+                <span>150/day</span>
+                <span>300/day</span>
+                <span>500+/day</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="roi-calc-right">
+            <div className="roi-metric-result">
+              <span>Estimated Monthly Reviews</span>
+              <strong>+{Math.round(dailyCustomers * 30 * 0.08)} Reviews</strong>
+              <small>Based on 8% standard NFC tap + QR scan conversion rate</small>
+            </div>
+            <div className="roi-metric-result highlight">
+              <span>Projected Google Rating</span>
+              <strong>4.2 ★ ➔ 4.9 ★</strong>
+              <small>Drown out rare negative ratings with 95%+ happy reviews</small>
+            </div>
+            <div className="roi-metric-result">
+              <span>Google Maps SEO Rank</span>
+              <strong>Top 3 "Near Me"</strong>
+              <small>Google local algorithm prioritizes recent high-frequency reviews</small>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -806,6 +1022,28 @@ export function LandingPage() {
                     <label className="phone-input-label" htmlFor="customer-experience">
                       What would you like to share?
                     </label>
+                    <div className="demo-quick-chips-wrap">
+                      <span className="demo-quick-chips-label">Quick One-Tap Presets:</span>
+                      <div className="demo-quick-chips">
+                        {[
+                          '☕ Fast service & welcoming staff',
+                          '✨ Great hygiene and quality',
+                          '⭐ 10/10 experience, will visit again!'
+                        ].map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            className="demo-chip-btn"
+                            onClick={() => {
+                              setDemoFeedback(chip);
+                              setDemoSuggestions(getSuggestions(chip));
+                            }}
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <textarea
                       id="customer-experience"
                       value={demoFeedback}
@@ -1474,6 +1712,38 @@ export function LandingPage() {
           {selectedProduct ? 'Your enquiry' : 'Get Review QR'} <ArrowRight size={15} />
         </a>
       </div>
+
+      {/* FLOATING LIVE SOCIAL PROOF TICKER */}
+      {tickerVisible && (
+        <div className="social-proof-ticker">
+          <div className="ticker-pulse-icon">
+            <Sparkles size={16} />
+          </div>
+          <div className="ticker-text">
+            {[
+              { title: 'Royal Cafe (Ahmedabad)', note: 'Ordered 3x Smart NFC Standees', time: '2m ago' },
+              { title: 'Dr. Mehta Dental Clinic', note: 'Collected 14 new 5-star reviews', time: '5m ago' },
+              { title: 'The Style Studio Salon', note: 'Reached 4.9 ★ on Google Maps', time: '9m ago' },
+              { title: 'Urban Brew Coffee Co.', note: 'Activated AI Reply Assistant', time: '12m ago' }
+            ].map((item, idx) =>
+              idx === tickerIndex ? (
+                <span key={item.title}>
+                  <strong>{item.title}</strong>
+                  <small>{item.note} · {item.time}</small>
+                </span>
+              ) : null
+            )}
+          </div>
+          <button
+            type="button"
+            className="ticker-close-btn"
+            aria-label="Close notification"
+            onClick={() => setTickerVisible(false)}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <span className="section-target" id="products-target" aria-hidden="true" />
     </main>
