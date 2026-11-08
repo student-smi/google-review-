@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, gt, desc, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { users, sessions, businesses, customerReviews, scans, aiUsageDaily } from '../db/schema';
+import { users, sessions, businesses, customerReviews, scans, aiUsageDaily, enquiries } from '../db/schema';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import type { Env } from './public';
 
@@ -42,6 +42,11 @@ adminRoutes.get('/overview', async (c) => {
     // Total scans
     const allScans = await db.select({ id: scans.id }).from(scans);
     const totalScans = allScans.length;
+
+    // Total business enquiries
+    const allEnquiries = await db.select().from(enquiries).catch(() => []);
+    const totalEnquiries = allEnquiries.length;
+    const newEnquiries = allEnquiries.filter((e) => e.status === 'new').length;
 
     // AI Usage Telemetry
     const today = now.toISOString().split('T')[0];
@@ -84,7 +89,9 @@ adminRoutes.get('/overview', async (c) => {
         blockedUsers,
         totalBusinesses,
         totalReviews,
-        totalScans
+        totalScans,
+        totalEnquiries,
+        newEnquiries
       },
       telemetry: {
         ai: {
@@ -348,4 +355,66 @@ adminRoutes.post('/users/:userId/role', async (c) => {
     return c.json({ error: err.message || 'Failed to update user role' }, 500);
   }
 });
+
+// ──────────────────────────────────────────────
+// 6. Business Standee & Multi-Location Enquiries
+// ──────────────────────────────────────────────
+adminRoutes.get('/enquiries', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const list = await db
+      .select()
+      .from(enquiries)
+      .orderBy(desc(enquiries.createdAt));
+
+    return c.json({
+      success: true,
+      enquiries: list
+    });
+  } catch (err: any) {
+    console.error('Fetch enquiries failed:', err);
+    return c.json({ error: err.message || 'Failed to fetch enquiries' }, 500);
+  }
+});
+
+adminRoutes.patch('/enquiries/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const db = getDb(c.env.DB);
+    const now = Math.floor(Date.now() / 1000);
+
+    const updateData: any = { updatedAt: now };
+    if (body.status !== undefined) updateData.status = String(body.status);
+    if (body.notes !== undefined) updateData.notes = String(body.notes);
+
+    await db.update(enquiries).set(updateData).where(eq(enquiries.id, id));
+
+    return c.json({
+      success: true,
+      message: 'Enquiry updated successfully'
+    });
+  } catch (err: any) {
+    console.error('Update enquiry failed:', err);
+    return c.json({ error: err.message || 'Failed to update enquiry' }, 500);
+  }
+});
+
+adminRoutes.delete('/enquiries/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = getDb(c.env.DB);
+
+    await db.delete(enquiries).where(eq(enquiries.id, id));
+
+    return c.json({
+      success: true,
+      message: 'Enquiry deleted successfully'
+    });
+  } catch (err: any) {
+    console.error('Delete enquiry failed:', err);
+    return c.json({ error: err.message || 'Failed to delete enquiry' }, 500);
+  }
+});
+
 

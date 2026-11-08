@@ -277,3 +277,24 @@ export const mediaAssets = sqliteTable('media_assets', {
   index('idx_media_assets_business').on(t.businessId)
 ]);
 
+export const enquiries = sqliteTable('enquiries', {
+  id: text('id').primaryKey(),
+  company: text('company').notNull(),
+  contactPerson: text('contact_person').notNull(),
+  mobile: text('mobile').notNull(),
+  email: text('email').notNull(),
+  locations: integer('locations').default(1).notNull(),
+  quantity: text('quantity').notNull(),
+  product: text('product').notNull(),
+  message: text('message'),
+  status: text('status').default('new').notNull(), // 'new' | 'contacted' | 'qualified' | 'converted' | 'archived'
+  notes: text('notes'),
+  source: text('source').default('landing_page').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, (t) => [
+  index('idx_enquiries_created').on(t.createdAt),
+  index('idx_enquiries_status').on(t.status)
+]);
+
+

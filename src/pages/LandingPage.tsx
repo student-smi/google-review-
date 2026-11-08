@@ -334,7 +334,8 @@ export function LandingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedQuantity, setSelectedQuantity] = useState('25 units');
-  const [formStatus, setFormStatus] = useState<'idle' | 'ready'>('idle');
+  const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [formError, setFormError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [aiCopierStatus, setAiCopierStatus] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -394,10 +395,42 @@ export function LandingPage() {
     document.getElementById('bulk-inquiry')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (e.currentTarget.reportValidity()) {
-      setFormStatus('ready');
+    if (!e.currentTarget.reportValidity()) return;
+
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      company: formData.get('company'),
+      contactPerson: formData.get('contact'),
+      mobile: formData.get('mobile'),
+      email: formData.get('email'),
+      locations: formData.get('locations'),
+      quantity: formData.get('quantity'),
+      product: formData.get('product'),
+      message: formData.get('message'),
+      source: 'landing_page'
+    };
+
+    setFormStatus('submitting');
+    setFormError(null);
+
+    try {
+      const res = await fetch('/api/public/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = (await res.json()) as any;
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit enquiry');
+      }
+
+      setFormStatus('success');
+      formRef.current?.reset();
+    } catch (err: any) {
+      setFormError(err?.message || 'Something went wrong. Please try again.');
+      setFormStatus('error');
     }
   }
 
@@ -1427,63 +1460,99 @@ export function LandingPage() {
                 <button type="button" className="text-blue-500 hover:text-blue-700 cursor-pointer" onClick={() => setSelectedProduct('')}>✕</button>
               </div>
             )}
-            <form ref={formRef} onSubmit={handleFormSubmit} className="flex flex-col gap-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {formStatus === 'success' ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-3 animate-in fade-in duration-200">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                  <CheckCircle2 size={26} />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">Enquiry Received Successfully!</h4>
+                  <p className="text-xs text-slate-600 mt-1 max-w-sm mx-auto">
+                    Thank you! Our dedicated enterprise team has received your enquiry and will contact you via WhatsApp / Email within 2 business hours.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormStatus('idle');
+                      setSelectedProduct('');
+                    }}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-white border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Submit Another Enquiry
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form ref={formRef} onSubmit={handleFormSubmit} className="flex flex-col gap-3">
+                {formError && (
+                  <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3.5 py-2.5 rounded-xl font-medium">
+                    {formError}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Company Name *
+                    <input name="company" required placeholder="Business or brand name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Contact Person *
+                    <input name="contact" required placeholder="Your name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Mobile Number *
+                    <input name="mobile" required placeholder="+91 98765 43210" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Business Email *
+                    <input name="email" type="email" required placeholder="you@company.com" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Number of Locations *
+                    <input name="locations" type="number" required min={1} defaultValue={1} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                    Quantity to Explore *
+                    <select name="quantity" required value={selectedQuantity} onChange={(e) => setSelectedQuantity(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
+                      {['1 unit (Trial sample)', '5-10 units', '10-25 units', '25-50 units', '50-100 units', '100+ units'].map((qty) => (
+                        <option key={qty} value={qty}>{qty}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Company Name *
-                  <input name="company" required placeholder="Business or brand name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Contact Person *
-                  <input name="contact" required placeholder="Your name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Mobile Number *
-                  <input name="mobile" required placeholder="+91 98765 43210" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Business Email *
-                  <input name="email" type="email" required placeholder="you@company.com" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Number of Locations *
-                  <input name="locations" type="number" required min={1} defaultValue={1} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                  Quantity to Explore *
-                  <select name="quantity" required value={selectedQuantity} onChange={(e) => setSelectedQuantity(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
-                    {['1 unit (Trial sample)', '5-10 units', '10-25 units', '25-50 units', '50-100 units', '100+ units'].map((qty) => (
-                      <option key={qty} value={qty}>{qty}</option>
+                  Product Choice *
+                  <select name="product" required value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
+                    <option value="" disabled>Select product or plan</option>
+                    {products.map((prod) => (
+                      <option key={prod.name} value={prod.name}>{prod.name}</option>
+                    ))}
+                    {softwarePlans.map((plan) => (
+                      <option key={plan.name} value={`${plan.name} software plan`}>{plan.name} software plan</option>
                     ))}
                   </select>
                 </label>
-              </div>
-              <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                Product Choice *
-                <select name="product" required value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
-                  <option value="" disabled>Select product or plan</option>
-                  {products.map((prod) => (
-                    <option key={prod.name} value={prod.name}>{prod.name}</option>
-                  ))}
-                  {softwarePlans.map((plan) => (
-                    <option key={plan.name} value={`${plan.name} software plan`}>{plan.name} software plan</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-                Special Requirements (Optional)
-                <input name="message" placeholder="Custom logo, multiple delivery addresses, or questions" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
-              </label>
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm mt-2 cursor-pointer"
-              >
-                {formStatus === 'ready' ? '✓ Enquiry Details Ready! We will contact you shortly' : 'Submit Business Enquiry'} <ArrowRight size={16} />
-              </button>
-              <span className="text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-1.5 mt-1">
-                <CheckCircle2 size={13} className="text-emerald-600" /> Zero spam guarantee · 100% confidential
-              </span>
-            </form>
+                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+                  Special Requirements (Optional)
+                  <input name="message" placeholder="Custom logo, multiple delivery addresses, or questions" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                </label>
+                <button
+                  type="submit"
+                  disabled={formStatus === 'submitting'}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-11 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm mt-2 cursor-pointer"
+                >
+                  {formStatus === 'submitting' ? (
+                    'Submitting Enquiry...'
+                  ) : (
+                    <>Submit Business Enquiry <ArrowRight size={16} /></>
+                  )}
+                </button>
+                <span className="text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-1.5 mt-1">
+                  <CheckCircle2 size={13} className="text-emerald-600" /> Zero spam guarantee · 100% confidential
+                </span>
+              </form>
+            )}
           </div>
         </div>
       </motion.section>

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, or, sql, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews, locations, users, sessions } from '../db/schema';
+import { qrCodes, businesses, scanDailyStats, scans, mediaAssets, customerReviews, locations, users, sessions, enquiries } from '../db/schema';
 
 export interface Env {
   DB: any;
@@ -602,5 +602,60 @@ publicRoutes.post('/auth/google', async (c) => {
   } catch (err: any) {
     console.error('Google auth error:', err);
     return c.json({ error: 'Authentication failed' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// Submit Business Lead / Standee Order Enquiry
+// ──────────────────────────────────────────────
+publicRoutes.post('/enquiry', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => null);
+    if (!body) {
+      return c.json({ error: 'Invalid enquiry payload' }, 400);
+    }
+
+    const company = String(body.company || '').trim();
+    const contactPerson = String(body.contactPerson || body.contact || '').trim();
+    const mobile = String(body.mobile || '').trim();
+    const email = String(body.email || '').trim().toLowerCase();
+
+    if (!company || !contactPerson || !mobile || !email) {
+      return c.json({
+        error: 'Please provide company name, contact person, mobile number, and email.'
+      }, 400);
+    }
+
+    const db = getDb(c.env.DB);
+    const id = `enq_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    const enquiryRecord = {
+      id,
+      company,
+      contactPerson,
+      mobile,
+      email,
+      locations: Number(body.locations) || 1,
+      quantity: String(body.quantity || '1 unit (Trial sample)').trim(),
+      product: String(body.product || 'NFC + QR Smart Review Standee').trim(),
+      message: body.message ? String(body.message).trim() : null,
+      status: 'new',
+      notes: null,
+      source: String(body.source || 'landing_page'),
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.insert(enquiries).values(enquiryRecord);
+
+    return c.json({
+      success: true,
+      id,
+      message: 'Enquiry submitted successfully! Our team will reach out shortly.'
+    }, 201);
+  } catch (err: any) {
+    console.error('Submit enquiry error:', err);
+    return c.json({ error: err.message || 'Failed to submit enquiry' }, 500);
   }
 });
