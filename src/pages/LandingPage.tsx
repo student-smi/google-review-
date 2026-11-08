@@ -53,6 +53,7 @@ interface Product {
   index: string;
   view: string;
   viewLabel: string;
+  image: string;
   recommended?: boolean;
 }
 
@@ -65,7 +66,8 @@ const products: Product[] = [
     custom: 'Ask about custom branding',
     index: '01',
     view: 'qr-detail',
-    viewLabel: 'QR access'
+    viewLabel: 'QR access',
+    image: '/landing/pricing-qr-standee.jpg'
   },
   {
     name: 'NFC + QR Smart Review Standee',
@@ -76,6 +78,7 @@ const products: Product[] = [
     index: '02',
     view: 'scan-and-tap',
     viewLabel: 'Scan + tap access',
+    image: '/landing/pricing-nfc-qr-smart.jpg',
     recommended: true
   },
   {
@@ -86,7 +89,8 @@ const products: Product[] = [
     custom: 'Branded finish available by inquiry',
     index: '03',
     view: 'standee-detail',
-    viewLabel: 'Branding by enquiry'
+    viewLabel: 'Branding by enquiry',
+    image: '/landing/pricing-premium-branded.jpg'
   }
 ];
 
@@ -502,9 +506,9 @@ export function LandingPage() {
       </section>
 
       {/* 4. REAL-LIFE USAGE SETTING SECTION (NEW LIFESTYLE BANNER) */}
-      <section className="lifestyle-section section-wrap">
+      <section className="lifestyle-section section-wrap" id="real-life">
         <div className="section-heading centered-heading">
-          <span className="eyebrow">REAL-WORLD EXPERIENCE</span>
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>REAL-WORLD EXPERIENCE</span>
           <h2>From the Counter to <span>Your Customer's Phone.</span></h2>
           <p>A natural, effortless touchpoint at checkout that turns everyday customer satisfaction into verified 5-star Google reviews.</p>
         </div>
@@ -515,14 +519,11 @@ export function LandingPage() {
             alt="Real life counter setting: barista and customer interacting with Loctimize standee on counter"
             loading="lazy"
           />
-          <div className="lifestyle-overlay-badge">
-            <div className="lifestyle-badge-title">
-              <span className="tiny-green-dot" /> LIVE AT CHECKOUT
-            </div>
-            <div className="lifestyle-badge-text">
-              Fits effortlessly into cafes, restaurants, clinics, salons, and retail counters.
-            </div>
-          </div>
+        </div>
+        <div className="lifestyle-caption-pill">
+          <span className="tiny-green-dot" />
+          <strong>LIVE AT CHECKOUT</strong>
+          <span>· Fits effortlessly into cafes, restaurants, clinics, salons, and retail counters.</span>
         </div>
       </section>
 
@@ -1036,9 +1037,9 @@ export function LandingPage() {
       </section>
 
       {/* 7. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + TESTIMONIAL + FINAL CTA) */}
-      <section className="benefits-section section-wrap" id="businesses">
-        <div className="section-heading benefits-heading">
-          <span className="eyebrow">A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
+      <section className="growth-full-section section-wrap" id="businesses">
+        <div className="section-heading centered-heading">
+          <span className="eyebrow" style={{ justifyContent: 'center' }}>A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
           <h2>Designed for Everyday <span>Business Growth.</span></h2>
           <p>Less friction for your customers. More thoughtful conversations and higher rankings for your business.</p>
         </div>
@@ -1087,7 +1088,7 @@ export function LandingPage() {
           <div className="growth-final-cta-card">
             <div>
               <div className="growth-final-cta-visual">
-                <img src={finalCtaImg} alt="Loctimize Standee and Dashboard on Laptop" loading="lazy" />
+                <img src={heroImage} alt="Loctimize Standee and Customer Google Review" loading="lazy" style={{ maxHeight: '190px', objectFit: 'cover', width: '100%', borderRadius: '10px' }} />
               </div>
               <h2>Make Every Customer Experience Easier to Share.</h2>
               <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
@@ -1142,10 +1143,10 @@ export function LandingPage() {
                     (selectedProduct === prod.name ? ' is-selected' : '')
                   }
                 >
-                  <div className={`price-product-photo ${prod.view}`}>
+                  <div className="price-product-photo">
                     <img
-                      src={counterBase}
-                      alt={`Illustrative ${prod.viewLabel.toLowerCase()} detail; not a confirmed variant photograph`}
+                      src={prod.image}
+                      alt={prod.name}
                       loading="lazy"
                       width={1024}
                       height={1024}

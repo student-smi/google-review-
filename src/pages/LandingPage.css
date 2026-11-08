@@ -731,3 +731,170 @@ html {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ========================================================
+   DEFINITIVE OVERRIDES FOR FULL-WIDTH FIT & UNCLIPPED IMAGES
+   ======================================================== */
+
+/* Reset all unwanted transforms & clipping */
+.product-detail-crop img,
+.price-product-photo img,
+.price-product-photo.qr-detail img,
+.price-product-photo.standee-detail img,
+.price-product-photo.scan-and-tap img,
+.product-image-large img {
+  transform: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+}
+
+.price-product-photo {
+  aspect-ratio: 4 / 3 !important;
+  width: 100% !important;
+  max-height: 260px !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid var(--border) !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.product-image-large {
+  aspect-ratio: 4 / 3 !important;
+  width: 100% !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 28px rgba(4, 20, 60, 0.06) !important;
+}
+
+.product-layout {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  align-items: center !important;
+  gap: 48px !important;
+}
+
+@media (max-width: 860px) {
+  .product-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Full Width Growth Section (Bypassing old .benefits-section grid) */
+.growth-full-section {
+  display: block !important;
+  width: 100% !important;
+  padding-top: 80px !important;
+  padding-bottom: 80px !important;
+}
+
+.growth-action-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 20px !important;
+  margin: 36px 0 48px !important;
+  width: 100% !important;
+}
+
+.proof-cta-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1.35fr !important;
+  gap: 28px !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+
+.owner-testimonial-card {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px rgba(4, 20, 60, 0.05) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.owner-testimonial-img-wrap {
+  width: 100% !important;
+  height: 260px !important;
+  overflow: hidden !important;
+}
+
+.owner-testimonial-img-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center 20% !important;
+}
+
+.growth-final-cta-card {
+  background: var(--rr-navy) !important;
+  color: #ffffff !important;
+  border-radius: 20px !important;
+  padding: 36px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  box-shadow: 0 16px 40px rgba(4, 20, 60, 0.18) !important;
+  height: 100% !important;
+}
+
+/* Lifestyle Section */
+.lifestyle-section {
+  padding: 80px 0 60px !important;
+  scroll-margin-top: 80px !important;
+  display: block !important;
+  width: 100% !important;
+}
+.lifestyle-card {
+  position: relative !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 16px 40px rgba(4, 20, 60, 0.12) !important;
+  border: 1px solid var(--border) !important;
+  background: #0f172a !important;
+}
+.lifestyle-card img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 480px !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+}
+.lifestyle-caption-pill {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  margin-top: 18px !important;
+  font-size: 14px !important;
+  color: var(--rr-copy) !important;
+  text-align: center !important;
+  background: var(--secondary) !important;
+  padding: 10px 22px !important;
+  border-radius: 30px !important;
+  border: 1px solid var(--border) !important;
+  max-width: max-content !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+@media (max-width: 992px) {
+  .growth-action-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .proof-cta-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+@media (max-width: 640px) {
+  .growth-action-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
