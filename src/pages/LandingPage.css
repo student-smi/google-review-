@@ -2234,3 +2234,393 @@ html {
     transform: rotate(90deg) !important;
   }
 }
+
+
+/* ==========================================================================
+   BROWSER-VERIFIED PIXEL-PERFECT FIXES (VERIFIED VIA HEADLESS CHROME)
+   ========================================================================== */
+
+/* Fix 1: Sticky Header scroll-margin-top for all section anchors */
+#products,
+#industries,
+#how-it-works,
+#real-life,
+#features,
+#live-demo,
+#ai-assistant,
+#ai-replies,
+#businesses,
+#pricing,
+#inquiry,
+.faq-section {
+  scroll-margin-top: 75px !important;
+}
+
+/* Fix 2: Hero Section top breathing space so badges & proof pills aren't under navbar */
+.hero-section {
+  padding-top: 36px !important;
+  padding-bottom: 24px !important;
+}
+
+.hero-social-proof-pill {
+  margin-top: 4px !important;
+  margin-bottom: 12px !important;
+}
+
+/* Fix 3: Real Mobile Phone Simulator Mockup */
+.phone-preview-wrap {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 16px auto 0 !important;
+  width: 100% !important;
+}
+
+.phone-device {
+  width: 100% !important;
+  max-width: 320px !important;
+  margin: 0 auto !important;
+  border: 9px solid #1e293b !important;
+  border-radius: 36px !important;
+  background: #ffffff !important;
+  box-shadow: 0 20px 50px -10px rgba(4, 20, 60, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.phone-camera {
+  width: 60px !important;
+  height: 5px !important;
+  background: #0f172a !important;
+  border-radius: 4px !important;
+  margin: 7px auto 4px !important;
+}
+
+.phone-status {
+  padding: 2px 14px !important;
+  font-size: 11px !important;
+  color: #64748b !important;
+  display: flex !important;
+  justify-content: space-between !important;
+}
+
+.phone-brand {
+  text-align: center !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--primary) !important;
+  margin: 4px 0 10px !important;
+}
+
+.phone-brand span {
+  color: var(--foreground) !important;
+}
+
+.phone-screen {
+  padding: 10px 14px 18px !important;
+}
+
+.phone-stage h3 {
+  font-size: 15px !important;
+  margin: 4px 0 6px !important;
+}
+
+.phone-stage p {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  margin-bottom: 10px !important;
+}
+
+.phone-review-stamp {
+  width: 100px !important;
+  height: 100px !important;
+  border-radius: 14px !important;
+  margin: 12px auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #eff6ff !important;
+  border: 2px dashed #0284c7 !important;
+  color: #0284c7 !important;
+  gap: 4px !important;
+}
+
+.phone-review-stamp span {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+}
+
+.phone-language-pill {
+  font-size: 11px !important;
+  margin: 8px auto 14px !important;
+  padding: 4px 10px !important;
+  width: fit-content !important;
+}
+
+.phone-button {
+  width: 100% !important;
+  min-height: 38px !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+}
+
+/* Fix 4: Restaurant Owner Photo display in Section 7 */
+.owner-testimonial-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(4, 20, 60, 0.05) !important;
+  min-height: 130px !important;
+}
+
+.owner-testimonial-img-wrap {
+  width: 125px !important;
+  min-width: 125px !important;
+  max-width: 125px !important;
+  align-self: stretch !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background: #f1f5f9 !important;
+}
+
+.owner-testimonial-img-wrap img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center 20% !important;
+  display: block !important;
+}
+
+.owner-testimonial-content {
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+
+.owner-quote-mark {
+  font-size: 24px !important;
+  line-height: 1 !important;
+  color: var(--primary) !important;
+  margin: 0 !important;
+}
+
+.owner-quote-text {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+}
+
+.owner-author-name {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  margin-top: 2px !important;
+}
+
+/* Fix 5: Pricing Cards compact fit - buttons 100% visible on screen */
+.pricing-section {
+  padding-top: 28px !important;
+  padding-bottom: 28px !important;
+}
+
+.price-product-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+}
+
+.price-product-row {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(4, 20, 60, 0.05) !important;
+}
+
+.price-product-photo {
+  height: 110px !important;
+  max-height: 110px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+  padding: 6px !important;
+  background: #f8fafc !important;
+  display: block !important;
+}
+
+.price-card-content {
+  padding: 10px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.price-product-name {
+  font-size: 15px !important;
+  margin: 2px 0 4px !important;
+}
+
+.price-product-intro {
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+  margin-bottom: 6px !important;
+  min-height: 28px !important;
+}
+
+.hardware-price strong {
+  font-size: 22px !important;
+}
+
+.hardware-price small {
+  font-size: 10.5px !important;
+}
+
+.hardware-features {
+  gap: 4px !important;
+  margin: 6px 0 10px !important;
+}
+
+.hardware-features li {
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+}
+
+.price-select-button {
+  padding: 7px 12px !important;
+  min-height: 36px !important;
+  font-size: 12.5px !important;
+  border-radius: 6px !important;
+}
+
+/* Fix 6: Notification Ticker compact & non-obtrusive */
+.social-proof-ticker {
+  bottom: 12px !important;
+  left: 12px !important;
+  padding: 5px 10px 5px 8px !important;
+  font-size: 11px !important;
+  max-width: 280px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 14px rgba(4, 20, 60, 0.1) !important;
+  z-index: 35 !important;
+}
+
+.ticker-pulse-icon {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.ticker-text strong {
+  font-size: 11.5px !important;
+}
+
+.ticker-text small {
+  font-size: 10px !important;
+}
+
+
+/* ==========================================================================
+   FINAL POLISH FOR VIEWPORT FIT & CENTERING
+   ========================================================================== */
+
+/* Pricing Top flex row: Heading on left, Toggle on right */
+.pricing-top {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  margin-bottom: 14px !important;
+  gap: 16px !important;
+  text-align: left !important;
+}
+
+.pricing-top > div:first-child {
+  max-width: 640px !important;
+}
+
+.pricing-top h2 {
+  margin: 4px 0 6px !important;
+}
+
+.pricing-top p {
+  margin-bottom: 0 !important;
+  font-size: 12.5px !important;
+}
+
+.pricing-toggle {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+}
+
+/* Pricing cards compact sizing: 100% visible on screen */
+.price-product-list {
+  gap: 14px !important;
+}
+
+.price-product-photo {
+  height: 95px !important;
+  max-height: 95px !important;
+  padding: 4px !important;
+}
+
+.price-product-intro {
+  display: none !important;
+}
+
+.hardware-price {
+  margin: 4px 0 6px !important;
+}
+
+.hardware-price strong {
+  font-size: 22px !important;
+}
+
+.hardware-price small {
+  font-size: 10px !important;
+}
+
+.hardware-features {
+  gap: 3px !important;
+  margin: 4px 0 8px !important;
+}
+
+.hardware-features li {
+  font-size: 11.5px !important;
+  line-height: 1.25 !important;
+}
+
+.price-select-button {
+  padding: 6px 12px !important;
+  min-height: 34px !important;
+  font-size: 12.5px !important;
+  margin-top: 4px !important;
+}
+
+.price-card-content {
+  padding: 8px 12px 10px !important;
+}
+
+/* Phone Simulator centered */
+.phone-preview-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 14px auto 0 !important;
+}
+
+@media (max-width: 768px) {
+  .pricing-top {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
