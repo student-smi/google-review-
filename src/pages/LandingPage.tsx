@@ -537,9 +537,117 @@ export function LandingPage() {
           <p>Pair your physical standees with Loctimize’s central review management, growth analytics, and AI response assistant.</p>
         </div>
 
-        {/* Laptop Dashboard Showcase with KPI Badges */}
-        <div className="dashboard-showcase-wrap">
-          <img src={dashboardImg} alt="Loctimize Reviews Overview Dashboard on Laptop" loading="lazy" />
+        {/* Retina Vector Laptop Showcase (Infinitely Crisp - Zero Blur) */}
+        <div className="mac-laptop-mockup">
+          <div className="mac-laptop-camera" />
+          <div className="mac-laptop-screen">
+            <div className="mac-laptop-topbar">
+              <div className="mac-window-controls">
+                <span className="mac-win-dot red" />
+                <span className="mac-win-dot yellow" />
+                <span className="mac-win-dot green" />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#04143c' }}>
+                <img src={headerLogo} alt="Loctimize" style={{ height: '18px' }} />
+                <span>· Reviews Console</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '3px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                <span className="tiny-green-dot" /> Live Sync
+              </div>
+            </div>
+
+            <div className="mac-dash-body">
+              <aside className="mac-dash-sidebar">
+                <div className="mac-sidebar-item active">
+                  <BarChart3 size={16} /> Overview
+                </div>
+                <div className="mac-sidebar-item">
+                  <Star size={16} /> Reviews
+                </div>
+                <div className="mac-sidebar-item">
+                  <Sparkles size={16} /> AI Replies
+                </div>
+                <div className="mac-sidebar-item">
+                  <QrCode size={16} /> QR Studio
+                </div>
+              </aside>
+
+              <main className="mac-dash-main">
+                <div className="mac-dash-header">
+                  <div>
+                    <h4>Reviews Overview</h4>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Connected to Google Business Profile</p>
+                  </div>
+                  <span style={{ fontSize: '12px', background: '#ffffff', border: '1px solid #e2e8f0', padding: '4px 10px', borderRadius: '6px', color: '#334155', fontWeight: 500 }}>
+                    Last 30 Days ▼
+                  </span>
+                </div>
+
+                <div className="mac-dash-kpi-grid">
+                  <div className="mac-kpi-card">
+                    <span>Total Reviews</span>
+                    <strong>248</strong>
+                    <small>▲ +18% vs last month</small>
+                  </div>
+                  <div className="mac-kpi-card">
+                    <span>Average Rating</span>
+                    <strong>4.6 ★</strong>
+                    <small style={{ color: '#f59e0b' }}>★★★★★ (92% positive)</small>
+                  </div>
+                  <div className="mac-kpi-card">
+                    <span>New Reviews</span>
+                    <strong>+32</strong>
+                    <small style={{ color: '#2563eb' }}>⚡ 100% replied with AI</small>
+                  </div>
+                </div>
+
+                <div className="mac-dash-charts">
+                  <div className="mac-chart-box">
+                    <h5>Monthly Reviews Growth</h5>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '110px', paddingTop: '10px' }}>
+                      {[
+                        { m: 'Jun', h: 42, v: '18' },
+                        { m: 'Jul', h: 56, v: '24' },
+                        { m: 'Aug', h: 68, v: '29' },
+                        { m: 'Sep', h: 74, v: '31' },
+                        { m: 'Oct', h: 86, v: '36' },
+                        { m: 'Nov', h: 100, v: '48' }
+                      ].map(bar => (
+                        <div key={bar.m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 1 }}>
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>{bar.v}</span>
+                          <div style={{ width: '28px', height: `${bar.h}px`, background: 'linear-gradient(180deg, #003cb7 0%, #00a4f4 100%)', borderRadius: '4px 4px 0 0' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 600, color: '#334155' }}>{bar.m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mac-chart-box">
+                    <h5>Rating Sentiment</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                      {[
+                        { s: '5 Stars', pct: 82, c: '#16a34a' },
+                        { s: '4 Stars', pct: 12, c: '#22c55e' },
+                        { s: '3 Stars', pct: 4, c: '#f59e0b' },
+                        { s: '1-2 Stars', pct: 2, c: '#ef4444' }
+                      ].map(row => (
+                        <div key={row.s} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+                          <span style={{ width: '48px', color: '#475569' }}>{row.s}</span>
+                          <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${row.pct}%`, height: '100%', background: row.c, borderRadius: '4px' }} />
+                          </div>
+                          <span style={{ width: '28px', textAlign: 'right', fontWeight: 600, color: '#334155' }}>{row.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </main>
+            </div>
+          </div>
+          <div className="mac-laptop-base">
+            <div className="mac-laptop-notch" />
+          </div>
         </div>
 
         <div className="dashboard-metrics-row">
