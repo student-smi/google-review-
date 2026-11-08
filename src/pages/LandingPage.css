@@ -4601,16 +4601,30 @@ html {
     flex-shrink: 0 !important;
   }
 
-  /* 4. FOOTER COMPLETE VISIBILITY */
+  /* 4. FOOTER COMPLETE VISIBILITY & FULL SCREEN FIT */
   .site-footer {
-    padding: 28px max(30px, 50% - 570px) 16px !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: normal !important;
+    min-height: calc(100vh - 58px) !important;
+    height: calc(100vh - 58px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    background: #04143c !important;
+    color: #ffffff !important;
+    padding: 36px max(30px, 50% - 570px) 20px !important;
+    box-sizing: border-box !important;
   }
   .footer-top {
-    gap: 20px !important;
-    margin-bottom: 16px !important;
+    gap: 24px !important;
+    margin-bottom: auto !important;
+    padding-bottom: 20px !important;
   }
   .footer-bottom {
-    padding-top: 12px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    padding-top: 14px !important;
     font-size: 11.5px !important;
+    margin-top: auto !important;
   }
 }
