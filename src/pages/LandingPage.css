@@ -4362,3 +4362,255 @@ html {
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ==========================================================================
+   PIXEL-PERFECT POLISH FOR USER-VERIFIED SECTIONS (BROWSER VERIFIED)
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  /* 1. EVERYDAY GROWTH SECTION COMPACTNESS (NO BOTTOM CUTOFF) */
+  .growth-full-section {
+    padding: 10px max(30px, 50% - 570px) !important;
+  }
+  .growth-full-section .section-heading {
+    margin-bottom: 8px !important;
+  }
+  .growth-full-section h2 {
+    font-size: 24px !important;
+    margin: 2px 0 4px !important;
+  }
+  .growth-full-section p {
+    font-size: 12.5px !important;
+  }
+  .growth-action-grid {
+    gap: 10px !important;
+    margin: 0 auto 10px !important;
+  }
+  .growth-action-card {
+    padding: 10px 12px !important;
+    min-height: 85px !important;
+    border-radius: 12px !important;
+    gap: 4px !important;
+  }
+  .growth-action-icon {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+  .growth-action-card h3 {
+    font-size: 13.5px !important;
+    margin: 0 !important;
+  }
+  .growth-action-card p {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+  .growth-metric-pill {
+    font-size: 9.5px !important;
+    padding: 1px 6px !important;
+  }
+
+  .proof-cta-row {
+    gap: 14px !important;
+  }
+  .owner-testimonial-card {
+    padding: 10px 14px !important;
+    min-height: 110px !important;
+    border-radius: 14px !important;
+    gap: 12px !important;
+  }
+  .owner-testimonial-img-wrap {
+    width: 85px !important;
+    min-width: 85px !important;
+    height: 95px !important;
+    border-radius: 10px !important;
+  }
+  .owner-star-rating {
+    font-size: 12px !important;
+    letter-spacing: 1px !important;
+  }
+  .owner-quote-text {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+  }
+  .owner-author-info strong {
+    font-size: 11.5px !important;
+  }
+  .owner-author-info span {
+    font-size: 10.5px !important;
+  }
+  .owner-badge-verified {
+    font-size: 9.5px !important;
+    padding: 1px 6px !important;
+  }
+
+  .growth-final-cta-card {
+    padding: 14px 18px !important;
+    min-height: 110px !important;
+    border-radius: 14px !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+  .growth-final-cta-card h2 {
+    font-size: 16px !important;
+    margin: 0 !important;
+  }
+  .growth-final-cta-card p {
+    font-size: 11.5px !important;
+    margin: 0 !important;
+  }
+  .growth-final-cta-footer {
+    margin-top: 6px !important;
+  }
+  .growth-final-cta-footer .rr-button {
+    min-height: 34px !important;
+    padding: 6px 14px !important;
+    font-size: 12.5px !important;
+  }
+
+  /* 2. PRICING CARDS PREMIUM RESTRUCTURING (CLEAN THUMBNAIL, NO CROPPED STRIP) */
+  .price-product-list {
+    gap: 16px !important;
+  }
+  .price-product-row {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 16px rgba(4, 20, 60, 0.05) !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
+  .price-product-row.is-recommended {
+    border: 2px solid var(--primary) !important;
+    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%) !important;
+    box-shadow: 0 8px 28px rgba(0, 60, 183, 0.12) !important;
+  }
+  .price-card-header {
+    padding: 12px 14px 8px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+  .price-card-top-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 6px !important;
+  }
+  .price-badge-tag {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    background: #f1f5f9 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+  }
+  .price-card-visual-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  .price-product-thumb {
+    width: 60px !important;
+    height: 60px !important;
+    min-width: 60px !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+  .price-product-thumb img {
+    width: 85% !important;
+    height: 85% !important;
+    object-fit: contain !important;
+  }
+  .price-header-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+  .price-product-name {
+    font-size: 14.5px !important;
+    font-weight: 700 !important;
+    color: #04143c !important;
+    margin: 0 !important;
+  }
+  .price-product-intro {
+    font-size: 11px !important;
+    color: #64748b !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+  }
+  .price-card-content {
+    padding: 10px 14px 12px !important;
+    gap: 6px !important;
+  }
+  .hardware-price strong {
+    font-size: 22px !important;
+    color: #04143c !important;
+  }
+  .price-one-time-label {
+    font-size: 10.5px !important;
+    color: #64748b !important;
+    margin-left: 6px !important;
+  }
+  .hardware-features {
+    gap: 3px !important;
+    margin: 2px 0 4px !important;
+  }
+  .hardware-features li {
+    font-size: 11px !important;
+    gap: 6px !important;
+  }
+  .price-select-button {
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+  }
+
+  /* 3. FAQ SUMMARY ALIGNMENT FIX (ZERO TEXT GAP) */
+  .faq-item summary {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    list-style: none !important;
+  }
+  .faq-number {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    background: #eff6ff !important;
+    padding: 2px 7px !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+  }
+  .faq-item summary > span:nth-child(2) {
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    flex: 1 !important;
+    text-align: left !important;
+  }
+  .faq-icon {
+    margin-left: auto !important;
+    color: var(--primary) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 4. FOOTER COMPLETE VISIBILITY */
+  .site-footer {
+    padding: 28px max(30px, 50% - 570px) 16px !important;
+  }
+  .footer-top {
+    gap: 20px !important;
+    margin-bottom: 16px !important;
+  }
+  .footer-bottom {
+    padding-top: 12px !important;
+    font-size: 11.5px !important;
+  }
+}

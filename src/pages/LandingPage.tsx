@@ -1361,7 +1361,7 @@ export function LandingPage() {
         {/* 4 Feature Action Cards matching Blueprint */}
         <div className="growth-action-grid reveal-stagger">
           <div className="growth-action-card">
-            <span className="growth-action-icon star-icon"><Star size={24} /></span>
+            <span className="growth-action-icon star-icon"><Star size={22} /></span>
             <div>
               <h3>Get More Reviews</h3>
               <p>Put review access directly in front of happy customers right at checkout.</p>
@@ -1369,7 +1369,7 @@ export function LandingPage() {
             <span className="growth-metric-pill">+300% Conversion</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon msg-icon"><MessageSquareText size={24} /></span>
+            <span className="growth-action-icon msg-icon"><MessageSquareText size={22} /></span>
             <div>
               <h3>Manage Feedback Easily</h3>
               <p>One unified inbox for all Google reviews across single or multiple locations.</p>
@@ -1377,7 +1377,7 @@ export function LandingPage() {
             <span className="growth-metric-pill">Unified Inbox</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon zap-icon"><Zap size={24} /></span>
+            <span className="growth-action-icon zap-icon"><Zap size={22} /></span>
             <div>
               <h3>Save Time with AI Replies</h3>
               <p>Generate polite, SEO-optimized owner responses in 1-click without typing fatigue.</p>
@@ -1385,7 +1385,7 @@ export function LandingPage() {
             <span className="growth-metric-pill">1-Click AI Draft</span>
           </div>
           <div className="growth-action-card">
-            <span className="growth-action-icon chart-icon"><BarChart3 size={24} /></span>
+            <span className="growth-action-icon chart-icon"><BarChart3 size={22} /></span>
             <div>
               <h3>Understand Customer Insights</h3>
               <p>Identify rating trends, customer sentiment, and operational highlights easily.</p>
@@ -1417,9 +1417,6 @@ export function LandingPage() {
           {/* High-Converting Final CTA Card */}
           <div className="growth-final-cta-card">
             <div className="growth-final-cta-content">
-              <div className="growth-final-cta-visual">
-                <img src={heroImage} alt="Loctimize Standee and Customer Google Review" loading="eager" />
-              </div>
               <h2>Make Every Customer Experience Easier to Share.</h2>
               <p>Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
             </div>
@@ -1474,28 +1471,30 @@ export function LandingPage() {
                     (selectedProduct === prod.name ? ' is-selected' : '')
                   }
                 >
-                  <div className="price-product-photo">
-                    <img
-                      src={prod.image}
-                      alt={prod.name}
-                      loading="eager"
-                      width={1024}
-                      height={1024}
-                    />
-                    <span className="price-photo-badge">{prod.viewLabel}</span>
+                  <div className="price-card-header">
+                    <div className="price-card-top-row">
+                      <span className="price-badge-tag">{prod.viewLabel}</span>
+                      {prod.recommended && <span className="price-recommendation">★ BESTSELLER</span>}
+                    </div>
+                    <div className="price-card-visual-row">
+                      <div className="price-product-thumb">
+                        <img src={prod.image} alt={prod.name} loading="eager" />
+                      </div>
+                      <div className="price-header-info">
+                        <h3 className="price-product-name">{prod.name}</h3>
+                        <p className="price-product-intro">{prod.intro}</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="price-card-content">
-                    {prod.recommended && <span className="price-recommendation">★ BESTSELLER · RECOMMENDED</span>}
-                    <h3 className="price-product-name">{prod.name}</h3>
-                    <p className="price-product-intro">{prod.intro}</p>
                     <div className="hardware-price">
-                      <strong>{prod.price}<small> *</small></strong>
-                      <span>One-time hardware purchase</span>
+                      <strong>{prod.price}</strong>
+                      <span className="price-one-time-label">One-time purchase · Lifetime access</span>
                     </div>
                     <ul className="hardware-features">
                       {[prod.access, 'Direct link to Google Reviews', 'No app needed to scan'].map(feat => (
-                        <li key={feat}><Check size={16} />{feat}</li>
+                        <li key={feat}><Check size={15} />{feat}</li>
                       ))}
                     </ul>
                     <button
@@ -1505,8 +1504,7 @@ export function LandingPage() {
                       aria-label={`Select ${prod.name} for enquiry`}
                       aria-pressed={selectedProduct === prod.name}
                     >
-                      {selectedProduct === prod.name ? 'Selected for enquiry' : 'Enquire about this product'}{' '}
-                      <ArrowRight size={16} />
+                      {selectedProduct === prod.name ? '✓ Selected for enquiry' : (prod.recommended ? 'Get Smart NFC Standee →' : 'Select Product →')}
                     </button>
                   </div>
                 </article>
