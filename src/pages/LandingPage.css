@@ -2251,9 +2251,10 @@ html {
 #ai-replies,
 #businesses,
 #pricing,
+#bulk-inquiry,
 #inquiry,
 .faq-section {
-  scroll-margin-top: 75px !important;
+  scroll-margin-top: 58px !important;
 }
 
 /* Fix 2: Hero Section top breathing space so badges & proof pills aren't under navbar */
@@ -2622,5 +2623,208 @@ html {
   .pricing-top {
     flex-direction: column !important;
     align-items: flex-start !important;
+  }
+}
+
+
+/* ==========================================================================
+   DEFINITIVE 1-SECTION = 1-SCREEN (100VH) FULL VIEWPORT SYSTEM
+   Ensures every single section occupies exactly ONE FULL SCREEN.
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  html {
+    scroll-snap-type: y mandatory !important;
+    scroll-behavior: smooth !important;
+  }
+
+  /* Each section is exactly the height of the visible screen (minus sticky header) */
+  .screen-snap-section {
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    min-height: calc(100vh - 58px) !important;
+    height: calc(100vh - 58px) !important;
+    max-height: calc(100vh - 58px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  .screen-snap-section > * {
+    max-width: 1180px !important;
+    width: 100% !important;
+  }
+
+  /* Internal component heights tuned to comfortably fit within 100vh */
+
+  /* 1. Hero Section */
+  .hero-section {
+    display: grid !important;
+    grid-template-columns: 1.15fr 1fr !important;
+    align-items: center !important;
+    gap: 40px !important;
+  }
+  .hero-visual {
+    max-height: 380px !important;
+  }
+  .hero-image-wrap {
+    max-height: 340px !important;
+  }
+  .hero-product-image {
+    max-height: 340px !important;
+  }
+
+  /* 2. Product Section */
+  .product-layout {
+    margin: 12px 0 16px !important;
+    gap: 36px !important;
+  }
+  .product-image-large {
+    max-height: 250px !important;
+  }
+  .product-image-large img {
+    max-height: 250px !important;
+  }
+
+  /* 3. Industry Section */
+  .industry-content-card {
+    padding: 18px 24px !important;
+    gap: 24px !important;
+  }
+  .industry-content-visual {
+    height: 190px !important;
+  }
+
+  /* 4. ROI Calculator */
+  .roi-calculator-card {
+    padding: 20px 24px !important;
+    gap: 24px !important;
+  }
+
+  /* 5. 3 Steps Flow */
+  .process-flow-wrap {
+    margin-top: 16px !important;
+    gap: 12px !important;
+  }
+  .process-flow-img-wrap {
+    height: 115px !important;
+  }
+
+  /* 6. Lifestyle Counter */
+  .lifestyle-card {
+    max-height: 280px !important;
+  }
+  .lifestyle-card img {
+    max-height: 280px !important;
+  }
+
+  /* 7. SaaS Laptop Showcase */
+  .mac-laptop-mockup {
+    max-width: 680px !important;
+    margin: 10px auto 12px !important;
+  }
+  .mac-dash-body {
+    min-height: 195px !important;
+  }
+
+  /* 8. Phone Simulator Demo */
+  .interactive-demo-section {
+    justify-content: center !important;
+  }
+  .demo-intro {
+    margin-bottom: 8px !important;
+  }
+  .demo-workspace {
+    margin: 8px auto 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .demo-steps {
+    margin-bottom: 10px !important;
+  }
+  .phone-device {
+    max-width: 290px !important;
+    border-width: 8px !important;
+    border-radius: 32px !important;
+  }
+  .phone-screen {
+    padding: 8px 12px 14px !important;
+  }
+  .phone-review-stamp {
+    width: 85px !important;
+    height: 85px !important;
+    margin: 8px auto !important;
+  }
+
+  /* 9. AI Reply Copilot */
+  .ai-reply-card-comparison {
+    padding: 12px 16px !important;
+    margin: 10px 0 14px !important;
+  }
+  .reply-layout {
+    gap: 20px !important;
+  }
+  .reply-preview {
+    padding: 14px 18px !important;
+  }
+  .reply-preview textarea {
+    min-height: 60px !important;
+    font-size: 12px !important;
+  }
+
+  /* 10. Business Growth */
+  .growth-action-grid {
+    margin: 12px 0 16px !important;
+    gap: 10px !important;
+  }
+  .growth-action-card {
+    padding: 10px 10px !important;
+  }
+  .proof-cta-row {
+    gap: 14px !important;
+  }
+  .owner-testimonial-card {
+    min-height: 115px !important;
+  }
+  .owner-testimonial-img-wrap {
+    width: 110px !important;
+    min-width: 110px !important;
+  }
+  .growth-final-cta-card {
+    padding: 14px 18px !important;
+  }
+
+  /* 11. Pricing Table */
+  .pricing-top {
+    margin-bottom: 12px !important;
+  }
+  .price-product-list {
+    gap: 12px !important;
+  }
+  .price-product-photo {
+    height: 85px !important;
+    max-height: 85px !important;
+  }
+  .price-card-content {
+    padding: 8px 10px !important;
+  }
+  .hardware-features {
+    gap: 2px !important;
+    margin: 4px 0 6px !important;
+  }
+  .price-select-button {
+    min-height: 32px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
   }
 }

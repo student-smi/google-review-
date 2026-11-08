@@ -477,7 +477,7 @@ export function LandingPage() {
       </div>
 
       {/* 1. HERO SECTION (MAIN PRODUCT + CUSTOMER PHONE) */}
-      <section className="hero-section">
+      <section className="hero-section screen-snap-section">
         <div className="hero-copy reveal-on-scroll">
           <div className="hero-social-proof-pill">
             <span className="live-pulse-dot" />
@@ -529,7 +529,7 @@ export function LandingPage() {
       </section>
 
       {/* 2. A SIMPLE WAY SECTION (PRODUCT CLOSE-UP + MODERN FEATURE PILLS) */}
-      <section className="product-section section-wrap reveal-on-scroll" id="products">
+      <section className="product-section section-wrap screen-snap-section reveal-on-scroll" id="products">
         <div className="section-heading product-section-heading">
           <div>
             <span className="eyebrow">THE PRODUCT</span>
@@ -546,7 +546,7 @@ export function LandingPage() {
               <img
                 src={standeeCloseup}
                 alt="Loctimize ReviewQR acrylic standee close-up detail"
-                loading="lazy"
+                loading="eager"
                 width={1024}
                 height={1024}
               />
@@ -616,7 +616,7 @@ export function LandingPage() {
       </section>
 
       {/* INDUSTRY USE CASES SECTION */}
-      <section className="industries-section section-wrap reveal-on-scroll" id="industries">
+      <section className="industries-section section-wrap screen-snap-section reveal-on-scroll" id="industries">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>BUILT FOR EVERY LOCAL BUSINESS</span>
           <h2>Tailored for <span>Your Industry.</span></h2>
@@ -661,7 +661,7 @@ export function LandingPage() {
       </section>
 
       {/* INTERACTIVE REVIEW GROWTH & ROI CALCULATOR */}
-      <section className="roi-calculator-section section-wrap reveal-on-scroll">
+      <section className="roi-calculator-section section-wrap screen-snap-section reveal-on-scroll">
         <div className="roi-calculator-card">
           <div className="roi-calc-left">
             <span className="eyebrow">SEE YOUR POTENTIAL</span>
@@ -712,7 +712,7 @@ export function LandingPage() {
       </section>
 
       {/* 3. THREE STEPS SECTION (VISUAL 3-PHOTO PROCESS FLOW) */}
-      <section className="how-section section-wrap" id="how-it-works">
+      <section className="how-section section-wrap screen-snap-section" id="how-it-works">
         <div className="section-heading centered-heading">
           <span className="eyebrow">Small step. Simple share.</span>
           <h2>Three Steps. <span>One Simple Experience.</span></h2>
@@ -723,7 +723,7 @@ export function LandingPage() {
           {/* Step 1 */}
           <article className="process-flow-card">
             <div className="process-flow-img-wrap">
-              <img src={step1Img} alt="Unboxing Loctimize Review QR Standee" loading="lazy" />
+              <img src={step1Img} alt="Unboxing Loctimize Review QR Standee" loading="eager" />
             </div>
             <div className="process-flow-body">
               <span className="process-step-badge">1</span>
@@ -737,7 +737,7 @@ export function LandingPage() {
           {/* Step 2 */}
           <article className="process-flow-card">
             <div className="process-flow-img-wrap">
-              <img src={step2Img} alt="Placing Review QR on counter" loading="lazy" />
+              <img src={step2Img} alt="Placing Review QR on counter" loading="eager" />
             </div>
             <div className="process-flow-body">
               <span className="process-step-badge">2</span>
@@ -751,7 +751,7 @@ export function LandingPage() {
           {/* Step 3 */}
           <article className="process-flow-card">
             <div className="process-flow-img-wrap">
-              <img src={step3Img} alt="Customer scanning and sharing Google feedback" loading="lazy" />
+              <img src={step3Img} alt="Customer scanning and sharing Google feedback" loading="eager" />
             </div>
             <div className="process-flow-body">
               <span className="process-step-badge">3</span>
@@ -763,7 +763,7 @@ export function LandingPage() {
       </section>
 
       {/* 4. REAL-LIFE USAGE SETTING SECTION (NEW LIFESTYLE BANNER) */}
-      <section className="lifestyle-section section-wrap reveal-on-scroll" id="real-life">
+      <section className="lifestyle-section section-wrap screen-snap-section reveal-on-scroll" id="real-life">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>REAL-WORLD EXPERIENCE</span>
           <h2>From the Counter to <span>Your Customer's Phone.</span></h2>
@@ -774,7 +774,7 @@ export function LandingPage() {
           <img
             src={lifestyleImg}
             alt="Real life counter setting: barista and customer interacting with Loctimize standee on counter"
-            loading="lazy"
+            loading="eager"
           />
         </div>
         <div className="lifestyle-caption-pill">
@@ -785,7 +785,7 @@ export function LandingPage() {
       </section>
 
       {/* 5. SAAS ECOSYSTEM & DASHBOARD SHOWCASE */}
-      <section className="assistant-section section-wrap" id="features">
+      <section className="assistant-section section-wrap screen-snap-section reveal-on-scroll" id="features">
         <span id="ai-assistant" className="anchor-point" />
         <div className="assistant-heading">
           <div>
@@ -931,8 +931,10 @@ export function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
 
-        {/* INTERACTIVE WORKSPACE (PHONE SIMULATOR & ASSISTANT) */}
+      {/* 6. INTERACTIVE WORKSPACE (PHONE SIMULATOR) */}
+      <section className="interactive-demo-section section-wrap screen-snap-section reveal-on-scroll" id="live-demo">
         <div className="demo-intro">
           <div>
             <span className="eyebrow">TRY THE INTERACTIVE EXPERIENCE</span>
@@ -1204,9 +1206,11 @@ export function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
 
-        {/* 6. AI REPLY COPILOT (INTERACTIVE REVIEW -> AI REPLY CARD) */}
-        <div className="reply-section" id="ai-replies">
+      {/* 7. AI REPLY COPILOT */}
+      <section className="ai-reply-copilot-section section-wrap screen-snap-section reveal-on-scroll" id="ai-replies">
+        <div className="reply-section">
           <div className="section-heading centered-heading" style={{ marginBottom: '24px' }}>
             <span className="eyebrow">A draft, never an autopilot</span>
             <h2>Respond Thoughtfully. <span>Save time.</span></h2>
@@ -1315,8 +1319,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 7. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + TESTIMONIAL + FINAL CTA) */}
-      <section className="growth-full-section section-wrap" id="businesses">
+      {/* 8. DESIGNED FOR EVERYDAY BUSINESS GROWTH (4 ACTION CARDS + TESTIMONIAL + FINAL CTA) */}
+      <section className="growth-full-section section-wrap screen-snap-section" id="businesses">
         <div className="section-heading centered-heading">
           <span className="eyebrow" style={{ justifyContent: 'center' }}>A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
           <h2>Designed for Everyday <span>Business Growth.</span></h2>
@@ -1352,7 +1356,7 @@ export function LandingPage() {
           {/* Real Merchant Testimonial Card */}
           <div className="owner-testimonial-card">
             <div className="owner-testimonial-img-wrap">
-              <img src={ownerImg} alt="Smiling Restaurant Owner in front of cafe" loading="lazy" />
+              <img src={ownerImg} alt="Smiling Restaurant Owner in front of cafe" loading="eager" />
             </div>
             <div className="owner-testimonial-content">
               <span className="owner-quote-mark">“</span>
@@ -1381,8 +1385,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 8. PRICING SECTION */}
-      <section className="pricing-section section-wrap reveal-on-scroll" id="pricing">
+      {/* 9. PRICING SECTION */}
+      <section className="pricing-section section-wrap screen-snap-section reveal-on-scroll" id="pricing">
         <div className="pricing-top">
           <div>
             <span className="eyebrow">Plans that can grow with you</span>
@@ -1426,7 +1430,7 @@ export function LandingPage() {
                     <img
                       src={prod.image}
                       alt={prod.name}
-                      loading="lazy"
+                      loading="eager"
                       width={1024}
                       height={1024}
                     />
@@ -1503,25 +1507,24 @@ export function LandingPage() {
             </p>
           </Fragment>
         )}
+      </section>
 
-        <div className="purchase-information">
+      {/* 10. BULK / CORPORATE INQUIRY FORM */}
+      <section className="inquiry-section section-wrap screen-snap-section reveal-on-scroll" id="bulk-inquiry">
+        <div className="purchase-information" style={{ margin: '0 0 20px', width: '100%' }}>
           <div>
             <h3>Setup</h3>
-            <p>Choose your business review destination. Final configuration and setup assistance will be confirmed before purchase.</p>
+            <p>Choose your business review destination. Setup assistance confirmed before dispatch.</p>
           </div>
           <div>
             <h3>Delivery & support</h3>
-            <p>Delivery areas, shipping charges, timelines and support arrangements are not yet confirmed.</p>
+            <p>Pan-India courier delivery with doorstep tracking and customer support.</p>
           </div>
           <div>
-            <h3>Before you pay</h3>
-            <p>Select a product to prepare an enquiry. Checkout and enquiry delivery are not connected; no payment or order is created.</p>
+            <h3>Zero Risk</h3>
+            <p>Submit inquiry with zero payment. Final pricing verified before ordering.</p>
           </div>
         </div>
-      </section>
-
-      {/* 9. BULK / CORPORATE INQUIRY FORM */}
-      <section className="inquiry-section section-wrap reveal-on-scroll" id="bulk-inquiry">
         <div className="inquiry-copy">
           <span className="eyebrow">Bulk, multi-location & product enquiries</span>
           <h2>Let's talk about <span>your business.</span></h2>
@@ -1620,8 +1623,8 @@ export function LandingPage() {
         </form>
       </section>
 
-      {/* 10. FAQS SECTION */}
-      <section className="faq-section section-wrap reveal-on-scroll" id="faq">
+      {/* 11. FAQS SECTION */}
+      <section className="faq-section section-wrap screen-snap-section reveal-on-scroll" id="faq">
         <div className="faq-heading">
           <span className="eyebrow">Good questions deserve clear answers</span>
           <h2>Everything you need to <span>know.</span></h2>
