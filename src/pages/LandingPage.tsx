@@ -1716,18 +1716,39 @@ export function LandingPage() {
             <div>
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Contact & Support</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
-                <li><span>Ahmedabad, Gujarat, India</span></li>
-                <li><a href="mailto:support@loctimize.in" className="hover:text-white transition">support@loctimize.in</a></li>
-                <li><a href="#bulk-inquiry" className="hover:text-white transition">Corporate Enquiries</a></li>
+                <li><span className="text-slate-300">Ahmedabad, Gujarat, India</span></li>
+                <li>
+                  <a href="mailto:begaindvs@gmail.com" className="hover:text-white transition">
+                    begaindvs@gmail.com
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+918320699679" className="hover:text-white transition">
+                    +91 83206 99679
+                  </a>
+                </li>
                 <li>
                   <a
-                    href="https://wa.me/919999999999?text=Hi%20Loctimize%2C%20I%20have%20an%20enquiry%20about%20ReviewQR"
+                    href="https://wa.me/918320699679?text=Hi%20Loctimize%2C%20I%20have%20an%20enquiry%20about%20ReviewQR"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition inline-flex items-center gap-1 group"
                   >
-                    <span>WhatsApp Support</span>
+                    <span>WhatsApp: +91 83206 99679</span>
                     <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#bulk-inquiry"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('bulk-inquiry')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition inline-flex items-center gap-1 group font-medium text-slate-300 cursor-pointer"
+                  >
+                    <span>Corporate Enquiries (Contact Form)</span>
+                    <ArrowRight size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
                   </a>
                 </li>
               </ul>
