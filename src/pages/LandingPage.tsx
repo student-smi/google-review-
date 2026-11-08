@@ -29,7 +29,9 @@ import {
   Stethoscope,
   Scissors,
   ShoppingBag,
-  Car
+  Car,
+  ExternalLink,
+  ShieldCheck
 } from 'lucide-react';
 import './LandingPage.css';
 
@@ -1539,18 +1541,23 @@ export function LandingPage() {
       {/* 14. FOOTER */}
       <footer className="w-full bg-[#04143c] text-white py-14 px-4 sm:px-8 lg:px-12 border-t border-slate-800">
         <div className="max-w-6xl w-full mx-auto flex flex-col justify-between">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-slate-800">
-            <div className="md:col-span-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pb-10 border-b border-slate-800">
+            <div className="sm:col-span-2 lg:col-span-1">
               <a href="#home" aria-label="Loctimize home">
                 <img src={footerLogo} className="h-8 w-auto mb-3" alt="Loctimize — Optimize Local. Grow Global." />
               </a>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
                 ReviewQR makes it easier for customers to find your review link — on their own terms.
               </p>
-              <span className="text-[11px] text-slate-500 block">
+              <span className="text-[11px] text-slate-500 block mb-3">
                 Loctimize is an independent product and is not affiliated with Google.
               </span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+                <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
+                <span>100% Policy Compliant</span>
+              </div>
             </div>
+
             <div>
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Products</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
@@ -1564,6 +1571,7 @@ export function LandingPage() {
                 <li><a href="#pricing" className="hover:text-white transition">Proposed plans</a></li>
               </ul>
             </div>
+
             <div>
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Solutions</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
@@ -1573,21 +1581,123 @@ export function LandingPage() {
                 <li><a href="#businesses" className="hover:text-white transition">Business benefits</a></li>
               </ul>
             </div>
+
+            {/* Google Policies */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Google Policies</h4>
+              <ul className="flex flex-col gap-2 text-xs text-slate-400">
+                <li>
+                  <a
+                    href="https://support.google.com/contributionpolicy/answer/7400114"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>Google Maps Review Policy</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://support.google.com/business/answer/3474122"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>Merchant Review Guidelines</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://support.google.com/contributionpolicy/answer/7400114#zippy="
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>Prohibited Content Policy</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>Google Privacy Policy</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>Google Terms of Service</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+
             <div>
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Contact & Support</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
                 <li><span>Ahmedabad, Gujarat, India</span></li>
                 <li><a href="mailto:support@loctimize.in" className="hover:text-white transition">support@loctimize.in</a></li>
                 <li><a href="#bulk-inquiry" className="hover:text-white transition">Corporate Enquiries</a></li>
+                <li>
+                  <a
+                    href="https://wa.me/919999999999?text=Hi%20Loctimize%2C%20I%20have%20an%20enquiry%20about%20ReviewQR"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1 group"
+                  >
+                    <span>WhatsApp Support</span>
+                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+
+          <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4">
             <div>© {new Date().getFullYear()} Loctimize Technologies. All rights reserved.</div>
-            <div className="flex gap-4">
-              <span>Privacy Policy</span>
-              <span>Terms of Service</span>
-              <span>Google Guidelines Compliant</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
+              <a
+                href="https://support.google.com/contributionpolicy/answer/7400114"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
+              >
+                <span>Google Maps Review Policy</span>
+                <ExternalLink size={11} className="text-slate-500" />
+              </a>
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
+              >
+                <span>Google Privacy Policy</span>
+                <ExternalLink size={11} className="text-slate-500" />
+              </a>
+              <a
+                href="https://policies.google.com/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
+              >
+                <span>Google Terms</span>
+                <ExternalLink size={11} className="text-slate-500" />
+              </a>
+              <span className="text-emerald-400 font-medium inline-flex items-center gap-1">
+                <CheckCircle2 size={12} /> Ungated & Anti-Review Gating Compliant
+              </span>
             </div>
           </div>
         </div>
