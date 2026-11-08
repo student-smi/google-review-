@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, Fragment } from 'react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   ArrowDown,
   ArrowRight,
@@ -288,6 +289,36 @@ const socialFeed = [
   { name: 'Royal Tandoor Restaurant', action: 'Captured 42 verified table reviews', time: '22m ago' }
 ];
 
+// Reusable scroll animation variants
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.65, ease: 'easeOut' }
+  }
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.14,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const cardVariant: Variants = {
+  hidden: { opacity: 0, y: 25 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: 'easeOut' }
+  }
+};
+
 export function LandingPage() {
   const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
   const [activeIndustry, setActiveIndustry] = useState(0);
@@ -371,7 +402,7 @@ export function LandingPage() {
   const estimatedMonthlyReviews = Math.round(dailyCustomers * 30 * 0.08);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
       {/* 1. TOP STICKY NAVBAR */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between">
         <a className="flex items-center gap-2" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
@@ -395,7 +426,7 @@ export function LandingPage() {
           </a>
           <button
             type="button"
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition"
+            className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer"
             aria-label="Toggle menu"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
@@ -405,23 +436,30 @@ export function LandingPage() {
       </header>
 
       {/* MOBILE NAV OVERLAY */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-40 flex flex-col gap-4 text-base font-semibold text-slate-800">
-          <a href="#products" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Review QR</a>
-          <a href="#how-it-works" onClick={closeMobileNav} className="py-2 border-b border-slate-100">How It Works</a>
-          <a href="#features" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Features</a>
-          <a href="#pricing" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Pricing</a>
-          <a href="#faq" onClick={closeMobileNav} className="py-2 border-b border-slate-100">FAQ</a>
-          <div className="pt-2 flex flex-col gap-2">
-            <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl">
-              Login to Account
-            </a>
-            <a href="#pricing" onClick={closeMobileNav} className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs">
-              Get Your Review QR
-            </a>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-40 flex flex-col gap-4 text-base font-semibold text-slate-800"
+          >
+            <a href="#products" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Review QR</a>
+            <a href="#how-it-works" onClick={closeMobileNav} className="py-2 border-b border-slate-100">How It Works</a>
+            <a href="#features" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Features</a>
+            <a href="#pricing" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Pricing</a>
+            <a href="#faq" onClick={closeMobileNav} className="py-2 border-b border-slate-100">FAQ</a>
+            <div className="pt-2 flex flex-col gap-2">
+              <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl">
+                Login to Account
+              </a>
+              <a href="#pricing" onClick={closeMobileNav} className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs">
+                Get Your Review QR
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* SCROLL PROGRESS BAR */}
       <div className="fixed top-16 left-0 right-0 h-0.5 bg-transparent z-50 pointer-events-none">
@@ -429,7 +467,14 @@ export function LandingPage() {
       </div>
 
       {/* 2. HERO SECTION */}
-      <section id="home" className="scroll-mt-20 pt-10 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center">
+      <motion.section
+        id="home"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 pt-10 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-white border border-slate-200/90 rounded-full px-3.5 py-1 text-xs font-semibold text-slate-600 shadow-2xs mb-5">
@@ -471,12 +516,19 @@ export function LandingPage() {
             <p className="mt-3 text-xs text-slate-500 font-medium">A small touchpoint. An easier way to share.</p>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 3. PRODUCT SHOWCASE */}
-      <section id="products" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="products"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
-          <div className="relative rounded-3xl overflow-hidden shadow-xl border border-slate-200/90 w-full max-w-md lg:max-none mx-auto">
+          <div className="relative rounded-3xl overflow-hidden shadow-xl border border-slate-200/90 w-full max-w-md lg:max-w-none mx-auto">
             <img src={standeeCloseup} alt="Loctimize ReviewQR acrylic standee close-up detail" className="w-full h-auto max-h-[440px] object-cover" loading="eager" />
             <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-full px-3.5 py-1 text-xs font-bold text-slate-800 shadow-xs flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> QR · NFC · DIRECT LINK
@@ -529,10 +581,17 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 4. INDUSTRY SHOWCASE */}
-      <section id="industries" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="industries"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full">
           <div className="text-center mb-8 sm:mb-10">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">BUILT FOR EVERY LOCAL BUSINESS</span>
@@ -561,7 +620,13 @@ export function LandingPage() {
             ))}
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          <motion.div
+            key={activeIndustry}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center"
+          >
             <div>
               <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full mb-3">
                 {industries[activeIndustry].tagline}
@@ -599,12 +664,19 @@ export function LandingPage() {
                 <span className="text-slate-500 block text-[10px]">Avg. Customer Growth</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 5. ROI CALCULATOR */}
-      <section id="roi-calculator" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="roi-calculator"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-5xl w-full bg-gradient-to-br from-blue-50/60 via-white to-slate-50/80 border border-blue-100 rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div>
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">SEE YOUR POTENTIAL</span>
@@ -655,10 +727,17 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 6. THREE STEPS FLOW */}
-      <section id="how-it-works" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100">
+      <motion.section
+        id="how-it-works"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100"
+      >
         <div className="max-w-6xl w-full mx-auto">
           <div className="text-center mb-10 sm:mb-14">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">Small step. Simple share.</span>
@@ -669,11 +748,21 @@ export function LandingPage() {
               Make your review link easy to find, without deciding what customers say.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.15 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8"
+          >
             {/* Step 1 */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <motion.div
+              variants={cardVariant}
+              whileHover={{ y: -6 }}
+              className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            >
               <div>
-                <div className="rounded-2xl overflow-hidden h-40 mb-5 border border-slate-100">
+                <div className="rounded-2xl overflow-hidden h-44 mb-5 border border-slate-100 bg-slate-100">
                   <img src={step1Img} alt="Unboxing Loctimize Review QR Standee" className="w-full h-full object-cover" loading="eager" />
                 </div>
                 <div className="flex items-center justify-between mb-2">
@@ -683,12 +772,16 @@ export function LandingPage() {
                 <h3 className="text-lg font-bold text-slate-900 mb-1.5">Get your Review QR</h3>
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Choose the standee model and review destination URL for your business.</p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Step 2 */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <motion.div
+              variants={cardVariant}
+              whileHover={{ y: -6 }}
+              className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            >
               <div>
-                <div className="rounded-2xl overflow-hidden h-40 mb-5 border border-slate-100">
+                <div className="rounded-2xl overflow-hidden h-44 mb-5 border border-slate-100 bg-slate-100">
                   <img src={step2Img} alt="Placing Review QR on counter" className="w-full h-full object-cover" loading="eager" />
                 </div>
                 <div className="flex items-center justify-between mb-2">
@@ -698,12 +791,16 @@ export function LandingPage() {
                 <h3 className="text-lg font-bold text-slate-900 mb-1.5">Place it at your counter</h3>
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Set your QR or NFC + QR standee at checkout, counter, tables, or reception.</p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Step 3 */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <motion.div
+              variants={cardVariant}
+              whileHover={{ y: -6 }}
+              className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            >
               <div>
-                <div className="rounded-2xl overflow-hidden h-40 mb-5 border border-slate-100">
+                <div className="rounded-2xl overflow-hidden h-44 mb-5 border border-slate-100 bg-slate-100">
                   <img src={step3Img} alt="Customer scanning and sharing Google feedback" className="w-full h-full object-cover" loading="eager" />
                 </div>
                 <div className="flex items-center justify-between mb-2">
@@ -713,13 +810,20 @@ export function LandingPage() {
                 <h3 className="text-lg font-bold text-slate-900 mb-1.5">Customers scan & share</h3>
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Customers share honest feedback in their own words, on their own terms.</p>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 7. LIFESTYLE BANNER */}
-      <section id="real-life" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="real-life"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-5xl w-full">
           <div className="text-center mb-8">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">REAL-WORLD EXPERIENCE</span>
@@ -734,10 +838,17 @@ export function LandingPage() {
             <img src={lifestyleImg} alt="Real life counter setting: barista and customer interacting with Loctimize standee" className="w-full h-full object-cover max-h-[400px]" loading="eager" />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 8. AI REVIEW WRITING STUDIO */}
-      <section id="features" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="features"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full">
           <div className="text-center mb-8">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">AI CUSTOMER ASSISTANT · YOUR EXPERIENCE, YOUR WORDS</span>
@@ -846,10 +957,17 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 9. AI OWNER REPLY COPILOT */}
-      <section id="ai-replies" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="ai-replies"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full">
           <div className="text-center mb-8">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">BUSINESS REPUTATION COPILOT</span>
@@ -922,10 +1040,17 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 10. EVERYDAY BUSINESS GROWTH */}
-      <section id="businesses" className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="businesses"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full">
           <div className="text-center mb-10 sm:mb-12">
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">A CONNECTED CUSTOMER FEEDBACK EXPERIENCE</span>
@@ -936,32 +1061,38 @@ export function LandingPage() {
               Less friction for your customers. More thoughtful conversations and higher rankings for your business.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.15 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          >
+            <motion.div variants={cardVariant} whileHover={{ y: -5 }} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4"><Star size={20} /></div>
               <h3 className="text-base font-bold text-slate-900 mb-1.5">Get More Reviews</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Put review access directly in front of happy customers right at checkout.</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition">
+            </motion.div>
+            <motion.div variants={cardVariant} whileHover={{ y: -5 }} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4"><MessageSquareText size={20} /></div>
               <h3 className="text-base font-bold text-slate-900 mb-1.5">Manage Feedback Easily</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">One unified inbox for all Google reviews across single or multiple locations.</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition">
+            </motion.div>
+            <motion.div variants={cardVariant} whileHover={{ y: -5 }} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4"><Zap size={20} /></div>
               <h3 className="text-base font-bold text-slate-900 mb-1.5">Save Time with AI Replies</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Generate polite, SEO-optimized owner responses in 1-click without typing fatigue.</p>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition">
+            </motion.div>
+            <motion.div variants={cardVariant} whileHover={{ y: -5 }} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4"><BarChart3 size={20} /></div>
               <h3 className="text-base font-bold text-slate-900 mb-1.5">Understand Insights</h3>
               <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">Identify rating trends, customer sentiment, and operational highlights easily.</p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6">
             {/* Testimonial */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs flex items-center gap-5">
-              <div className="w-20 h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-100">
+              <div className="w-20 h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-100 bg-slate-100">
                 <img src={ownerImg} alt="Restaurant Owner" className="w-full h-full object-cover" loading="eager" />
               </div>
               <div>
@@ -984,10 +1115,17 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* 11. PRICING SECTION */}
-      <section id="pricing" className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      {/* 11. PRICING SECTION (WITH LARGE CRYSTAL-CLEAR STANDEE PRODUCT IMAGES) */}
+      <motion.section
+        id="pricing"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.12 }}
+        variants={fadeInUp}
+        className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
             <div>
@@ -1017,10 +1155,18 @@ export function LandingPage() {
 
           {pricingTab === 'products' ? (
             <Fragment>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.12 }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch"
+              >
                 {products.map((prod) => (
-                  <article
+                  <motion.article
                     key={prod.name}
+                    variants={cardVariant}
+                    whileHover={{ y: -8 }}
                     className={`rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all ${
                       prod.recommended
                         ? 'border-2 border-blue-600 bg-gradient-to-b from-blue-50/40 via-white to-white shadow-xl relative'
@@ -1028,27 +1174,34 @@ export function LandingPage() {
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">{prod.viewLabel}</span>
+                      {/* Prominent High-Resolution Product Showcase Image */}
+                      <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden bg-slate-100/90 border border-slate-200/90 mb-6 group">
+                        <img
+                          src={prod.image}
+                          alt={prod.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          loading="eager"
+                        />
+                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold text-slate-800 shadow-sm border border-slate-200/60">
+                          {prod.viewLabel}
+                        </div>
                         {prod.recommended && (
-                          <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100 px-3 py-1 rounded-full">★ BESTSELLER</span>
+                          <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3.5 py-1 rounded-full text-[11px] font-extrabold shadow-md flex items-center gap-1">
+                            ★ BESTSELLER
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-3.5 mb-5">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                          <img src={prod.image} alt={prod.name} className="w-12 h-12 object-contain" loading="eager" />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 leading-snug">{prod.name}</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">{prod.intro}</p>
-                        </div>
-                      </div>
+
+                      <h3 className="text-xl font-extrabold text-slate-900 leading-tight mb-1.5">{prod.name}</h3>
+                      <p className="text-xs sm:text-sm text-slate-500 mb-5 leading-relaxed">{prod.intro}</p>
+
                       <div className="border-t border-slate-100 pt-4 mb-4">
                         <div className="flex items-baseline gap-2">
                           <strong className="text-3xl font-extrabold text-[#04143c]">{prod.price}</strong>
                           <span className="text-xs text-slate-500 font-medium">One-time purchase · Lifetime use</span>
                         </div>
                       </div>
+
                       <ul className="flex flex-col gap-2.5 mb-6">
                         {[prod.access, 'Direct access to your Google Maps review URL', 'No customer app required to scan or tap', prod.custom].map((feat) => (
                           <li key={feat} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
@@ -1058,29 +1211,38 @@ export function LandingPage() {
                         ))}
                       </ul>
                     </div>
+
                     <button
                       type="button"
-                      className={`w-full py-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                      className={`w-full py-3.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                         prod.recommended
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                       }`}
                       onClick={() => handleSelectProduct(prod.name)}
                     >
                       {selectedProduct === prod.name ? '✓ Selected for enquiry' : 'Order / Enquire Now'} <ArrowRight size={14} />
                     </button>
-                  </article>
+                  </motion.article>
                 ))}
-              </div>
+              </motion.div>
               <p className="text-center text-xs text-slate-400 mt-6">
                 * Transparent one-time hardware purchase. No forced subscriptions or ongoing renewal fees for direct scan routing.
               </p>
             </Fragment>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch"
+            >
               {softwarePlans.map((plan) => (
-                <article
+                <motion.article
                   key={plan.name}
+                  variants={cardVariant}
+                  whileHover={{ y: -8 }}
                   className={`rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all ${
                     plan.recommended
                       ? 'border-2 border-blue-600 bg-gradient-to-b from-blue-50/40 via-white to-white shadow-xl'
@@ -1089,18 +1251,18 @@ export function LandingPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-bold text-slate-900">{plan.name}</span>
+                      <span className="text-lg font-extrabold text-slate-900">{plan.name}</span>
                       {plan.recommended && (
-                        <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">RECOMMENDED</span>
+                        <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">RECOMMENDED</span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500 mb-4">{plan.description}</p>
-                    <div className="text-2xl font-extrabold text-[#04143c] mb-4">
+                    <div className="text-3xl font-extrabold text-[#04143c] mb-5">
                       {plan.price}<small className="text-xs text-slate-500 font-normal"> {plan.cadence}</small>
                     </div>
                     <ul className="flex flex-col gap-2.5 mb-6">
                       {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-2 text-xs text-slate-600">
+                        <li key={f} className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                           <Check size={14} className="text-emerald-600 shrink-0" />
                           <span>{f}</span>
                         </li>
@@ -1109,20 +1271,27 @@ export function LandingPage() {
                   </div>
                   <button
                     type="button"
-                    className="w-full py-3 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition cursor-pointer"
+                    className="w-full py-3 rounded-xl text-xs sm:text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition cursor-pointer"
                     onClick={() => handleSelectProduct(`${plan.name} software plan`)}
                   >
                     Choose {plan.name}
                   </button>
-                </article>
+                </motion.article>
               ))}
-            </div>
+            </motion.div>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* 12. BULK INQUIRY FORM */}
-      <section id="bulk-inquiry" className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="bulk-inquiry"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/60 border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-8 lg:gap-14 items-center">
           <div>
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">BULK & MULTI-LOCATION ORDERS</span>
@@ -1226,10 +1395,17 @@ export function LandingPage() {
             </form>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 13. FAQ SECTION */}
-      <section id="faq" className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center">
+      <motion.section
+        id="faq"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
+      >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 lg:gap-14 items-start">
           <div>
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">CLEAR ANSWERS · NO JARGON</span>
@@ -1269,7 +1445,7 @@ export function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* 14. FOOTER */}
       <footer className="w-full bg-[#04143c] text-white py-14 px-4 sm:px-8 lg:px-12 border-t border-slate-800">
@@ -1329,25 +1505,33 @@ export function LandingPage() {
       </footer>
 
       {/* 15. FLOATING LIVE SOCIAL PROOF TOAST */}
-      {feedVisible && (
-        <div className="fixed bottom-4 left-4 z-40 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-xl flex items-center gap-3 max-w-sm transition-all duration-300">
-          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Sparkles size={16} />
-          </div>
-          <div className="text-xs">
-            <strong className="text-slate-900 block font-semibold">{socialFeed[feedIndex].name}</strong>
-            <span className="text-slate-500 text-[11px] block">{socialFeed[feedIndex].action} · {socialFeed[feedIndex].time}</span>
-          </div>
-          <button
-            type="button"
-            className="text-slate-400 hover:text-slate-600 p-1 ml-auto cursor-pointer"
-            onClick={() => setFeedVisible(false)}
-            aria-label="Close notification"
+      <AnimatePresence>
+        {feedVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 25, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 25, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-4 left-4 z-40 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-xl flex items-center gap-3 max-w-sm"
           >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Sparkles size={16} />
+            </div>
+            <div className="text-xs">
+              <strong className="text-slate-900 block font-semibold">{socialFeed[feedIndex].name}</strong>
+              <span className="text-slate-500 text-[11px] block">{socialFeed[feedIndex].action} · {socialFeed[feedIndex].time}</span>
+            </div>
+            <button
+              type="button"
+              className="text-slate-400 hover:text-slate-600 p-1 ml-auto cursor-pointer"
+              onClick={() => setFeedVisible(false)}
+              aria-label="Close notification"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
