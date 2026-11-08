@@ -1427,3 +1427,810 @@ html {
     display: none;
   }
 }
+
+
+/* ==========================================================================
+   COMPREHENSIVE COMPACT & VIEWPORT-FIT SYSTEM FOR ALL SCREENS (1366px, 1080p, Mobile)
+   Every section fits comfortably in standard screen height without awkward scroll cuts.
+   ========================================================================== */
+
+/* 1. Global Typography & Spacing Compaction */
+.rr-home {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.rr-home h1 {
+  font-size: clamp(26px, 2.8vw, 38px) !important;
+  margin: 6px 0 12px !important;
+  line-height: 1.15 !important;
+  text-wrap: balance !important;
+}
+
+.rr-home h2 {
+  font-size: clamp(20px, 2.2vw, 28px) !important;
+  margin: 6px 0 10px !important;
+  line-height: 1.2 !important;
+  text-wrap: balance !important;
+}
+
+.rr-home h3 {
+  font-size: 16px !important;
+  margin: 4px 0 8px !important;
+  line-height: 1.25 !important;
+}
+
+.rr-home p {
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  margin-bottom: 10px !important;
+}
+
+.rr-home .eyebrow {
+  font-size: 11.5px !important;
+  letter-spacing: 0.06em !important;
+  margin-bottom: 4px !important;
+}
+
+/* Compact Section Heights & Paddings across the whole page */
+.section-wrap {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+  max-width: 1180px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.section-heading {
+  margin-bottom: 18px !important;
+}
+
+.section-heading.centered-heading {
+  max-width: 640px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-bottom: 20px !important;
+  text-align: center !important;
+}
+
+/* 2. Top Header & Reading Bar */
+.site-header {
+  min-height: 58px !important;
+  height: 58px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.header-logo {
+  height: 26px !important;
+  width: auto !important;
+}
+
+.main-nav > a, .login-link {
+  font-size: 14px !important;
+}
+
+.scroll-progress-track {
+  top: 58px !important;
+  height: 3px !important;
+}
+
+/* 3. Hero Section (Compact Screen-Fit) */
+.hero-section {
+  padding-top: 20px !important;
+  padding-bottom: 24px !important;
+  gap: 36px !important;
+  align-items: center !important;
+  min-height: auto !important;
+}
+
+.hero-social-proof-pill {
+  padding: 5px 12px !important;
+  font-size: 11.5px !important;
+  margin-bottom: 10px !important;
+}
+
+.hero-description {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  margin-bottom: 16px !important;
+  max-width: 480px !important;
+}
+
+.hero-ctas {
+  gap: 10px !important;
+  margin-top: 14px !important;
+  margin-bottom: 14px !important;
+}
+
+.hero-ctas .rr-button {
+  padding: 9px 18px !important;
+  font-size: 13.5px !important;
+  min-height: 42px !important;
+}
+
+.hero-note {
+  font-size: 12px !important;
+  gap: 14px !important;
+  margin-top: 12px !important;
+}
+
+.hero-visual {
+  max-height: 320px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.hero-image-wrap {
+  max-height: 300px !important;
+  aspect-ratio: auto !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.hero-product-image {
+  max-height: 300px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+}
+
+.hero-photo-caption {
+  font-size: 11.5px !important;
+  padding: 6px 0 !important;
+  margin-top: 4px !important;
+}
+
+.hero-floating-glass-badge {
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+  border-radius: 8px !important;
+}
+
+/* 4. "A Simple Way" Section Compact Fit */
+.product-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.product-layout {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 32px !important;
+  align-items: center !important;
+}
+
+.product-image-large {
+  max-height: 270px !important;
+  aspect-ratio: auto !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.product-image-large img {
+  max-height: 270px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+}
+
+.feature-pills-list {
+  gap: 8px !important;
+  margin: 12px 0 16px !important;
+}
+
+.feature-pill-card {
+  padding: 8px 14px !important;
+  gap: 10px !important;
+  border-radius: 10px !important;
+}
+
+.feature-pill-icon {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.feature-pill-content strong {
+  font-size: 13.5px !important;
+}
+
+.feature-pill-content span {
+  font-size: 12px !important;
+}
+
+.product-introduction .rr-button {
+  padding: 9px 18px !important;
+  min-height: 42px !important;
+  font-size: 13.5px !important;
+}
+
+.value-strip {
+  margin-top: 24px !important;
+  padding: 10px 16px !important;
+  font-size: 12.5px !important;
+  border-radius: 10px !important;
+}
+
+/* 5. Industry Use Cases Section Compact Fit */
+.industries-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.industry-tabs-bar {
+  margin: 12px 0 18px !important;
+  gap: 8px !important;
+}
+
+.industry-tab-btn {
+  padding: 6px 14px !important;
+  font-size: 12.5px !important;
+  border-radius: 20px !important;
+}
+
+.industry-content-card {
+  padding: 20px 24px !important;
+  gap: 24px !important;
+  border-radius: 16px !important;
+  align-items: center !important;
+}
+
+.industry-content-copy h3 {
+  font-size: 19px !important;
+  margin-bottom: 8px !important;
+}
+
+.industry-content-copy p {
+  font-size: 13px !important;
+  margin-bottom: 12px !important;
+}
+
+.industry-benefits-list {
+  gap: 6px !important;
+  margin-bottom: 16px !important;
+}
+
+.industry-benefits-list li {
+  font-size: 12.5px !important;
+}
+
+.industry-content-visual {
+  height: 210px !important;
+  border-radius: 12px !important;
+}
+
+/* 6. ROI Calculator Section Compact Fit */
+.roi-calculator-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.roi-calculator-card {
+  padding: 22px 26px !important;
+  gap: 26px !important;
+  border-radius: 16px !important;
+}
+
+.roi-calc-left h2 {
+  font-size: 21px !important;
+  margin: 4px 0 8px !important;
+}
+
+.roi-calc-left p {
+  font-size: 13px !important;
+  margin-bottom: 14px !important;
+}
+
+.slider-control-group {
+  padding: 14px 16px !important;
+  border-radius: 12px !important;
+}
+
+.slider-label-row {
+  margin-bottom: 8px !important;
+  font-size: 13px !important;
+}
+
+.slider-label-row strong {
+  font-size: 15px !important;
+}
+
+.roi-metric-result {
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+}
+
+.roi-metric-result strong {
+  font-size: 20px !important;
+}
+
+.roi-metric-result small {
+  font-size: 11px !important;
+}
+
+/* 7. Process Flow (3 Steps) Compact Fit */
+.how-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.process-flow-wrap {
+  margin-top: 18px !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+.process-flow-card {
+  border-radius: 12px !important;
+}
+
+.process-flow-img-wrap {
+  height: 120px !important;
+}
+
+.process-flow-body {
+  padding: 10px 12px !important;
+  gap: 4px !important;
+}
+
+.process-flow-body h3 {
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+.process-flow-body p {
+  font-size: 12px !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.process-step-badge {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 12px !important;
+}
+
+.process-flow-arrow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0.6 !important;
+}
+
+/* 8. Lifestyle Counter Section Compact Fit (Fits whole section in screen) */
+.lifestyle-section {
+  padding-top: 32px !important;
+  padding-bottom: 28px !important;
+  scroll-margin-top: 65px !important;
+}
+
+.lifestyle-card {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  max-height: 270px !important;
+  box-shadow: 0 10px 28px rgba(4, 20, 60, 0.1) !important;
+}
+
+.lifestyle-card img {
+  max-height: 270px !important;
+  width: 100% !important;
+  object-fit: cover !important;
+  object-position: center 32% !important;
+  display: block !important;
+}
+
+.lifestyle-caption-pill {
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  margin-top: 10px !important;
+  border-radius: 20px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* 9. SaaS Laptop Showcase & Interactive Workspace */
+.assistant-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.mac-laptop-mockup {
+  max-width: 740px !important;
+  margin: 14px auto 16px !important;
+  padding: 8px 8px 0 8px !important;
+  border-radius: 14px 14px 0 0 !important;
+}
+
+.mac-laptop-topbar {
+  padding: 6px 12px !important;
+}
+
+.mac-dash-body {
+  min-height: 220px !important;
+}
+
+.mac-dash-sidebar {
+  padding: 10px 8px !important;
+  width: 120px !important;
+}
+
+.mac-sidebar-item {
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+  gap: 6px !important;
+}
+
+.mac-dash-main {
+  padding: 10px 14px !important;
+  gap: 8px !important;
+}
+
+.mac-dash-header h4 {
+  font-size: 14px !important;
+}
+
+.mac-kpi-card {
+  padding: 6px 10px !important;
+}
+
+.mac-kpi-card strong {
+  font-size: 16px !important;
+}
+
+.mac-kpi-card span {
+  font-size: 9.5px !important;
+}
+
+.mac-chart-box {
+  padding: 8px 10px !important;
+}
+
+.mac-chart-box h5 {
+  font-size: 11px !important;
+  margin-bottom: 4px !important;
+}
+
+.dashboard-metrics-row {
+  margin: 16px auto 0 !important;
+  max-width: 740px !important;
+  gap: 12px !important;
+}
+
+.dashboard-metric-pill {
+  padding: 8px 14px !important;
+  gap: 10px !important;
+}
+
+.dashboard-metric-data strong {
+  font-size: 15px !important;
+}
+
+.dashboard-metric-data span {
+  font-size: 11px !important;
+}
+
+/* 10. AI Reply Comparison Compact Fit */
+.ai-reply-card-comparison {
+  padding: 14px 18px !important;
+  margin: 16px 0 !important;
+  gap: 12px !important;
+  border-radius: 14px !important;
+  align-items: center !important;
+}
+
+.review-incoming-card,
+.ai-reply-suggested-card {
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+}
+
+.review-incoming-text,
+.ai-reply-body-text {
+  font-size: 12.5px !important;
+  margin: 4px 0 !important;
+}
+
+.ai-use-reply-btn {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  min-height: 32px !important;
+}
+
+/* 11. Everyday Growth Section Compact Fit (All components in 1 screen) */
+.growth-full-section {
+  display: block !important;
+  width: 100% !important;
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.growth-action-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px !important;
+  margin: 16px 0 20px !important;
+  width: 100% !important;
+}
+
+.growth-action-card {
+  padding: 12px 12px !important;
+  border-radius: 12px !important;
+  gap: 6px !important;
+}
+
+.growth-action-icon {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+}
+
+.growth-action-card h3 {
+  font-size: 13.5px !important;
+  margin: 0 !important;
+}
+
+.growth-action-card p {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+}
+
+.proof-cta-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1.25fr !important;
+  gap: 16px !important;
+  width: 100% !important;
+  align-items: stretch !important;
+  margin: 0 !important;
+}
+
+.owner-testimonial-card {
+  display: flex !important;
+  flex-direction: row !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(4, 20, 60, 0.05) !important;
+  align-items: center !important;
+}
+
+.owner-testimonial-img-wrap {
+  width: 130px !important;
+  height: 100% !important;
+  min-height: 140px !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+.owner-testimonial-img-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center 20% !important;
+}
+
+.owner-testimonial-content {
+  padding: 14px 16px !important;
+  gap: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.owner-quote-mark {
+  font-size: 26px !important;
+  line-height: 1 !important;
+  color: var(--primary) !important;
+}
+
+.owner-quote-text {
+  font-size: 12.5px !important;
+  line-height: 1.4 !important;
+  margin: 0 !important;
+}
+
+.owner-author-name {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+}
+
+.growth-final-cta-card {
+  background: var(--rr-navy) !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  box-shadow: 0 8px 24px rgba(4, 20, 60, 0.16) !important;
+}
+
+.growth-final-cta-visual {
+  display: none !important;
+}
+
+.growth-final-cta-card h2 {
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+  margin: 0 0 6px !important;
+  color: #ffffff !important;
+}
+
+.growth-final-cta-card p {
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+  margin: 0 !important;
+  color: #d3dbea !important;
+}
+
+.growth-final-cta-card .rr-button {
+  padding: 9px 18px !important;
+  min-height: 40px !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* 12. Pricing Cards Compact Fit (Entire pricing visible on screen) */
+.pricing-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.pricing-toggle {
+  margin: 12px 0 18px !important;
+}
+
+.price-product-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
+}
+
+.price-product-row {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  box-shadow: 0 4px 16px rgba(4, 20, 60, 0.05) !important;
+}
+
+.price-product-photo {
+  height: 150px !important;
+  max-height: 150px !important;
+  width: 100% !important;
+  object-fit: contain !important;
+  background: #f8fafc !important;
+  padding: 8px !important;
+  display: block !important;
+}
+
+.price-card-content {
+  padding: 14px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  justify-content: space-between !important;
+}
+
+.price-product-name {
+  font-size: 16px !important;
+  margin: 2px 0 4px !important;
+}
+
+.price-product-intro {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  margin-bottom: 8px !important;
+  min-height: 32px !important;
+}
+
+.hardware-price strong {
+  font-size: 24px !important;
+}
+
+.hardware-price small {
+  font-size: 11px !important;
+}
+
+.hardware-features {
+  gap: 5px !important;
+  margin: 8px 0 12px !important;
+}
+
+.hardware-features li {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+.price-select-button {
+  padding: 8px 14px !important;
+  min-height: 38px !important;
+  font-size: 13px !important;
+}
+
+.purchase-information {
+  margin-top: 20px !important;
+  gap: 16px !important;
+  padding: 12px 18px !important;
+  font-size: 12px !important;
+}
+
+/* 13. Inquiry & FAQ Compact Fit */
+.inquiry-section,
+.faq-section {
+  padding-top: 32px !important;
+  padding-bottom: 32px !important;
+}
+
+.inquiry-form {
+  padding: 20px 24px !important;
+  border-radius: 16px !important;
+}
+
+.faq-item {
+  padding: 10px 0 !important;
+}
+
+.faq-item summary {
+  font-size: 14.5px !important;
+}
+
+.faq-item p {
+  font-size: 13px !important;
+  padding-left: 32px !important;
+}
+
+/* Responsive adjustments for Tablets & Mobile */
+@media (max-width: 992px) {
+  .hero-section {
+    grid-template-columns: 1fr !important;
+  }
+  .product-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .growth-action-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .proof-cta-row {
+    grid-template-columns: 1fr !important;
+  }
+  .owner-testimonial-card {
+    flex-direction: column !important;
+  }
+  .owner-testimonial-img-wrap {
+    width: 100% !important;
+    height: 160px !important;
+  }
+  .growth-final-cta-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .price-product-list {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .growth-action-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .process-flow-wrap {
+    flex-direction: column !important;
+  }
+  .process-flow-arrow {
+    transform: rotate(90deg) !important;
+  }
+}
