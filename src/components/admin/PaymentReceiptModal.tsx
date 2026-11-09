@@ -224,3 +224,4 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({ invoic
     </div>
   );
 };
+

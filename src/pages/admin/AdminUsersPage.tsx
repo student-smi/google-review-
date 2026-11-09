@@ -38,7 +38,8 @@ import {
   Check,
   ArrowUpRight,
   Shield,
-  Receipt
+  Receipt,
+  Menu
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { getCurrentUser, isAdminUser } from '@/lib/auth';
@@ -47,6 +48,7 @@ import { CrmCustomersTab, CustomerItem } from '@/components/admin/CrmCustomersTa
 import { CrmBillingTab } from '@/components/admin/CrmBillingTab';
 import { CrmTeamTab, TeamMemberItem } from '@/components/admin/CrmTeamTab';
 import { InvoiceData } from '@/components/admin/PaymentReceiptModal';
+import { AdminSidebar, AdminTabType } from '@/components/admin/AdminSidebar';
 
 interface BusinessItem {
   id: string;
@@ -142,7 +144,9 @@ export function AdminUsersPage() {
   const [pageSize, setPageSize] = useState(10);
 
   // Active CRM & Admin View Tabs: 'leads' | 'customers' | 'billing' | 'team' | 'users'
-  const [activeAdminTab, setActiveAdminTab] = useState<'leads' | 'customers' | 'billing' | 'team' | 'users'>('leads');
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTabType>('leads');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [crmLeads, setCrmLeads] = useState<LeadItem[]>([]);
   const [crmCustomers, setCrmCustomers] = useState<CustomerItem[]>([]);
   const [crmInvoices, setCrmInvoices] = useState<InvoiceData[]>([]);
@@ -340,45 +344,93 @@ export function AdminUsersPage() {
 
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans p-4 sm:p-8 space-y-8">
-      {/* Top Header */}
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
-        <div>
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 font-sans antialiased">
+      {/* Mobile drawer backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs transition-opacity lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Admin Sidebar Navigation */}
+      <AdminSidebar
+        activeTab={activeAdminTab}
+        onSelectTab={(tab) => setActiveAdminTab(tab)}
+        leadsCount={crmLeads.length}
+        newLeadsCount={crmLeads.filter((l) => (l.stage || l.status) === 'new').length}
+        customersCount={crmCustomers.length}
+        invoicesCount={crmInvoices.length}
+        teamCount={crmTeam.length}
+        usersCount={users.length}
+        dbUsedMb={telemetry?.database.usedMb ?? 3.1}
+        neuronsPercent={telemetry?.ai.neuronsPercentUsed ?? 0}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+      />
+
+      {/* Right Main Container */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        {/* Top Header */}
+        <header className="h-16 px-4 sm:px-8 border-b border-slate-200/80 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30">
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden h-9 w-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 cursor-pointer"
+              title="Open Navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-400">Admin Portal</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-xs font-bold text-indigo-600">
+                  {activeAdminTab === 'leads' && 'Leads CRM Pipeline'}
+                  {activeAdminTab === 'customers' && 'Customer 360'}
+                  {activeAdminTab === 'billing' && 'Billing & Receipts'}
+                  {activeAdminTab === 'team' && 'Roles & RBAC'}
+                  {activeAdminTab === 'users' && 'Merchants Access'}
+                </span>
+              </div>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
+                {activeAdminTab === 'leads' && 'Leads CRM & Follow-Up Pipeline'}
+                {activeAdminTab === 'customers' && 'Customer 360 & Outlets Directory'}
+                {activeAdminTab === 'billing' && 'Financial Ledger & Tax Receipts'}
+                {activeAdminTab === 'team' && 'Roles & Access Control (RBAC)'}
+                {activeAdminTab === 'users' && 'Merchant Accounts & Access Monitoring'}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={loadAdminData}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              className="gap-2 bg-white text-slate-700 shadow-xs hover:bg-slate-50 text-xs h-9 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
+              <span className="hidden sm:inline">Refresh Data</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/dashboard')}
-              className="gap-1.5 text-xs text-slate-600 hover:text-slate-900"
+              className="gap-1.5 text-xs text-slate-600 hover:text-slate-900 h-9 hidden md:flex cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Store App</span>
             </Button>
-            <Badge className="bg-indigo-600 text-white font-bold px-2.5 py-0.5 text-xs flex items-center gap-1 shadow-sm">
-              <Crown className="w-3 h-3 text-amber-300" /> Super Admin
-            </Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-3">
-            User Control & Monitoring Center
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
-            Live monitor registered merchants, active sessions, and suspend abusive accounts with instant logout.
-          </p>
-        </div>
+        </header>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={loadAdminData}
-            variant="outline"
-            size="sm"
-            disabled={isLoading}
-            className="gap-2 bg-white text-slate-700 shadow-xs hover:bg-slate-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
-            Refresh Data
-          </Button>
-        </div>
-      </div>
-
+        {/* Scrollable Content View */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Notice Banner */}
       {notice && (
         <div className="max-w-7xl mx-auto">
@@ -407,14 +459,65 @@ export function AdminUsersPage() {
         </div>
       )}
 
+
+      {activeAdminTab === 'leads' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmLeadsTab
+            leads={crmLeads}
+            executives={
+              crmTeam
+                .filter((t) => t.role === 'executive' || t.role === 'manager' || t.role === 'admin')
+                .map((t) => t.name)
+                .concat(['Smit Panchal'])
+                .filter((v, i, a) => a.indexOf(v) === i)
+            }
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'customers' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmCustomersTab
+            customers={crmCustomers}
+            onSelectCustomerForBilling={(cust) => {
+              setPreSelectedCustomer(cust);
+              setActiveAdminTab('billing');
+            }}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'billing' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmBillingTab
+            invoices={crmInvoices}
+            customers={crmCustomers}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+            preSelectedCustomer={preSelectedCustomer}
+            onClearPreSelectedCustomer={() => setPreSelectedCustomer(null)}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'team' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmTeamTab
+            team={crmTeam}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+          />
+        </div>
+      )}
+
+
+      {activeAdminTab === 'users' && (
+        <div className="max-w-7xl mx-auto space-y-6">
       {/* KPI Stats Cards */}
       <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <Card
-          onClick={() => setActiveAdminTab('users')}
-          className={`border-slate-200/80 bg-white shadow-xs cursor-pointer transition-all hover:border-indigo-400 ${
-            activeAdminTab === 'users' ? 'ring-2 ring-indigo-600 border-indigo-500' : ''
-          }`}
-        >
+        <Card className="border-slate-200/80 bg-white shadow-xs">
           <CardContent className="p-4 sm:p-5 flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -468,9 +571,7 @@ export function AdminUsersPage() {
         {/* Business Enquiries & Leads KPI Card */}
         <Card
           onClick={() => setActiveAdminTab('leads')}
-          className={`border-slate-200/80 bg-white shadow-xs cursor-pointer transition-all hover:border-blue-400 hover:shadow-sm ${
-            activeAdminTab === 'leads' ? 'ring-2 ring-blue-600 border-blue-500' : ''
-          }`}
+          className="border-slate-200/80 bg-white shadow-xs cursor-pointer transition-all hover:border-blue-400 hover:shadow-sm"
         >
           <CardContent className="p-4 sm:p-5 flex items-center justify-between">
             <div className="space-y-1">
@@ -513,6 +614,7 @@ export function AdminUsersPage() {
           </CardContent>
         </Card>
       </div>
+
 
       {/* Infrastructure & Quota Telemetry (Workers AI & Cloudflare D1 Storage) */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -661,132 +763,7 @@ export function AdminUsersPage() {
         </Card>
       </div>
 
-      {/* Primary Section Switcher: Complete CRM Modules */}
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('leads')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'leads'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>Leads CRM Pipeline ({crmLeads.length})</span>
-          {crmLeads.filter((l) => (l.stage || l.status) === 'new').length > 0 && (
-            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-amber-400 text-slate-900 shadow-2xs">
-              {crmLeads.filter((l) => (l.stage || l.status) === 'new').length} New
-            </span>
-          )}
-        </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('customers')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'customers'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Customer 360 ({crmCustomers.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('billing')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'billing'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Receipt className="w-4 h-4" />
-          <span>Billing & Receipts ({crmInvoices.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('team')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'team'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Shield className="w-4 h-4" />
-          <span>Roles & RBAC ({crmTeam.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('users')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'users'
-              ? 'bg-slate-800 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <KeyRound className="w-4 h-4" />
-          <span>Merchants Access ({users.length})</span>
-        </button>
-      </div>
-
-      {activeAdminTab === 'leads' && (
-        <div className="max-w-7xl mx-auto">
-          <CrmLeadsTab
-            leads={crmLeads}
-            executives={
-              crmTeam
-                .filter((t) => t.role === 'executive' || t.role === 'manager' || t.role === 'admin')
-                .map((t) => t.name)
-                .concat(['Smit Panchal'])
-                .filter((v, i, a) => a.indexOf(v) === i)
-            }
-            onRefresh={loadAdminData}
-            showNotice={showNotice}
-          />
-        </div>
-      )}
-
-      {activeAdminTab === 'customers' && (
-        <div className="max-w-7xl mx-auto">
-          <CrmCustomersTab
-            customers={crmCustomers}
-            onSelectCustomerForBilling={(cust) => {
-              setPreSelectedCustomer(cust);
-              setActiveAdminTab('billing');
-            }}
-          />
-        </div>
-      )}
-
-      {activeAdminTab === 'billing' && (
-        <div className="max-w-7xl mx-auto">
-          <CrmBillingTab
-            invoices={crmInvoices}
-            customers={crmCustomers}
-            onRefresh={loadAdminData}
-            showNotice={showNotice}
-            preSelectedCustomer={preSelectedCustomer}
-            onClearPreSelectedCustomer={() => setPreSelectedCustomer(null)}
-          />
-        </div>
-      )}
-
-      {activeAdminTab === 'team' && (
-        <div className="max-w-7xl mx-auto">
-          <CrmTeamTab
-            team={crmTeam}
-            onRefresh={loadAdminData}
-            showNotice={showNotice}
-          />
-        </div>
-      )}
-
-      {activeAdminTab === 'users' && (
       /* Main Users Table Section */
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Filters & Search */}
@@ -1139,8 +1116,10 @@ export function AdminUsersPage() {
           )}
         </Card>
       </div>
+        </div>
       )}
-
+        </main>
+      </div>
 
       {/* Block Confirmation Modal */}
       {blockingTarget && (
@@ -1292,4 +1271,3 @@ export function AdminUsersPage() {
     </div>
   );
 }
-

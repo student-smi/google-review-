@@ -248,3 +248,4 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
     </div>
   );
 };
+
