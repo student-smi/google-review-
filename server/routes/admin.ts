@@ -1,7 +1,25 @@
 import { Hono } from 'hono';
-import { eq, and, gt, desc, sql } from 'drizzle-orm';
+import { eq, and, or, gt, desc, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { users, sessions, businesses, customerReviews, scans, aiUsageDaily, enquiries } from '../db/schema';
+import {
+  users,
+  sessions,
+  accounts,
+  memberships,
+  brands,
+  businesses,
+  locations,
+  qrCodes,
+  scans,
+  scanDailyStats,
+  customerReviews,
+  replyDrafts,
+  seoChecklistItems,
+  mediaAssets,
+  aiDraftEvents,
+  aiUsageDaily,
+  enquiries
+} from '../db/schema';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import type { Env } from './public';
 
@@ -351,6 +369,80 @@ adminRoutes.post('/users/:userId/role', async (c) => {
   } catch (err: any) {
     console.error('Toggle role failed:', err);
     return c.json({ error: err.message || 'Failed to update user role' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 6. Delete User Profile & Associated Records
+// ──────────────────────────────────────────────
+adminRoutes.delete('/users/:userId', async (c) => {
+  try {
+    const targetUserId = c.req.param('userId');
+    const currentAdmin = c.get('user');
+
+    if (!targetUserId) {
+      return c.json({ error: 'userId is required' }, 400);
+    }
+
+    if (currentAdmin && currentAdmin.id === targetUserId) {
+      return c.json({ error: 'You cannot delete your own administrator account!' }, 400);
+    }
+
+    const db = getDb(c.env.DB);
+    const [target] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
+    if (!target) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const targetEmail = (target.email || '').toLowerCase().trim();
+    if (targetEmail === 'smitpanchal734@gmail.com') {
+      return c.json({ error: 'Primary Super Administrator account cannot be deleted' }, 403);
+    }
+
+    // Find all businesses associated with this user
+    const userBusinesses = await db
+      .select({ id: businesses.id })
+      .from(businesses)
+      .where(or(eq(businesses.ownerId, targetUserId), eq(businesses.ownerId, target.email)));
+
+    const bizIds = userBusinesses.map((b) => b.id);
+
+    // 1. Delete dependent entities for all user's businesses
+    for (const bizId of bizIds) {
+      await db.delete(customerReviews).where(eq(customerReviews.businessId, bizId)).catch(() => {});
+      await db.delete(replyDrafts).where(eq(replyDrafts.businessId, bizId)).catch(() => {});
+      await db.delete(scans).where(eq(scans.businessId, bizId)).catch(() => {});
+      await db.delete(scanDailyStats).where(eq(scanDailyStats.businessId, bizId)).catch(() => {});
+      await db.delete(qrCodes).where(eq(qrCodes.businessId, bizId)).catch(() => {});
+      await db.delete(locations).where(eq(locations.businessId, bizId)).catch(() => {});
+      await db.delete(mediaAssets).where(eq(mediaAssets.businessId, bizId)).catch(() => {});
+      await db.delete(seoChecklistItems).where(eq(seoChecklistItems.businessId, bizId)).catch(() => {});
+      await db.delete(aiDraftEvents).where(eq(aiDraftEvents.businessId, bizId)).catch(() => {});
+      await db.delete(aiUsageDaily).where(eq(aiUsageDaily.businessId, bizId)).catch(() => {});
+    }
+
+    // 2. Delete businesses
+    if (bizIds.length > 0) {
+      await db.delete(businesses).where(or(eq(businesses.ownerId, targetUserId), eq(businesses.ownerId, target.email))).catch(() => {});
+    }
+
+    // 3. Delete user memberships, brands, sessions & accounts
+    await db.delete(memberships).where(eq(memberships.userId, targetUserId)).catch(() => {});
+    await db.delete(brands).where(eq(brands.ownerId, targetUserId)).catch(() => {});
+    await db.delete(sessions).where(eq(sessions.userId, targetUserId)).catch(() => {});
+    await db.delete(accounts).where(eq(accounts.userId, targetUserId)).catch(() => {});
+
+    // 4. Delete the user profile
+    await db.delete(users).where(eq(users.id, targetUserId));
+
+    return c.json({
+      success: true,
+      message: `User ${target.name} (${target.email}) and all related data have been permanently deleted.`,
+      userId: targetUserId
+    });
+  } catch (err: any) {
+    console.error('Delete user failed:', err);
+    return c.json({ error: err.message || 'Failed to delete user' }, 500);
   }
 });
 

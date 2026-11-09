@@ -152,6 +152,11 @@ export function AdminUsersPage() {
   const [blockReason, setBlockReason] = useState('Violation of platform policy');
   const [isSubmittingBlock, setIsSubmittingBlock] = useState(false);
 
+  // Delete modal state
+  const [deletingTarget, setDeletingTarget] = useState<EnrichedUser | null>(null);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
+
   // Status message notification
   const [notice, setNotice] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -292,6 +297,25 @@ export function AdminUsersPage() {
       await loadAdminData();
     } catch (err: any) {
       showNotice(err?.message || 'Failed to update user role', 'error');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTarget) return;
+    setIsSubmittingDelete(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string }>(
+        `/api/admin/users/${deletingTarget.id}`,
+        { method: 'DELETE' }
+      );
+      showNotice(res?.message || 'User profile deleted successfully!');
+      setDeletingTarget(null);
+      setConfirmDeleteText('');
+      await loadAdminData();
+    } catch (err: any) {
+      showNotice(err?.message || 'Failed to delete user profile', 'error');
+    } finally {
+      setIsSubmittingDelete(false);
     }
   };
 
@@ -915,6 +939,27 @@ export function AdminUsersPage() {
                                 <KeyRound className="w-3.5 h-3.5" />
                               </Button>
                             )}
+
+                            {/* Delete User Profile */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isCurrentAdmin || user.email === 'smitpanchal734@gmail.com'}
+                              onClick={() => {
+                                setDeletingTarget(user);
+                                setConfirmDeleteText('');
+                              }}
+                              className="h-7 px-2 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold disabled:opacity-20"
+                              title={
+                                isCurrentAdmin
+                                  ? 'You cannot delete yourself'
+                                  : user.email === 'smitpanchal734@gmail.com'
+                                  ? 'Super Admin cannot be deleted'
+                                  : 'Permanently delete user profile'
+                              }
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -1369,6 +1414,74 @@ export function AdminUsersPage() {
                 >
                   <Ban className="w-3.5 h-3.5" />
                   {isSubmittingBlock ? 'Blocking...' : 'Confirm Suspension'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deletingTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-rose-200 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-6 space-y-4">
+              <div className="h-12 w-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Delete User Profile: {deletingTarget.name}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Email: <span className="font-mono text-slate-700 font-semibold">{deletingTarget.email}</span>
+                </p>
+                <div className="mt-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Permanent Deletion:</strong> This will permanently delete the user account, their registered businesses, QR codes, scan analytics, and active sessions from the database. <strong>This action cannot be undone.</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">
+                  Type <span className="font-mono text-rose-600 font-black">DELETE</span> to confirm:
+                </label>
+                <Input
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  placeholder="DELETE"
+                  className="text-xs h-9 font-mono uppercase tracking-wider"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDeletingTarget(null);
+                    setConfirmDeleteText('');
+                  }}
+                  disabled={isSubmittingDelete}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleConfirmDelete}
+                  disabled={isSubmittingDelete || confirmDeleteText.trim().toUpperCase() !== 'DELETE'}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-1.5 shadow-sm disabled:opacity-40"
+                >
+                  {isSubmittingDelete ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  {isSubmittingDelete ? 'Deleting...' : 'Permanently Delete'}
                 </Button>
               </div>
             </div>
