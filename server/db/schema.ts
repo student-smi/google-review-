@@ -290,11 +290,46 @@ export const enquiries = sqliteTable('enquiries', {
   status: text('status').default('new').notNull(), // 'new' | 'contacted' | 'qualified' | 'converted' | 'archived'
   notes: text('notes'),
   source: text('source').default('landing_page').notNull(),
+  assignedTo: text('assigned_to'),
+  stage: text('stage').default('new'),
+  followUpDate: text('follow_up_date'),
+  followUpStatus: text('follow_up_status').default('pending'),
+  dealValue: integer('deal_value').default(0),
+  activityLog: text('activity_log'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull()
 }, (t) => [
   index('idx_enquiries_created').on(t.createdAt),
-  index('idx_enquiries_status').on(t.status)
+  index('idx_enquiries_status').on(t.status),
+  index('idx_enquiries_stage').on(t.stage)
 ]);
+
+export const invoices = sqliteTable('invoices', {
+  id: text('id').primaryKey(),
+  invoiceNumber: text('invoice_number').notNull().unique(),
+  customerId: text('customer_id'),
+  customerName: text('customer_name').notNull(),
+  customerEmail: text('customer_email').notNull(),
+  customerPhone: text('customer_phone'),
+  businessId: text('business_id'),
+  businessName: text('business_name'),
+  itemsJson: text('items_json').notNull(),
+  subtotal: integer('subtotal').notNull(),
+  taxRate: integer('tax_rate').default(18),
+  taxAmount: integer('tax_amount').notNull(),
+  totalAmount: integer('total_amount').notNull(),
+  status: text('status').default('pending').notNull(), // 'paid' | 'pending' | 'overdue' | 'cancelled'
+  paymentMethod: text('payment_method').default('upi'), // 'razorpay' | 'upi' | 'bank_transfer' | 'cash'
+  paymentId: text('payment_id'),
+  paidAt: integer('paid_at'),
+  dueDate: integer('due_date'),
+  notes: text('notes'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, (t) => [
+  index('idx_invoices_customer').on(t.customerId),
+  index('idx_invoices_status').on(t.status)
+]);
+
 
 

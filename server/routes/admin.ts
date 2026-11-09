@@ -18,7 +18,8 @@ import {
   mediaAssets,
   aiDraftEvents,
   aiUsageDaily,
-  enquiries
+  enquiries,
+  invoices
 } from '../db/schema';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import type { Env } from './public';
@@ -337,7 +338,8 @@ adminRoutes.post('/users/:userId/role', async (c) => {
   try {
     const targetUserId = c.req.param('userId');
     const body = await c.req.json().catch(() => ({}));
-    const newRole = body?.role === 'admin' ? 'admin' : 'owner';
+    const allowedRoles = ['admin', 'manager', 'executive', 'agency', 'owner'];
+    const newRole = allowedRoles.includes(body?.role) ? body.role : 'owner';
 
     const db = getDb(c.env.DB);
     const [target] = await db.select().from(users).where(eq(users.id, targetUserId)).limit(1);
@@ -504,6 +506,379 @@ adminRoutes.delete('/enquiries/:id', async (c) => {
   } catch (err: any) {
     console.error('Delete enquiry failed:', err);
     return c.json({ error: err.message || 'Failed to delete enquiry' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 7. Full CRM Pipeline (Leads, Stages, Follow-ups, Activities)
+// ──────────────────────────────────────────────
+adminRoutes.get('/crm/leads', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const list = await db.select().from(enquiries).orderBy(desc(enquiries.createdAt));
+    return c.json({ success: true, leads: list });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to fetch leads' }, 500);
+  }
+});
+
+adminRoutes.post('/crm/leads', async (c) => {
+  try {
+    const body = await c.req.json();
+    const db = getDb(c.env.DB);
+    const now = Math.floor(Date.now() / 1000);
+    const id = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    const leadRecord = {
+      id,
+      company: body.company || 'Direct Inquiry',
+      contactPerson: body.contactPerson || 'Prospect',
+      mobile: body.mobile || '',
+      email: body.email || '',
+      locations: Number(body.locations) || 1,
+      quantity: body.quantity || '1 unit',
+      product: body.product || 'NFC + QR Standee',
+      message: body.message || null,
+      status: body.stage || 'new',
+      stage: body.stage || 'new',
+      notes: body.notes || null,
+      source: body.source || 'direct_call',
+      assignedTo: body.assignedTo || 'Unassigned',
+      followUpDate: body.followUpDate || null,
+      followUpStatus: 'pending',
+      dealValue: Number(body.dealValue) || 999,
+      activityLog: JSON.stringify([
+        {
+          id: `act_${Date.now()}`,
+          text: `Lead created manually (Source: ${body.source || 'direct_call'})`,
+          author: c.get('user')?.name || 'Admin',
+          createdAt: Date.now(),
+          type: 'created'
+        }
+      ]),
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.insert(enquiries).values(leadRecord);
+    return c.json({ success: true, message: 'Lead created successfully', lead: leadRecord }, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to create lead' }, 500);
+  }
+});
+
+adminRoutes.patch('/crm/leads/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const db = getDb(c.env.DB);
+    const now = Math.floor(Date.now() / 1000);
+
+    const updateData: any = { updatedAt: now };
+    if (body.stage !== undefined) {
+      updateData.stage = String(body.stage);
+      updateData.status = String(body.stage);
+    }
+    if (body.assignedTo !== undefined) updateData.assignedTo = String(body.assignedTo);
+    if (body.followUpDate !== undefined) updateData.followUpDate = body.followUpDate;
+    if (body.followUpStatus !== undefined) updateData.followUpStatus = String(body.followUpStatus);
+    if (body.dealValue !== undefined) updateData.dealValue = Number(body.dealValue);
+    if (body.notes !== undefined) updateData.notes = String(body.notes);
+    if (body.company !== undefined) updateData.company = String(body.company);
+    if (body.contactPerson !== undefined) updateData.contactPerson = String(body.contactPerson);
+    if (body.mobile !== undefined) updateData.mobile = String(body.mobile);
+    if (body.email !== undefined) updateData.email = String(body.email);
+    if (body.source !== undefined) updateData.source = String(body.source);
+
+    await db.update(enquiries).set(updateData).where(eq(enquiries.id, id));
+    return c.json({ success: true, message: 'Lead updated successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update lead' }, 500);
+  }
+});
+
+adminRoutes.post('/crm/leads/:id/notes', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { text, type } = await c.req.json();
+    if (!text) return c.json({ error: 'Note text is required' }, 400);
+
+    const db = getDb(c.env.DB);
+    const [lead] = await db.select().from(enquiries).where(eq(enquiries.id, id)).limit(1);
+    if (!lead) return c.json({ error: 'Lead not found' }, 404);
+
+    let activities = [];
+    try {
+      activities = lead.activityLog ? JSON.parse(lead.activityLog) : [];
+    } catch {}
+
+    const newActivity = {
+      id: `act_${Date.now()}`,
+      text: String(text).trim(),
+      author: c.get('user')?.name || 'Admin',
+      createdAt: Date.now(),
+      type: type || 'note'
+    };
+    activities.unshift(newActivity);
+
+    const now = Math.floor(Date.now() / 1000);
+    await db.update(enquiries).set({
+      activityLog: JSON.stringify(activities),
+      updatedAt: now
+    }).where(eq(enquiries.id, id));
+
+    return c.json({ success: true, message: 'Conversation note recorded', activity: newActivity });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to add note' }, 500);
+  }
+});
+
+adminRoutes.delete('/crm/leads/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = getDb(c.env.DB);
+    await db.delete(enquiries).where(eq(enquiries.id, id));
+    return c.json({ success: true, message: 'Lead deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to delete lead' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 8. Customer 360 Management & Subscriptions
+// ──────────────────────────────────────────────
+adminRoutes.get('/crm/customers', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+
+    const [userList, bizList, scanList, reviewList, invoiceList, locationList] = await Promise.all([
+      db.select().from(users).orderBy(desc(users.createdAt)),
+      db.select().from(businesses),
+      db.select({ id: scans.id, businessId: scans.businessId }).from(scans),
+      db.select({ id: customerReviews.id, businessId: customerReviews.businessId, replyText: customerReviews.replyText }).from(customerReviews),
+      db.select().from(invoices).catch(() => []),
+      db.select({ id: locations.id, businessId: locations.businessId }).from(locations)
+    ]);
+
+    // Group businesses by owner
+    const bizByOwner: Record<string, typeof bizList> = {};
+    for (const b of bizList) {
+      if (!bizByOwner[b.ownerId]) bizByOwner[b.ownerId] = [];
+      bizByOwner[b.ownerId].push(b);
+    }
+
+    // Group scans by businessId
+    const scansByBiz: Record<string, number> = {};
+    for (const s of scanList) {
+      scansByBiz[s.businessId] = (scansByBiz[s.businessId] || 0) + 1;
+    }
+
+    // Group reviews & replies by businessId
+    const reviewsByBiz: Record<string, { count: number; replies: number }> = {};
+    for (const r of reviewList) {
+      if (!reviewsByBiz[r.businessId]) reviewsByBiz[r.businessId] = { count: 0, replies: 0 };
+      reviewsByBiz[r.businessId].count += 1;
+      if (r.replyText) reviewsByBiz[r.businessId].replies += 1;
+    }
+
+    // Group locations by businessId
+    const locationsByBiz: Record<string, number> = {};
+    for (const l of locationList) {
+      locationsByBiz[l.businessId] = (locationsByBiz[l.businessId] || 0) + 1;
+    }
+
+    // Group invoices by customerId
+    const invoicesByCustomer: Record<string, any[]> = {};
+    for (const inv of invoiceList as any[]) {
+      if (inv.customerId) {
+        if (!invoicesByCustomer[inv.customerId]) invoicesByCustomer[inv.customerId] = [];
+        invoicesByCustomer[inv.customerId].push(inv);
+      }
+    }
+
+    const customers = userList.map((u) => {
+      const myBusinesses = bizByOwner[u.id] || [];
+      let totalScans = 0;
+      let totalReviews = 0;
+      let totalReplies = 0;
+      let totalLocations = myBusinesses.length;
+
+      for (const b of myBusinesses) {
+        totalScans += scansByBiz[b.id] || 0;
+        totalReviews += reviewsByBiz[b.id]?.count || 0;
+        totalReplies += reviewsByBiz[b.id]?.replies || 0;
+        totalLocations += locationsByBiz[b.id] || 0;
+      }
+
+      const myInvoices = invoicesByCustomer[u.id] || [];
+      const totalBilled = myInvoices.reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
+      const totalPaid = myInvoices.filter((i) => i.status === 'paid').reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
+
+      const planName = myBusinesses.length > 3 ? 'Enterprise (Multi-Outlet)' : myBusinesses.length > 0 ? 'Growth (NFC + Review Sync)' : 'Starter';
+      const planStatus = u.isBlocked ? 'suspended' : 'active';
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role || 'owner',
+        isBlocked: Boolean(u.isBlocked),
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+        businesses: myBusinesses.map((b) => ({ id: b.id, name: b.name, city: b.city, slug: b.slug })),
+        totalLocations: Math.max(1, totalLocations),
+        totalScans,
+        totalReviews,
+        totalReplies,
+        plan: {
+          name: planName,
+          status: planStatus,
+          billingCycle: 'monthly',
+          expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000
+        },
+        billing: {
+          invoiceCount: myInvoices.length,
+          totalBilled,
+          totalPaid
+        }
+      };
+    });
+
+    return c.json({ success: true, customers });
+  } catch (err: any) {
+    console.error('Fetch CRM customers failed:', err);
+    return c.json({ error: err.message || 'Failed to fetch customers' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 9. Billing, Invoices & Payment Receipts
+// ──────────────────────────────────────────────
+adminRoutes.get('/crm/invoices', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const list = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+    return c.json({ success: true, invoices: list });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to fetch invoices' }, 500);
+  }
+});
+
+adminRoutes.post('/crm/invoices', async (c) => {
+  try {
+    const body = await c.req.json();
+    const db = getDb(c.env.DB);
+    const now = Math.floor(Date.now() / 1000);
+    const id = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const invoiceNumber = body.invoiceNumber || `INV-${new Date().getFullYear()}-${randomNum}`;
+
+    const items = Array.isArray(body.items) && body.items.length > 0
+      ? body.items
+      : [{ description: body.itemDescription || 'Smart Review Standee Hardware', qty: 1, unitPrice: Number(body.subtotal) || 999, amount: Number(body.subtotal) || 999 }];
+
+    const subtotal = items.reduce((sum: number, it: any) => sum + (Number(it.amount) || (Number(it.qty) * Number(it.unitPrice))), 0);
+    const taxRate = 18; // 18% GST standard
+    const taxAmount = Math.round((subtotal * taxRate) / 100);
+    const totalAmount = subtotal + taxAmount;
+
+    const invoiceRecord = {
+      id,
+      invoiceNumber,
+      customerId: body.customerId || null,
+      customerName: body.customerName || 'Valued Merchant',
+      customerEmail: body.customerEmail || '',
+      customerPhone: body.customerPhone || null,
+      businessId: body.businessId || null,
+      businessName: body.businessName || 'Business Outlet',
+      itemsJson: JSON.stringify(items),
+      subtotal,
+      taxRate,
+      taxAmount,
+      totalAmount,
+      status: body.status || 'paid',
+      paymentMethod: body.paymentMethod || 'upi',
+      paymentId: body.paymentId || `TXN_${Date.now()}`,
+      paidAt: body.status === 'paid' ? now : null,
+      dueDate: now + 7 * 24 * 60 * 60,
+      notes: body.notes || 'Thank you for choosing Loctimize ReviewQR!',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.insert(invoices).values(invoiceRecord);
+    return c.json({ success: true, message: 'Invoice generated successfully', invoice: invoiceRecord }, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to create invoice' }, 500);
+  }
+});
+
+adminRoutes.patch('/crm/invoices/:id/status', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const { status, paymentMethod, paymentId } = await c.req.json();
+    const db = getDb(c.env.DB);
+    const now = Math.floor(Date.now() / 1000);
+
+    const updateData: any = { updatedAt: now };
+    if (status) updateData.status = String(status);
+    if (status === 'paid') updateData.paidAt = now;
+    if (paymentMethod) updateData.paymentMethod = String(paymentMethod);
+    if (paymentId) updateData.paymentId = String(paymentId);
+
+    await db.update(invoices).set(updateData).where(eq(invoices.id, id));
+    return c.json({ success: true, message: 'Invoice status updated successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update invoice' }, 500);
+  }
+});
+
+adminRoutes.delete('/crm/invoices/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = getDb(c.env.DB);
+    await db.delete(invoices).where(eq(invoices.id, id));
+    return c.json({ success: true, message: 'Invoice deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to delete invoice' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 10. Team & Roles Management (Admin, Manager, Executive, Agency)
+// ──────────────────────────────────────────────
+adminRoutes.get('/crm/team', async (c) => {
+  try {
+    const db = getDb(c.env.DB);
+    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+    const allLeads = await db.select({ assignedTo: enquiries.assignedTo }).from(enquiries);
+
+    // Count workload per team member
+    const workload: Record<string, number> = {};
+    for (const l of allLeads) {
+      if (l.assignedTo) {
+        workload[l.assignedTo] = (workload[l.assignedTo] || 0) + 1;
+      }
+    }
+
+    const team = allUsers.map((u) => {
+      const isSuperAdmin = (u.email || '').toLowerCase().trim() === 'smitpanchal734@gmail.com';
+      const role = isSuperAdmin ? 'admin' : (u.role || 'owner');
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role,
+        isBlocked: Boolean(u.isBlocked),
+        assignedLeadsCount: workload[u.name] || workload[u.email] || 0,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt
+      };
+    });
+
+    return c.json({ success: true, team });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to fetch team' }, 500);
   }
 });
 

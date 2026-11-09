@@ -636,6 +636,20 @@ publicRoutes.post('/enquiry', async (c) => {
       product: String(body.product || 'NFC + QR Smart Review Standee').trim(),
       message: body.message ? String(body.message).trim() : null,
       status: 'new',
+      stage: 'new',
+      assignedTo: 'Unassigned',
+      dealValue: 999,
+      followUpStatus: 'pending',
+      followUpDate: null,
+      activityLog: JSON.stringify([
+        {
+          id: `act_${Date.now()}`,
+          text: `Inquiry submitted via landing page (Product: ${String(body.product || 'NFC Standee').trim()})`,
+          author: 'Website Form',
+          createdAt: Date.now(),
+          type: 'created'
+        }
+      ]),
       notes: null,
       source: String(body.source || 'landing_page'),
       createdAt: now,

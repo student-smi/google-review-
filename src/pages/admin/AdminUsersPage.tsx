@@ -36,10 +36,17 @@ import {
   FileText,
   FileEdit,
   Check,
-  ArrowUpRight
+  ArrowUpRight,
+  Shield,
+  Receipt
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { getCurrentUser, isAdminUser } from '@/lib/auth';
+import { CrmLeadsTab, LeadItem } from '@/components/admin/CrmLeadsTab';
+import { CrmCustomersTab, CustomerItem } from '@/components/admin/CrmCustomersTab';
+import { CrmBillingTab } from '@/components/admin/CrmBillingTab';
+import { CrmTeamTab, TeamMemberItem } from '@/components/admin/CrmTeamTab';
+import { InvoiceData } from '@/components/admin/PaymentReceiptModal';
 
 interface BusinessItem {
   id: string;
@@ -134,13 +141,13 @@ export function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Active Admin View Tab: 'users' (Merchants) vs 'enquiries' (Business Leads)
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'enquiries'>('users');
-  const [enquiries, setEnquiries] = useState<EnquiryItem[]>([]);
-  const [enquiryFilter, setEnquiryFilter] = useState<'all' | 'new' | 'contacted' | 'qualified' | 'converted' | 'archived'>('all');
-  const [enquirySearch, setEnquirySearch] = useState('');
-  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
-  const [tempNotes, setTempNotes] = useState('');
+  // Active CRM & Admin View Tabs: 'leads' | 'customers' | 'billing' | 'team' | 'users'
+  const [activeAdminTab, setActiveAdminTab] = useState<'leads' | 'customers' | 'billing' | 'team' | 'users'>('leads');
+  const [crmLeads, setCrmLeads] = useState<LeadItem[]>([]);
+  const [crmCustomers, setCrmCustomers] = useState<CustomerItem[]>([]);
+  const [crmInvoices, setCrmInvoices] = useState<InvoiceData[]>([]);
+  const [crmTeam, setCrmTeam] = useState<TeamMemberItem[]>([]);
+  const [preSelectedCustomer, setPreSelectedCustomer] = useState<CustomerItem | null>(null);
 
   // Reset pagination to page 1 on filter, search or page size change
   useEffect(() => {
@@ -168,10 +175,13 @@ export function AdminUsersPage() {
   const loadAdminData = async () => {
     setIsLoading(true);
     try {
-      const [overviewRes, usersRes, enquiriesRes] = await Promise.all([
+      const [overviewRes, usersRes, leadsRes, customersRes, invoicesRes, teamRes] = await Promise.all([
         apiFetch<{ success: boolean; stats: AdminOverviewStats; telemetry?: AdminTelemetry }>('/api/admin/overview'),
         apiFetch<{ success: boolean; users: EnrichedUser[] }>('/api/admin/users'),
-        apiFetch<{ success: boolean; enquiries: EnquiryItem[] }>('/api/admin/enquiries').catch(() => ({ success: false, enquiries: [] }))
+        apiFetch<{ success: boolean; leads: LeadItem[] }>('/api/admin/crm/leads').catch(() => ({ success: false, leads: [] })),
+        apiFetch<{ success: boolean; customers: CustomerItem[] }>('/api/admin/crm/customers').catch(() => ({ success: false, customers: [] })),
+        apiFetch<{ success: boolean; invoices: InvoiceData[] }>('/api/admin/crm/invoices').catch(() => ({ success: false, invoices: [] })),
+        apiFetch<{ success: boolean; team: TeamMemberItem[] }>('/api/admin/crm/team').catch(() => ({ success: false, team: [] }))
       ]);
 
       if (overviewRes?.stats) {
@@ -183,54 +193,27 @@ export function AdminUsersPage() {
       if (usersRes?.users) {
         setUsers(usersRes.users);
       }
-      if (enquiriesRes?.enquiries) {
-        setEnquiries(enquiriesRes.enquiries);
+      if (leadsRes?.leads) {
+        setCrmLeads(leadsRes.leads);
+      }
+      if (customersRes?.customers) {
+        setCrmCustomers(customersRes.customers);
+      }
+      if (invoicesRes?.invoices) {
+        setCrmInvoices(invoicesRes.invoices);
+      }
+      if (teamRes?.team) {
+        setCrmTeam(teamRes.team);
       }
     } catch (err: any) {
       console.error('Failed to load admin data:', err);
-      showNotice(err?.message || 'Access denied or failed to load users.', 'error');
+      showNotice(err?.message || 'Access denied or failed to load CRM data.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateEnquiryStatus = async (id: string, status: string) => {
-    try {
-      await apiFetch(`/api/admin/enquiries/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status })
-      });
-      showNotice(`Enquiry status updated to "${status}"`);
-      await loadAdminData();
-    } catch (err: any) {
-      showNotice(err?.message || 'Failed to update enquiry status', 'error');
-    }
-  };
 
-  const handleSaveEnquiryNotes = async (id: string) => {
-    try {
-      await apiFetch(`/api/admin/enquiries/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ notes: tempNotes })
-      });
-      showNotice('Enquiry follow-up notes saved!');
-      setEditingNotesId(null);
-      await loadAdminData();
-    } catch (err: any) {
-      showNotice(err?.message || 'Failed to save notes', 'error');
-    }
-  };
-
-  const handleDeleteEnquiry = async (id: string, company: string) => {
-    if (!confirm(`Are you sure you want to permanently delete enquiry from "${company}"?`)) return;
-    try {
-      await apiFetch(`/api/admin/enquiries/${id}`, { method: 'DELETE' });
-      showNotice('Enquiry deleted successfully');
-      await loadAdminData();
-    } catch (err: any) {
-      showNotice(err?.message || 'Failed to delete enquiry', 'error');
-    }
-  };
 
   useEffect(() => {
     // Check if user is logged in and is super admin
@@ -354,22 +337,7 @@ export function AdminUsersPage() {
     return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const filteredEnquiries = enquiries.filter((item) => {
-    const q = enquirySearch.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      item.company.toLowerCase().includes(q) ||
-      item.contactPerson.toLowerCase().includes(q) ||
-      item.mobile.toLowerCase().includes(q) ||
-      item.email.toLowerCase().includes(q) ||
-      item.product.toLowerCase().includes(q) ||
-      (item.message && item.message.toLowerCase().includes(q)) ||
-      (item.notes && item.notes.toLowerCase().includes(q));
 
-    if (!matchesSearch) return false;
-    if (enquiryFilter !== 'all' && item.status !== enquiryFilter) return false;
-    return true;
-  });
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans p-4 sm:p-8 space-y-8">
@@ -497,18 +465,18 @@ export function AdminUsersPage() {
           </CardContent>
         </Card>
 
-        {/* Business Enquiries KPI Card */}
+        {/* Business Enquiries & Leads KPI Card */}
         <Card
-          onClick={() => setActiveAdminTab('enquiries')}
+          onClick={() => setActiveAdminTab('leads')}
           className={`border-slate-200/80 bg-white shadow-xs cursor-pointer transition-all hover:border-blue-400 hover:shadow-sm ${
-            activeAdminTab === 'enquiries' ? 'ring-2 ring-blue-600 border-blue-500' : ''
+            activeAdminTab === 'leads' ? 'ring-2 ring-blue-600 border-blue-500' : ''
           }`}
         >
           <CardContent className="p-4 sm:p-5 flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                Enquiries
-                {(stats?.newEnquiries ?? enquiries.filter((e) => e.status === 'new').length) > 0 && (
+                CRM Leads
+                {crmLeads.filter((l) => (l.stage || l.status) === 'new').length > 0 && (
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
@@ -516,10 +484,10 @@ export function AdminUsersPage() {
                 )}
               </span>
               <p className="text-2xl sm:text-3xl font-extrabold text-blue-600">
-                {stats?.totalEnquiries ?? enquiries.length}
+                {crmLeads.length}
               </p>
               <span className="text-[11px] text-blue-600 font-medium">
-                {stats?.newEnquiries ?? enquiries.filter((e) => e.status === 'new').length} New / Unhandled
+                {crmLeads.filter((l) => (l.stage || l.status) === 'new').length} New Leads in Pipeline
               </span>
             </div>
             <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -693,41 +661,132 @@ export function AdminUsersPage() {
         </Card>
       </div>
 
-      {/* Primary Section Switcher: Users vs Enquiries */}
-      <div className="max-w-7xl mx-auto flex items-center gap-3 border-b border-slate-200 pb-3">
+      {/* Primary Section Switcher: Complete CRM Modules */}
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         <button
           type="button"
-          onClick={() => setActiveAdminTab('users')}
+          onClick={() => setActiveAdminTab('leads')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'users'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Registered Merchants ({users.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveAdminTab('enquiries')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeAdminTab === 'enquiries'
+            activeAdminTab === 'leads'
               ? 'bg-blue-600 text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Business Leads & Enquiries ({enquiries.length})</span>
-          {enquiries.filter((e) => e.status === 'new').length > 0 && (
+          <span>Leads CRM Pipeline ({crmLeads.length})</span>
+          {crmLeads.filter((l) => (l.stage || l.status) === 'new').length > 0 && (
             <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-amber-400 text-slate-900 shadow-2xs">
-              {enquiries.filter((e) => e.status === 'new').length} New
+              {crmLeads.filter((l) => (l.stage || l.status) === 'new').length} New
             </span>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveAdminTab('customers')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeAdminTab === 'customers'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Customer 360 ({crmCustomers.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveAdminTab('billing')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeAdminTab === 'billing'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Receipt className="w-4 h-4" />
+          <span>Billing & Receipts ({crmInvoices.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveAdminTab('team')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeAdminTab === 'team'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          <span>Roles & RBAC ({crmTeam.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveAdminTab('users')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+            activeAdminTab === 'users'
+              ? 'bg-slate-800 text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>Merchants Access ({users.length})</span>
+        </button>
       </div>
 
-      {activeAdminTab === 'users' ? (
+      {activeAdminTab === 'leads' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmLeadsTab
+            leads={crmLeads}
+            executives={
+              crmTeam
+                .filter((t) => t.role === 'executive' || t.role === 'manager' || t.role === 'admin')
+                .map((t) => t.name)
+                .concat(['Smit Panchal'])
+                .filter((v, i, a) => a.indexOf(v) === i)
+            }
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'customers' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmCustomersTab
+            customers={crmCustomers}
+            onSelectCustomerForBilling={(cust) => {
+              setPreSelectedCustomer(cust);
+              setActiveAdminTab('billing');
+            }}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'billing' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmBillingTab
+            invoices={crmInvoices}
+            customers={crmCustomers}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+            preSelectedCustomer={preSelectedCustomer}
+            onClearPreSelectedCustomer={() => setPreSelectedCustomer(null)}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'team' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmTeamTab
+            team={crmTeam}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'users' && (
       /* Main Users Table Section */
       <div className="max-w-7xl mx-auto space-y-4">
         {/* Filters & Search */}
@@ -1080,266 +1139,8 @@ export function AdminUsersPage() {
           )}
         </Card>
       </div>
-      ) : (
-        /* Main Enquiries Management Section */
-        <div className="max-w-7xl mx-auto space-y-4">
-          {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <Input
-                value={enquirySearch}
-                onChange={(e) => setEnquirySearch(e.target.value)}
-                placeholder="Search enquiry by company, contact person, mobile, email, product..."
-                className="pl-9 h-10 text-sm border-slate-200 focus-visible:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              {(
-                [
-                  { id: 'all', label: `All (${enquiries.length})` },
-                  { id: 'new', label: `New (${enquiries.filter((e) => e.status === 'new').length})` },
-                  { id: 'contacted', label: `Contacted (${enquiries.filter((e) => e.status === 'contacted').length})` },
-                  { id: 'qualified', label: `Qualified (${enquiries.filter((e) => e.status === 'qualified').length})` },
-                  { id: 'converted', label: `Converted (${enquiries.filter((e) => e.status === 'converted').length})` },
-                  { id: 'archived', label: `Archived (${enquiries.filter((e) => e.status === 'archived').length})` }
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setEnquiryFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    enquiryFilter === tab.id
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Enquiries Table Card */}
-          <Card className="border-slate-200/80 bg-white shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
-                    <th className="py-3 px-4">Company & Contact</th>
-                    <th className="py-3 px-4">Contact Info</th>
-                    <th className="py-3 px-4">Requirement / Volume</th>
-                    <th className="py-3 px-4">Customer Request & Notes</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Received</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
-                        <div className="flex items-center justify-center gap-2">
-                          <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-                          <span>Loading enquiries...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : filteredEnquiries.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Building2 className="w-8 h-8 text-slate-300" />
-                          <p className="font-semibold text-slate-600">No enquiries found</p>
-                          <span className="text-[11px] text-slate-400">
-                            {enquirySearch || enquiryFilter !== 'all'
-                              ? 'Try adjusting your search criteria or filter pills'
-                              : 'Incoming enquiries from the landing page will appear here immediately.'}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredEnquiries.map((item) => {
-                      const cleanPhone = item.mobile.replace(/[^0-9]/g, '');
-                      const waNumber = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone.replace(/^0+/, '')}`;
-                      const waText = encodeURIComponent(`Hi ${item.contactPerson}, thank you for your enquiry on Loctimize regarding ${item.product}!`);
-
-                      return (
-                        <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                          {/* Company & Contact */}
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                              <span>{item.company}</span>
-                              {item.status === 'new' && (
-                                <span className="h-2 w-2 rounded-full bg-blue-600 ring-2 ring-blue-100 shrink-0" title="New unhandled lead" />
-                              )}
-                            </div>
-                            <div className="text-slate-600 font-medium text-xs mt-0.5">
-                              {item.contactPerson}
-                            </div>
-                            <div className="mt-1">
-                              <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium text-slate-600 border-slate-200 bg-slate-50">
-                                🏢 {item.locations} {item.locations === 1 ? 'Location' : 'Locations'}
-                              </Badge>
-                            </div>
-                          </td>
-
-                          {/* Contact Info (WhatsApp, Call, Email) */}
-                          <td className="py-3 px-4">
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs text-slate-800 font-semibold">{item.mobile}</span>
-                                <a
-                                  href={`https://wa.me/${waNumber}?text=${waText}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="h-6 px-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                                  title="Chat on WhatsApp"
-                                >
-                                  <MessageCircle className="w-3 h-3 text-emerald-600" />
-                                  <span>WhatsApp</span>
-                                </a>
-                                <a
-                                  href={`tel:${item.mobile}`}
-                                  className="h-6 w-6 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition inline-flex items-center justify-center text-[11px] cursor-pointer"
-                                  title="Call number"
-                                >
-                                  <Phone className="w-3 h-3" />
-                                </a>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-slate-600">
-                                <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                                <a href={`mailto:${item.email}`} className="text-blue-600 hover:underline truncate max-w-[180px]">
-                                  {item.email}
-                                </a>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Requirement / Plan */}
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-slate-900">{item.product}</div>
-                            <div className="mt-1">
-                              <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium text-[10px] py-0 px-1.5">
-                                Qty: {item.quantity}
-                              </Badge>
-                            </div>
-                          </td>
-
-                          {/* Message / Notes */}
-                          <td className="py-3 px-4 max-w-[260px]">
-                            {item.message ? (
-                              <p className="text-slate-700 text-xs italic bg-slate-50 p-2 rounded-lg border border-slate-100 line-clamp-2" title={item.message}>
-                                "{item.message}"
-                              </p>
-                            ) : (
-                              <span className="text-slate-400 text-[11px]">No specific requirements</span>
-                            )}
-
-                            {/* Internal Follow-up Notes */}
-                            {editingNotesId === item.id ? (
-                              <div className="mt-2 space-y-1.5">
-                                <textarea
-                                  value={tempNotes}
-                                  onChange={(e) => setTempNotes(e.target.value)}
-                                  placeholder="Add follow-up notes (e.g. called owner, quote sent)..."
-                                  className="w-full text-xs p-1.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 h-16 bg-white"
-                                />
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    onClick={() => handleSaveEnquiryNotes(item.id)}
-                                    className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold cursor-pointer"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingNotesId(null)}
-                                    className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] cursor-pointer"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                                <span className="truncate max-w-[180px]">
-                                  {item.notes ? `📝 ${item.notes}` : 'No notes'}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingNotesId(item.id);
-                                    setTempNotes(item.notes || '');
-                                  }}
-                                  className="text-blue-600 hover:underline shrink-0 ml-1 font-semibold cursor-pointer"
-                                >
-                                  {item.notes ? 'Edit' : '+ Note'}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Status Dropdown */}
-                          <td className="py-3 px-4">
-                            <select
-                              value={item.status}
-                              onChange={(e) => handleUpdateEnquiryStatus(item.id, e.target.value)}
-                              className={`text-xs font-bold rounded-lg px-2.5 py-1 border transition-all cursor-pointer outline-none ${
-                                item.status === 'new'
-                                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                  : item.status === 'contacted'
-                                  ? 'bg-purple-50 border-purple-200 text-purple-700'
-                                  : item.status === 'qualified'
-                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                  : item.status === 'converted'
-                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
-                              }`}
-                            >
-                              <option value="new">🔵 New</option>
-                              <option value="contacted">🟣 Contacted</option>
-                              <option value="qualified">🔷 Qualified</option>
-                              <option value="converted">🟢 Converted</option>
-                              <option value="archived">⚪ Archived</option>
-                            </select>
-                          </td>
-
-                          {/* Received Date */}
-                          <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
-                            <div className="font-semibold text-slate-700">{formatTime(item.createdAt)}</div>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(item.createdAt < 10000000000 ? item.createdAt * 1000 : item.createdAt).toLocaleDateString('en-IN', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteEnquiry(item.id, item.company)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                              title="Delete Enquiry"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
       )}
+
 
       {/* Block Confirmation Modal */}
       {blockingTarget && (
