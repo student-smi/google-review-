@@ -48,18 +48,12 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false, f
       if (res.ok && data.user) {
         const token = data.sessionToken || `gauth_${data.user.id}_${Date.now()}`;
         const lowerEmail = (data.user.email || '').toLowerCase().trim();
-        const isAdmin = (
-          lowerEmail === 'smitpanchal734@gmail.com' ||
-          lowerEmail === 'info.upmark.in@gmail.com' ||
-          lowerEmail === 'smitpanchal730@gmail.com' ||
-          lowerEmail === 'admin@reviewqr.com' ||
-          data.user.role === 'admin'
-        );
+        const isAdmin = lowerEmail === 'smitpanchal734@gmail.com';
         setAuthSession(token, {
           id: data.user.id,
           name: data.user.name,
           email: data.user.email,
-          role: isAdmin ? 'admin' : (data.user.role || 'owner')
+          role: isAdmin ? 'admin' : 'owner'
         });
         setUser(data.user);
         if (onSuccess) {

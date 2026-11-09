@@ -190,13 +190,8 @@ authRoutes.post('/login', async (c) => {
     // Update lastLoginAt
     await db.update(users).set({ lastLoginAt: now }).where(eq(users.id, user.id));
 
-    const isSuperEmail =
-      user.email === 'smitpanchal734@gmail.com' ||
-      user.email === 'info.upmark.in@gmail.com' ||
-      user.email === 'smitpanchal730@gmail.com' ||
-      user.email === 'admin@reviewqr.com';
-    const isAdmin = user.role === 'admin' || isSuperEmail;
-    const assignedRole = isAdmin ? 'admin' : (user.role || 'owner');
+    const isAdmin = (user.email || '').toLowerCase().trim() === 'smitpanchal734@gmail.com';
+    const assignedRole = isAdmin ? 'admin' : 'owner';
 
     return c.json({
       success: true,
@@ -254,13 +249,8 @@ authRoutes.get('/me', async (c) => {
       }, 403);
     }
 
-    const isSuperEmail =
-      session.userEmail === 'smitpanchal734@gmail.com' ||
-      session.userEmail === 'info.upmark.in@gmail.com' ||
-      session.userEmail === 'smitpanchal730@gmail.com' ||
-      session.userEmail === 'admin@reviewqr.com';
-    const isAdmin = session.role === 'admin' || isSuperEmail;
-    const assignedRole = isAdmin ? 'admin' : (session.role || 'owner');
+    const isAdmin = (session.userEmail || '').toLowerCase().trim() === 'smitpanchal734@gmail.com';
+    const assignedRole = isAdmin ? 'admin' : 'owner';
 
     return c.json({
       user: {

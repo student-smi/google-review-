@@ -538,12 +538,7 @@ publicRoutes.post('/auth/google', async (c) => {
     const payload = JSON.parse(jsonPayload);
 
     const lowerEmail = (payload.email || '').toLowerCase().trim();
-    const isAdmin = (
-      lowerEmail === 'smitpanchal734@gmail.com' ||
-      lowerEmail === 'info.upmark.in@gmail.com' ||
-      lowerEmail === 'smitpanchal730@gmail.com' ||
-      lowerEmail === 'admin@reviewqr.com'
-    );
+    const isAdmin = lowerEmail === 'smitpanchal734@gmail.com';
 
     const user = {
       id: payload.sub,

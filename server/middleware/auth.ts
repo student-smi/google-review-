@@ -106,16 +106,10 @@ export async function requireAdmin(c: Context<{ Bindings: Env; Variables: { owne
 
   const isAdminEmail = (email?: string | null) => {
     if (!email) return false;
-    const lower = email.toLowerCase().trim();
-    return (
-      lower === 'smitpanchal734@gmail.com' ||
-      lower === 'info.upmark.in@gmail.com' ||
-      lower === 'smitpanchal730@gmail.com' ||
-      lower === 'admin@reviewqr.com'
-    );
+    return email.toLowerCase().trim() === 'smitpanchal734@gmail.com';
   };
 
-  if (user && (user.role === 'admin' || isAdminEmail(user.email))) {
+  if (user && isAdminEmail(user.email)) {
     return next();
   }
 
@@ -123,7 +117,7 @@ export async function requireAdmin(c: Context<{ Bindings: Env; Variables: { owne
     try {
       const db = getDb(c.env.DB);
       const [u] = await db.select().from(users).where(eq(users.id, ownerId)).limit(1);
-      if (u && (u.role === 'admin' || isAdminEmail(u.email))) {
+      if (u && isAdminEmail(u.email)) {
         c.set('user', u);
         return next();
       }

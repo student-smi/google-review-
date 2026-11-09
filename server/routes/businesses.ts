@@ -24,9 +24,7 @@ businessRoutes.get('/', async (c) => {
   if (list.length === 0) {
     const user = c.get('user');
     const isAdmin =
-      user?.role === 'admin' ||
-      user?.email === 'smitpanchal734@gmail.com' ||
-      user?.email === 'info.upmark.in@gmail.com' ||
+      (user?.email || '').toLowerCase().trim() === 'smitpanchal734@gmail.com' ||
       ownerId === 'usr_admin_smit';
 
     if (isAdmin) {
@@ -524,10 +522,7 @@ businessRoutes.get('/:id/reviews', async (c) => {
     // Only permit Super Admin to view unowned business reviews
     const currentUser = (c as any).get('user') as any;
     const isAdmin =
-      currentUser?.role === 'admin' ||
-      currentUser?.email === 'smitpanchal734@gmail.com' ||
-      currentUser?.email === 'info.upmark.in@gmail.com' ||
-      currentUser?.email === 'admin@reviewqr.com';
+      (currentUser?.email || '').toLowerCase().trim() === 'smitpanchal734@gmail.com';
 
     if (isAdmin) {
       const reviews = await db
