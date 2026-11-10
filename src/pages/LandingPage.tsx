@@ -469,7 +469,7 @@ export function LandingPage() {
   const estimatedMonthlyReviews = Math.round(dailyCustomers * 30 * 0.08);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 relative">
+    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 relative overflow-x-hidden w-full max-w-full">
       {/* 1. TOP FIXED NAVBAR (ALWAYS PINNED TO TOP ON SCROLL) */}
       <header className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between shadow-2xs">
         <a className="flex items-center gap-2" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
@@ -484,7 +484,7 @@ export function LandingPage() {
           <a href="#faq" className="hover:text-blue-600 transition">FAQ</a>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {userLoggedIn ? (
             <button
               type="button"
@@ -501,7 +501,7 @@ export function LandingPage() {
           <button
             type="button"
             onClick={handleCtaClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
           >
             {userLoggedIn ? (
               <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
@@ -527,7 +527,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-50 flex flex-col gap-4 text-base font-semibold text-slate-800"
+            className="md:hidden fixed inset-x-0 top-16 bg-white border-b border-slate-200 p-5 shadow-xl z-50 flex flex-col gap-4 text-base font-semibold text-slate-800 max-h-[calc(100dvh-4rem)] overflow-y-auto"
           >
             <a href="#products" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Review QR</a>
             <a href="#how-it-works" onClick={closeMobileNav} className="py-2 border-b border-slate-100">How It Works</a>
@@ -539,19 +539,19 @@ export function LandingPage() {
                 <button
                   type="button"
                   onClick={() => { closeMobileNav(); navigate('/dashboard'); }}
-                  className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                  className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer w-full"
                 >
                   Go to Dashboard
                 </button>
               ) : (
                 <Fragment>
-                  <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl">
+                  <a href="/login" onClick={closeMobileNav} className="text-center py-2 text-blue-600 font-bold border border-blue-200 rounded-xl w-full">
                     Login to Account
                   </a>
                   <button
                     type="button"
                     onClick={handleCtaClick}
-                    className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer"
+                    className="text-center py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-xs cursor-pointer w-full"
                   >
                     Get Your Review QR
                   </button>
@@ -574,27 +574,27 @@ export function LandingPage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
         variants={fadeInUp}
-        className="scroll-mt-20 pt-24 pb-16 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center"
+        className="scroll-mt-20 pt-20 pb-12 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center overflow-hidden"
       >
-        <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 bg-white border border-slate-200/90 rounded-full px-3.5 py-1 text-xs font-semibold text-slate-600 shadow-2xs mb-5">
+            <div className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2 bg-white border border-slate-200/90 rounded-full px-3 sm:px-3.5 py-1 text-[11px] sm:text-xs font-semibold text-slate-600 shadow-2xs mb-4 sm:mb-5 max-w-full">
               <span className="text-amber-400 font-bold tracking-wider">★★★★★</span>
               <span>4.9 / 5 Rating</span>
               <span className="text-slate-300">·</span>
               <span>Trusted by 1,200+ Businesses in India</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#04143c] tracking-tight leading-[1.12]">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#04143c] tracking-tight leading-[1.14] break-words">
               Turn Happy Customers Into <span className="text-blue-600">Google Reviews.</span>
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
+            <p className="mt-3 sm:mt-4 text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl">
               Make it effortless for customers to share their experiences with a simple QR scan or contactless NFC tap. Build unbeatable local Google Maps trust with Loctimize.
             </p>
-            <div className="mt-8 flex flex-wrap gap-4 items-center">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
               <button
                 type="button"
                 onClick={handleCtaClick}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm sm:text-base cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm sm:text-base cursor-pointer"
               >
                 {userLoggedIn ? (
                   <Fragment>Go to Dashboard <ArrowRight size={16} /></Fragment>
@@ -602,11 +602,11 @@ export function LandingPage() {
                   <Fragment>Get Your Review QR <ArrowRight size={16} /></Fragment>
                 )}
               </button>
-              <a href="#how-it-works" className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs">
+              <a href="#how-it-works" className="w-full sm:w-auto justify-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs">
                 See How It Works <ArrowDown size={16} />
               </a>
             </div>
-            <div className="mt-6 flex flex-wrap gap-5 text-xs font-semibold text-slate-500">
+            <div className="mt-5 sm:mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-500">
               <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> QR scan & NFC tap</span>
               <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> No app needed to scan</span>
               <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 100% Google policy compliant</span>
@@ -680,11 +680,11 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-8 flex items-center gap-4">
+            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={handleCtaClick}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-xs transition inline-flex items-center gap-2 text-sm cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-xs transition inline-flex items-center gap-2 text-sm cursor-pointer"
               >
                 {userLoggedIn ? (
                   <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
@@ -692,7 +692,7 @@ export function LandingPage() {
                   <Fragment>Get Your Review QR <ArrowRight size={15} /></Fragment>
                 )}
               </button>
-              <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+              <span className="text-xs font-semibold text-slate-500 flex items-center justify-center sm:justify-start gap-1">
                 <Check size={14} className="text-emerald-600" /> No app needed to scan
               </span>
             </div>
@@ -719,12 +719,12 @@ export function LandingPage() {
               See how Loctimize ReviewQR transforms satisfied customers into verified Google 5-star reviews across sectors.
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mb-8">
             {industries.map((ind, idx) => (
               <button
                 key={ind.name}
                 type="button"
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 cursor-pointer ${
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                   activeIndustry === idx
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
@@ -742,7 +742,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center"
+            className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-8 lg:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center"
           >
             <div>
               <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full mb-3">
@@ -799,7 +799,7 @@ export function LandingPage() {
         variants={fadeInUp}
         className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
       >
-        <div className="max-w-5xl w-full bg-gradient-to-br from-blue-50/60 via-white to-slate-50/80 border border-blue-100 rounded-3xl p-6 sm:p-10 lg:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div className="max-w-5xl w-full bg-gradient-to-br from-blue-50/60 via-white to-slate-50/80 border border-blue-100 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div>
             <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">SEE YOUR POTENTIAL</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[#04143c] tracking-tight mt-1 mb-3">
@@ -1004,7 +1004,7 @@ export function LandingPage() {
             {/* Left Input */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
                     <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><PenLine size={15} /></span>
                     Customer Experience Input
@@ -1154,7 +1154,7 @@ export function LandingPage() {
               </div>
               <button
                 type="button"
-                className="self-start bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition inline-flex items-center gap-2 shadow-xs cursor-pointer"
+                className="w-full sm:w-auto justify-center self-stretch sm:self-start bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition inline-flex items-center gap-2 shadow-xs cursor-pointer"
                 onClick={handleUseReplyCopy}
               >
                 {aiCopierStatus ? <Fragment><Check size={15} /> Copied to Clipboard!</Fragment> : <Fragment><Sparkles size={15} /> 1-Click Copy Reply</Fragment>}
@@ -1213,8 +1213,8 @@ export function LandingPage() {
           </motion.div>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-6">
             {/* Testimonial */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-2xs flex items-center gap-5">
-              <div className="w-20 h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-100 bg-slate-100">
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+              <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-2xl overflow-hidden shrink-0 border border-slate-100 bg-slate-100">
                 <img src={ownerImg} alt="Restaurant Owner" className="w-full h-full object-cover" loading="eager" />
               </div>
               <div>
@@ -1226,15 +1226,15 @@ export function LandingPage() {
               </div>
             </div>
             {/* CTA Banner */}
-            <div className="bg-[#04143c] text-white rounded-3xl p-6 shadow-md flex items-center justify-between gap-5">
+            <div className="bg-[#04143c] text-white rounded-3xl p-5 sm:p-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
               <div>
-                <h3 className="text-lg font-bold mb-1">Make Every Customer Experience Easier to Share.</h3>
+                <h3 className="text-base sm:text-lg font-bold mb-1">Make Every Customer Experience Easier to Share.</h3>
                 <p className="text-xs text-slate-300">Bring QR and NFC review access to your business with Loctimize ReviewQR.</p>
               </div>
               <button
                 type="button"
                 onClick={handleCtaClick}
-                className="bg-white text-slate-900 hover:bg-slate-100 font-bold px-5 py-3 rounded-xl text-xs sm:text-sm shrink-0 transition inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-white text-slate-900 hover:bg-slate-100 font-bold px-5 py-3 rounded-xl text-xs sm:text-sm shrink-0 transition inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
               >
                 {userLoggedIn ? (
                   <Fragment>Go to Dashboard <ArrowRight size={14} /></Fragment>
@@ -1257,7 +1257,7 @@ export function LandingPage() {
         className="scroll-mt-24 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-100 flex items-center justify-center"
       >
         <div className="max-w-6xl w-full">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
             <div>
               <span className="text-xs font-bold text-blue-600 tracking-wider uppercase">PLANS THAT GROW WITH YOU</span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-[#04143c] tracking-tight mt-1 mb-2">
@@ -1265,17 +1265,17 @@ export function LandingPage() {
               </h2>
               <p className="text-slate-600 text-xs sm:text-sm">One-time transparent hardware purchase. Separate optional software plans.</p>
             </div>
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-1 text-xs shrink-0 self-start sm:self-auto">
+            <div className="flex bg-slate-100 rounded-xl p-1 gap-1 text-xs shrink-0 w-full sm:w-auto justify-center">
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg font-bold transition cursor-pointer ${pricingTab === 'products' ? 'bg-[#04143c] text-white shadow-xs' : 'text-slate-600'}`}
+                className={`flex-1 sm:flex-none text-center px-4 py-2 rounded-lg font-bold transition cursor-pointer ${pricingTab === 'products' ? 'bg-[#04143c] text-white shadow-xs' : 'text-slate-600'}`}
                 onClick={() => setPricingTab('products')}
               >
                 Physical Products
               </button>
               <button
                 type="button"
-                className={`px-4 py-2 rounded-lg font-bold transition cursor-pointer ${pricingTab === 'software' ? 'bg-[#04143c] text-white shadow-xs' : 'text-slate-600'}`}
+                className={`flex-1 sm:flex-none text-center px-4 py-2 rounded-lg font-bold transition cursor-pointer ${pricingTab === 'software' ? 'bg-[#04143c] text-white shadow-xs' : 'text-slate-600'}`}
                 onClick={() => setPricingTab('software')}
               >
                 Software Plans
@@ -1312,11 +1312,11 @@ export function LandingPage() {
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                           loading="eager"
                         />
-                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-bold text-slate-800 shadow-sm border border-slate-200/60">
+                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold text-slate-800 shadow-sm border border-slate-200/60 max-w-[140px] truncate">
                           {prod.viewLabel}
                         </div>
                         {prod.recommended && (
-                          <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3.5 py-1 rounded-full text-[11px] font-extrabold shadow-md flex items-center gap-1">
+                          <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold shadow-md flex items-center gap-1">
                             ★ BESTSELLER
                           </div>
                         )}
@@ -1455,15 +1455,15 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <strong className="text-base font-bold text-slate-900">Explore Business Enquiry</strong>
-              <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">Fast 2-hour response</span>
+          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-md">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+              <strong className="text-sm sm:text-base font-bold text-slate-900">Explore Business Enquiry</strong>
+              <span className="text-[10px] sm:text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md shrink-0">Fast 2-hour response</span>
             </div>
             {selectedProduct && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3 py-1.5 rounded-lg mb-4 flex items-center justify-between">
-                <span>Selected product: <strong>{selectedProduct}</strong></span>
-                <button type="button" className="text-blue-500 hover:text-blue-700 cursor-pointer" onClick={() => setSelectedProduct('')}>✕</button>
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs px-3 py-1.5 rounded-lg mb-4 flex items-center justify-between gap-2">
+                <span className="truncate">Selected product: <strong>{selectedProduct}</strong></span>
+                <button type="button" className="text-blue-500 hover:text-blue-700 cursor-pointer shrink-0" onClick={() => setSelectedProduct('')}>✕</button>
               </div>
             )}
             {formStatus === 'success' ? (
@@ -1500,27 +1500,27 @@ export function LandingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Company Name *
-                    <input name="company" required placeholder="Business or brand name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                    <input name="company" required placeholder="Business or brand name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Contact Person *
-                    <input name="contact" required placeholder="Your name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                    <input name="contact" required placeholder="Your name" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Mobile Number *
-                    <input name="mobile" required placeholder="+91 98765 43210" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                    <input name="mobile" required placeholder="+91 98765 43210" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Business Email *
-                    <input name="email" type="email" required placeholder="you@company.com" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                    <input name="email" type="email" required placeholder="you@company.com" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Number of Locations *
-                    <input name="locations" type="number" required min={1} defaultValue={1} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                    <input name="locations" type="number" required min={1} defaultValue={1} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                     Quantity to Explore *
-                    <select name="quantity" required value={selectedQuantity} onChange={(e) => setSelectedQuantity(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
+                    <select name="quantity" required value={selectedQuantity} onChange={(e) => setSelectedQuantity(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer w-full min-w-0 max-w-full">
                       {['1 unit (Trial sample)', '5-10 units', '10-25 units', '25-50 units', '50-100 units', '100+ units'].map((qty) => (
                         <option key={qty} value={qty}>{qty}</option>
                       ))}
@@ -1529,7 +1529,7 @@ export function LandingPage() {
                 </div>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                   Product Choice *
-                  <select name="product" required value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer">
+                  <select name="product" required value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)} className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition cursor-pointer w-full min-w-0 max-w-full">
                     <option value="" disabled>Select product or plan</option>
                     {products.map((prod) => (
                       <option key={prod.name} value={prod.name}>{prod.name}</option>
@@ -1541,12 +1541,12 @@ export function LandingPage() {
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
                   Special Requirements (Optional)
-                  <input name="message" placeholder="Custom logo, multiple delivery addresses, or questions" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition" />
+                  <input name="message" placeholder="Custom logo, multiple delivery addresses, or questions" className="h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-blue-600 transition w-full min-w-0 max-w-full" />
                 </label>
                 <button
                   type="submit"
                   disabled={formStatus === 'submitting'}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-11 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-sm mt-2 cursor-pointer"
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold h-11 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-sm mt-2 cursor-pointer"
                 >
                   {formStatus === 'submitting' ? (
                     'Submitting Enquiry...'
@@ -1555,7 +1555,7 @@ export function LandingPage() {
                   )}
                 </button>
                 <span className="text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-1.5 mt-1">
-                  <CheckCircle2 size={13} className="text-emerald-600" /> Zero spam guarantee · 100% confidential
+                  <CheckCircle2 size={13} className="text-emerald-600 shrink-0" /> Zero spam guarantee · 100% confidential
                 </span>
               </form>
             )}
@@ -1592,19 +1592,19 @@ export function LandingPage() {
           <div className="flex flex-col gap-3">
             {primaryFaqs.map((faq, idx) => (
               <details key={faq.q} className="group bg-white border border-slate-200 rounded-2xl p-4 transition-all hover:border-blue-400 hover:shadow-xs">
-                <summary className="flex items-center justify-between gap-3 cursor-pointer list-none select-none">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                <summary className="flex items-start sm:items-center justify-between gap-3 cursor-pointer list-none select-none">
+                  <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md shrink-0">
                       {String(idx + 1).padStart(2, '0')}
                     </span>
-                    <span className="text-sm font-bold text-slate-900 text-left">{faq.q}</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 text-left break-words">{faq.q}</span>
                   </div>
-                  <div className="text-blue-600 shrink-0">
+                  <div className="text-blue-600 shrink-0 ml-2 mt-0.5 sm:mt-0">
                     <Plus size={16} className="group-open:hidden" />
                     <Minus size={16} className="hidden group-open:block" />
                   </div>
                 </summary>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-3 pt-3 border-t border-slate-100 mb-0">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-3 pt-3 border-t border-slate-100 mb-0 break-words">
                   {faq.a}
                 </p>
               </details>
@@ -1761,9 +1761,9 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+          <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center md:text-left">
             <div>© {new Date().getFullYear()} Loctimize Technologies. All rights reserved.</div>
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
+            <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-2 text-xs">
               <a
                 href="https://support.google.com/contributionpolicy/answer/7400114"
                 target="_blank"
@@ -1807,7 +1807,7 @@ export function LandingPage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 25, scale: 0.95 }}
             transition={{ duration: 0.3 }}
-            className="fixed bottom-4 left-4 z-40 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-xl flex items-center gap-3 max-w-sm"
+            className="fixed bottom-4 left-4 right-4 sm:right-auto sm:max-w-sm z-40 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-xl flex items-center gap-3"
           >
             <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Sparkles size={16} />
