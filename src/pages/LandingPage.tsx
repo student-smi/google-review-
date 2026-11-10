@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { isAuthenticated } from '@/lib/auth';
+import { getStoredBusinesses } from '@/lib/api';
 import {
   ArrowDown,
   ArrowRight,
@@ -375,7 +376,12 @@ export function LandingPage() {
     if (e) e.preventDefault();
     closeMobileNav();
     if (isAuthenticated()) {
-      navigate('/dashboard');
+      const bizs = getStoredBusinesses();
+      if (bizs && bizs.length > 0) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
     } else {
       navigate('/signup');
     }

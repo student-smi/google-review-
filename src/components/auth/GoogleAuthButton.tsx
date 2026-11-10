@@ -62,9 +62,22 @@ export function GoogleAuthButton({ onSuccess, className = '', compact = false, f
           } catch (e) {
             console.warn('onSuccess error:', e);
           }
+        } else {
+          // If no custom handler, check if user has existing businesses to route to dashboard or onboarding
+          try {
+            const bizRes = await fetch('/api/businesses', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const bizData = (await bizRes.json()) as any;
+            if (bizData?.businesses && Array.isArray(bizData.businesses) && bizData.businesses.length > 0) {
+              window.location.href = '/dashboard';
+            } else {
+              window.location.href = '/onboarding';
+            }
+          } catch {
+            window.location.href = '/dashboard';
+          }
         }
-        // Always redirect directly to dashboard via full page load to initialize all providers
-        window.location.href = '/dashboard';
       }
     } catch (err) {
       console.error('Google sign-in error:', err);

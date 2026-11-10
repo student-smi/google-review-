@@ -22,14 +22,18 @@ export function AuthPage() {
 
   const navigate = useNavigate();
 
-  // Sync existing user businesses from remote D1 database and redirect directly to dashboard
-  const handlePostAuthSync = async (forceDashboard = true) => {
+  // Sync existing user businesses from remote D1 database and route appropriately
+  const handlePostAuthSync = async (forceDashboard = false) => {
     setIsLoading(true);
+    let hasBiz = false;
     try {
       const bizData = await apiFetch<{ businesses: any[] }>('/api/businesses');
       if (bizData?.businesses && Array.isArray(bizData.businesses) && bizData.businesses.length > 0) {
         saveStoredBusinesses(bizData.businesses);
         saveActiveBusinessId(bizData.businesses[0].id);
+        hasBiz = true;
+      } else {
+        saveStoredBusinesses([]);
       }
     } catch (err) {
       console.warn('Could not sync user businesses:', err);
@@ -37,18 +41,32 @@ export function AuthPage() {
       setIsLoading(false);
     }
 
-    // Login ALWAYS goes straight to dashboard. Only brand new signups go to onboarding.
-    if (forceDashboard || isLogin) {
+    // If user has existing business AND (forceDashboard || isLogin), go to dashboard
+    // If brand new user with 0 businesses, ALWAYS go to onboarding!
+    if (hasBiz && (forceDashboard || isLogin)) {
       navigate('/dashboard', { replace: true });
     } else {
       navigate('/onboarding', { replace: true });
     }
   };
 
-  // If already authenticated, go directly to dashboard
+  // If already authenticated on mount, check if user already has businesses
   useEffect(() => {
     if (isAuthenticated()) {
-      navigate('/dashboard', { replace: true });
+      apiFetch<{ businesses: any[] }>('/api/businesses')
+        .then((bizData) => {
+          if (bizData?.businesses && Array.isArray(bizData.businesses) && bizData.businesses.length > 0) {
+            saveStoredBusinesses(bizData.businesses);
+            saveActiveBusinessId(bizData.businesses[0].id);
+            navigate('/dashboard', { replace: true });
+          } else {
+            // Logged in user with 0 businesses -> go straight to onboarding
+            navigate('/onboarding', { replace: true });
+          }
+        })
+        .catch(() => {
+          navigate('/onboarding', { replace: true });
+        });
     }
   }, [navigate]);
 
@@ -83,10 +101,11 @@ export function AuthPage() {
     try {
       if (isLogin) {
         await loginApi(email, password);
-        // Automatically restore existing user data & go straight to dashboard
+        // Automatically restore existing user data & route to dashboard or onboarding
         await handlePostAuthSync(true);
       } else {
-        // User Signup: Create brand new user
+        // User Signup: Create brand new user & start completely fresh
+        saveStoredBusinesses([]);
         await signupApi(name, email, password);
         navigate('/onboarding', { replace: true });
       }
@@ -133,7 +152,7 @@ export function AuthPage() {
               <GoogleAuthButton
                 forceButton
                 onSuccess={async () => {
-                  await handlePostAuthSync(true);
+                  await handlePostAuthSync(isLogin);
                 }}
               />
             </div>

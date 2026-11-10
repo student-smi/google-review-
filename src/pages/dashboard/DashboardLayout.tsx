@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { Sidebar } from '@/components/app/Sidebar';
 import { Header } from '@/components/app/Header';
@@ -62,6 +62,13 @@ function DashboardContent() {
     refreshHierarchy,
     selectBusiness
   } = useHierarchy();
+
+  // Auto-redirect brand new owners with 0 businesses straight to Onboarding setup
+  useEffect(() => {
+    if (!isLoading && businesses.length === 0 && !roles.isSuperAdmin && !roles.isExecutive) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [isLoading, businesses.length, roles.isSuperAdmin, roles.isExecutive, navigate]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-900 antialiased font-sans">
