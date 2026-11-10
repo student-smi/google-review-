@@ -194,7 +194,7 @@ export function Header({
 
   return (
     <>
-      <header className="flex h-15 items-center justify-between border-b border-slate-200/80 bg-white px-2.5 sm:px-4 lg:px-6 z-20 shrink-0 gap-2">
+      <header className="flex h-14 sm:h-16 items-center justify-between border-b border-slate-200/80 bg-white px-2.5 sm:px-4 lg:px-6 z-20 shrink-0 gap-2">
         {/* Left: Hamburger, 3-Tier Switcher, Entity Dropdown */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
           {/* Mobile Hamburger Button */}
@@ -212,13 +212,13 @@ export function Header({
           {/* Single Store vs Multi-Branch Header Navigation */}
           {isSingleMode ? (
             /* Single Store Header: Clean Store Name & 1-Click Expansion */
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-xl bg-slate-50 border border-slate-200/90 shadow-2xs min-w-0">
                 <Store className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-xs font-black text-slate-800 truncate max-w-[120px] xs:max-w-[170px] sm:max-w-[220px]">
+                <span className="text-xs font-black text-slate-800 truncate max-w-[110px] xs:max-w-[160px] sm:max-w-[220px]">
                   {activeBusiness?.name || 'My Store'}
                 </span>
-                <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                   Single Store
                 </span>
               </div>
@@ -581,7 +581,7 @@ export function Header({
             type="button"
             onClick={handleOpenPreview}
             title="Open Live Customer Review Funnel in new tab"
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+            className="hidden sm:flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-colors cursor-pointer shadow-2xs"
           >
             <ExternalLink className="h-3.5 w-3.5 text-slate-500 shrink-0" />
             <span className="hidden md:inline">Preview Link</span>
@@ -604,7 +604,7 @@ export function Header({
             type="button"
             onClick={() => setStandeeModalOpen(true)}
             title="View Acrylic Countertop Standee Display"
-            className="flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-purple-700 transition-colors cursor-pointer shadow-2xs"
+            className="hidden md:flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 px-2 sm:px-2.5 py-1.5 text-xs font-bold text-purple-700 transition-colors cursor-pointer shadow-2xs"
           >
             <Layers className="h-3.5 w-3.5 text-purple-600 shrink-0" />
             <span className="hidden lg:inline">Standee View</span>

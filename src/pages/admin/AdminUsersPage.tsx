@@ -375,58 +375,96 @@ export function AdminUsersPage() {
       {/* Right Main Container */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         {/* Top Header */}
-        <header className="h-16 px-4 sm:px-8 border-b border-slate-200/80 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30">
-          <div className="flex items-center gap-3">
+        <header className="h-15 sm:h-16 px-3 sm:px-6 lg:px-8 border-b border-slate-200/80 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30 gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 pr-2">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden h-9 w-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 cursor-pointer"
+              className="lg:hidden h-9 w-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shrink-0 shadow-2xs cursor-pointer"
               title="Open Navigation"
+              aria-label="Open Navigation Drawer"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4.5 h-4.5" />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-400">Admin Portal</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-slate-400">
+                <span>Admin</span>
                 <span className="text-slate-300">/</span>
-                <span className="text-xs font-bold text-indigo-600">
-                  {activeAdminTab === 'leads' && 'Leads CRM Pipeline'}
+                <span className="text-indigo-600 truncate font-semibold">
+                  {activeAdminTab === 'leads' && 'CRM Pipeline'}
                   {activeAdminTab === 'customers' && 'Customer 360'}
-                  {activeAdminTab === 'billing' && 'Billing & Receipts'}
+                  {activeAdminTab === 'billing' && 'Billing'}
                   {activeAdminTab === 'team' && 'Roles & RBAC'}
-                  {activeAdminTab === 'users' && 'Merchants Access'}
+                  {activeAdminTab === 'users' && 'Merchants'}
                 </span>
               </div>
-              <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
-                {activeAdminTab === 'leads' && 'Leads CRM & Follow-Up Pipeline'}
-                {activeAdminTab === 'customers' && 'Customer 360 & Outlets Directory'}
-                {activeAdminTab === 'billing' && 'Financial Ledger & Tax Receipts'}
-                {activeAdminTab === 'team' && 'Roles & Access Control (RBAC)'}
-                {activeAdminTab === 'users' && 'Merchant Accounts & Access Monitoring'}
+              <h1 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight leading-tight truncate">
+                {activeAdminTab === 'leads' && (
+                  <>
+                    <span className="hidden sm:inline">Leads CRM & Follow-Up Pipeline</span>
+                    <span className="sm:hidden">Leads CRM Pipeline</span>
+                  </>
+                )}
+                {activeAdminTab === 'customers' && (
+                  <>
+                    <span className="hidden sm:inline">Customer 360 & Outlets Directory</span>
+                    <span className="sm:hidden">Customer 360 Outlets</span>
+                  </>
+                )}
+                {activeAdminTab === 'billing' && (
+                  <>
+                    <span className="hidden sm:inline">Financial Ledger & Tax Receipts</span>
+                    <span className="sm:hidden">Billing & Receipts</span>
+                  </>
+                )}
+                {activeAdminTab === 'team' && (
+                  <>
+                    <span className="hidden sm:inline">Roles & Access Control (RBAC)</span>
+                    <span className="sm:hidden">Roles & RBAC</span>
+                  </>
+                )}
+                {activeAdminTab === 'users' && (
+                  <>
+                    <span className="hidden sm:inline">Merchant Accounts & Access Monitoring</span>
+                    <span className="sm:hidden">Merchant Accounts</span>
+                  </>
+                )}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button
               onClick={loadAdminData}
               variant="outline"
               size="sm"
               disabled={isLoading}
-              className="gap-2 bg-white text-slate-700 shadow-xs hover:bg-slate-50 text-xs h-9 cursor-pointer"
+              className="gap-1.5 bg-white text-slate-700 shadow-xs hover:bg-slate-50 text-xs h-9 px-2.5 sm:px-3 cursor-pointer"
+              title="Refresh Data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
               <span className="hidden sm:inline">Refresh Data</span>
+              <span className="sm:hidden">Refresh</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/dashboard')}
-              className="gap-1.5 text-xs text-slate-600 hover:text-slate-900 h-9 hidden md:flex cursor-pointer"
+              className="gap-1.5 text-xs text-slate-700 hover:text-slate-900 h-9 px-3 hidden md:flex cursor-pointer bg-white shadow-xs border-slate-200"
+              title="Open Merchant Store Application"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Store App</span>
             </Button>
+            <div className="hidden xl:flex items-center gap-2 pl-2 border-l border-slate-200">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                S
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] font-bold text-slate-800 leading-none">Super Admin</span>
+                <span className="text-[9px] text-slate-400 font-mono">smitpanchal734@gmail.com</span>
+              </div>
+            </div>
           </div>
         </header>
 

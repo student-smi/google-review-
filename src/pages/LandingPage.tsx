@@ -471,52 +471,62 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 relative overflow-x-hidden w-full max-w-full">
       {/* 1. TOP FIXED NAVBAR (ALWAYS PINNED TO TOP ON SCROLL) */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between shadow-2xs">
-        <a className="flex items-center gap-2" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
-          <img src={headerLogo} className="h-8 w-auto object-contain" alt="Loctimize — Optimize Local. Grow Global." />
-        </a>
+      <header className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 lg:px-8 h-16 flex items-center shadow-2xs">
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-2 sm:gap-4">
+          <a className="flex items-center gap-2 shrink-0" href="#home" aria-label="Loctimize ReviewQR home" onClick={closeMobileNav}>
+            <img src={headerLogo} className="h-7 sm:h-8 w-auto object-contain max-w-[130px] sm:max-w-none" alt="Loctimize — Optimize Local. Grow Global." />
+          </a>
 
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-          <a href="#products" className="hover:text-blue-600 transition">Review QR</a>
-          <a href="#how-it-works" className="hover:text-blue-600 transition">How It Works</a>
-          <a href="#features" className="hover:text-blue-600 transition">Features</a>
-          <a href="#pricing" className="hover:text-blue-600 transition">Pricing</a>
-          <a href="#faq" className="hover:text-blue-600 transition">FAQ</a>
-        </nav>
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs lg:text-sm font-semibold text-slate-600">
+            <a href="#products" className="hover:text-blue-600 transition">Review QR</a>
+            <a href="#how-it-works" className="hover:text-blue-600 transition">How It Works</a>
+            <a href="#features" className="hover:text-blue-600 transition">Features</a>
+            <a href="#pricing" className="hover:text-blue-600 transition">Pricing</a>
+            <a href="#faq" className="hover:text-blue-600 transition">FAQ</a>
+          </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          {userLoggedIn ? (
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {userLoggedIn ? (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="hidden sm:inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-700 hover:text-blue-600 transition cursor-pointer px-2 py-1.5"
+              >
+                Dashboard <ArrowUpRight size={14} />
+              </button>
+            ) : (
+              <a href="/login" className="hidden sm:inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-slate-700 hover:text-blue-600 transition px-2 py-1.5">
+                Login <ArrowUpRight size={14} />
+              </a>
+            )}
             <button
               type="button"
-              onClick={() => navigate('/dashboard')}
-              className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-blue-600 transition cursor-pointer"
+              onClick={handleCtaClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1 sm:gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              Dashboard <ArrowUpRight size={14} />
+              {userLoggedIn ? (
+                <Fragment>
+                  <span className="hidden xs:inline">Go to Dashboard</span>
+                  <span className="xs:hidden">Dashboard</span>
+                  <ArrowRight size={14} />
+                </Fragment>
+              ) : (
+                <Fragment>
+                  <span className="hidden sm:inline">Get Your Review QR</span>
+                  <span className="sm:hidden">Get Review QR</span>
+                  <ArrowRight size={14} />
+                </Fragment>
+              )}
             </button>
-          ) : (
-            <a href="/login" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-slate-700 hover:text-blue-600 transition">
-              Login <ArrowUpRight size={14} />
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={handleCtaClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            {userLoggedIn ? (
-              <Fragment>Go to Dashboard <ArrowRight size={15} /></Fragment>
-            ) : (
-              <Fragment>Get Your Review QR <ArrowRight size={15} /></Fragment>
-            )}
-          </button>
-          <button
-            type="button"
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-            aria-label="Toggle menu"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+            <button
+              type="button"
+              className="md:hidden h-9 w-9 rounded-xl border border-slate-200/90 bg-slate-50 flex items-center justify-center text-slate-700 hover:text-blue-600 hover:bg-slate-100 transition cursor-pointer shrink-0 shadow-2xs"
+              aria-label="Toggle menu"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
       </header>
 
