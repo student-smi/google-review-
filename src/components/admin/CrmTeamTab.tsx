@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   ShieldAlert,
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
+import { TablePagination } from './TablePagination';
 
 export interface TeamMemberItem {
   id: string;
@@ -43,6 +44,8 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const ROLE_CONFIGS = [
     {
@@ -88,6 +91,17 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
     const matchesRole = roleFilter === 'all' || m.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  // Reset pagination on search or role filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter, pageSize]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredTeam.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedTeam = filteredTeam.slice(startIndex, startIndex + pageSize);
 
   const handleUpdateRole = async (user: TeamMemberItem, newRole: string) => {
     if (user.email === 'smitpanchal734@gmail.com') {
@@ -173,7 +187,7 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredTeam.map((m) => {
+              {paginatedTeam.map((m) => {
                 const isSuperAdmin = m.email === 'smitpanchal734@gmail.com';
                 const currentRoleConfig = ROLE_CONFIGS.find((r) => r.id === m.role) || ROLE_CONFIGS[4];
                 const Icon = currentRoleConfig.icon;
@@ -244,6 +258,16 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <TablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={filteredTeam.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          colorScheme="indigo"
+        />
       </div>
     </div>
   );

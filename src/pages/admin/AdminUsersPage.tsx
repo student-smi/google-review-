@@ -49,6 +49,7 @@ import { CrmBillingTab } from '@/components/admin/CrmBillingTab';
 import { CrmTeamTab, TeamMemberItem } from '@/components/admin/CrmTeamTab';
 import { InvoiceData } from '@/components/admin/PaymentReceiptModal';
 import { AdminSidebar, AdminTabType } from '@/components/admin/AdminSidebar';
+import { TablePagination } from '@/components/admin/TablePagination';
 
 interface BusinessItem {
   id: string;
@@ -1007,112 +1008,16 @@ export function AdminUsersPage() {
           </div>
 
           {/* Pagination Controls */}
+          {/* Pagination */}
           {!isLoading && filteredUsers.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t border-slate-200/80 bg-slate-50/60">
-              <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-500 font-medium">
-                <span>
-                  Showing <strong className="text-slate-900 font-bold">{startIndex + 1}</strong> to{' '}
-                  <strong className="text-slate-900 font-bold">{endIndex}</strong> of{' '}
-                  <strong className="text-slate-900 font-bold">{filteredUsers.length}</strong> users
-                </span>
-
-                <span className="text-slate-300">|</span>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Per page:</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    aria-label="Items per page"
-                    className="h-7 px-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Navigation buttons */}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={safeCurrentPage === 1}
-                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
-                  title="First Page"
-                >
-                  <ChevronsLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safeCurrentPage === 1}
-                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
-                  title="Previous Page"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-
-                {/* Page number buttons */}
-                <div className="flex items-center gap-1 px-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((pageNum) => {
-                      if (totalPages <= 5) return true;
-                      if (pageNum === 1 || pageNum === totalPages) return true;
-                      return Math.abs(pageNum - safeCurrentPage) <= 1;
-                    })
-                    .map((pageNum, idx, arr) => {
-                      const prev = arr[idx - 1];
-                      const showEllipsis = prev && pageNum - prev > 1;
-
-                      return (
-                        <div key={pageNum} className="flex items-center">
-                          {showEllipsis && (
-                            <span className="px-1 text-slate-400 select-none text-xs">...</span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant={safeCurrentPage === pageNum ? 'primary' : 'outline'}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`h-8 min-w-[32px] px-2 text-xs font-bold transition-all cursor-pointer ${
-                              safeCurrentPage === pageNum
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                                : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                            }`}
-                          >
-                            {pageNum}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safeCurrentPage === totalPages}
-                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
-                  title="Next Page"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={safeCurrentPage === totalPages}
-                  className="h-8 w-8 p-0 border-slate-200 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
-                  title="Last Page"
-                >
-                  <ChevronsRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              currentPage={safeCurrentPage}
+              pageSize={pageSize}
+              totalItems={filteredUsers.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              colorScheme="indigo"
+            />
           )}
         </Card>
       </div>

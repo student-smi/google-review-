@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
+import { TablePagination } from './TablePagination';
 
 export interface LeadActivity {
   id: string;
@@ -73,6 +74,10 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
   const [selectedStage, setSelectedStage] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const [selectedExecutive, setSelectedExecutive] = useState<string>('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
   // Selected lead for detail/notes slideover
   const [activeLead, setActiveLead] = useState<LeadItem | null>(null);
@@ -144,6 +149,17 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
 
     return matchesSearch && matchesStage && matchesSource && matchesExec;
   });
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedStage, selectedSource, selectedExecutive, pageSize]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedLeads = filteredLeads.slice(startIndex, startIndex + pageSize);
 
   // Today & Overdue count
   const todayFollowUps = leads.filter((l) => getFollowUpStatus(l.followUpDate)?.type === 'today');
@@ -410,7 +426,7 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => {
+                paginatedLeads.map((lead) => {
                   const leadStage = lead.stage || lead.status || 'new';
                   const stageObj = STAGES.find((s) => s.id === leadStage) || STAGES[0];
                   const followUp = getFollowUpStatus(lead.followUpDate);
@@ -575,6 +591,16 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <TablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={filteredLeads.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          colorScheme="blue"
+        />
       </div>
 
       {/* Lead Conversation Tracking Slide-Over / Modal */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Building,
@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { TablePagination } from './TablePagination';
 
 export interface CustomerItem {
   id: string;
@@ -58,6 +59,8 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredCustomers = customers.filter((c) => {
     const q = search.toLowerCase().trim();
@@ -75,6 +78,17 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
 
     return matchesSearch && matchesPlan;
   });
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, planFilter, pageSize]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="space-y-4">
@@ -129,7 +143,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((cust) => {
+                paginatedCustomers.map((cust) => {
                   const joinDate = new Date(
                     cust.createdAt * (cust.createdAt < 10000000000 ? 1000 : 1)
                   ).toLocaleDateString('en-IN', {
@@ -249,6 +263,16 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <TablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={filteredCustomers.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          colorScheme="indigo"
+        />
       </div>
     </div>
   );

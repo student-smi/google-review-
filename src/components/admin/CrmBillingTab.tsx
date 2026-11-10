@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 import { InvoiceData, PaymentReceiptModal } from './PaymentReceiptModal';
 import { CustomerItem } from './CrmCustomersTab';
+import { TablePagination } from './TablePagination';
 
 interface CrmBillingTabProps {
   invoices: InvoiceData[];
@@ -42,6 +43,8 @@ export const CrmBillingTab: React.FC<CrmBillingTabProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Receipt Modal State
   const [viewingReceipt, setViewingReceipt] = useState<InvoiceData | null>(null);
@@ -101,6 +104,17 @@ export const CrmBillingTab: React.FC<CrmBillingTabProps> = ({
     const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Reset pagination on search or status change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, pageSize]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + pageSize);
 
   // Create invoice handler
   const handleCreateInvoice = async (e: React.FormEvent) => {
@@ -267,7 +281,7 @@ export const CrmBillingTab: React.FC<CrmBillingTabProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => {
+                paginatedInvoices.map((inv) => {
                   const invDate = new Date(
                     inv.createdAt * (inv.createdAt < 10000000000 ? 1000 : 1)
                   ).toLocaleDateString('en-IN', {
@@ -372,6 +386,16 @@ export const CrmBillingTab: React.FC<CrmBillingTabProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <TablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={filteredInvoices.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          colorScheme="indigo"
+        />
       </div>
 
       {/* Printable Receipt Modal */}
