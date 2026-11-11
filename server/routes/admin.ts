@@ -1064,6 +1064,32 @@ adminRoutes.patch('/crm/customers/:id/plan', async (c) => {
   }
 });
 
+// Update customer profile details (phone, name)
+adminRoutes.patch('/crm/customers/:id', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const customerId = c.req.param('id');
+    const body = await c.req.json();
+    const { name, phone } = body;
+
+    const updateData: any = { updatedAt: new Date() };
+    if (name) updateData.name = name.trim();
+    if (phone !== undefined) updateData.phone = phone ? phone.trim() : null;
+
+    await db.update(users).set(updateData).where(eq(users.id, customerId));
+
+    // Also update phone on primary business if available
+    if (phone !== undefined) {
+      await db.update(businesses).set({ phone: phone ? phone.trim() : null }).where(eq(businesses.ownerId, customerId));
+    }
+
+    return c.json({ success: true, message: 'Customer details updated successfully!' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update customer details' }, 500);
+  }
+});
+
 // Record direct UPI payment and renew subscription (+1 Month / +X Months)
 adminRoutes.post('/crm/customers/:id/renew', async (c) => {
   try {

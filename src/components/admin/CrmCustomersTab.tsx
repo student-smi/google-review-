@@ -22,7 +22,8 @@ import {
   AlertCircle,
   CheckCircle2,
   CreditCard,
-  Copy
+  Copy,
+  Edit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +83,12 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Customer 360 Full Details Popup Modal State
+  const [detailCustomer, setDetailCustomer] = useState<CustomerItem | null>(null);
+  const [isEditingPhone, setIsEditingPhone] = useState<boolean>(false);
+  const [editedPhone, setEditedPhone] = useState<string>('');
+  const [isSavingPhone, setIsSavingPhone] = useState<boolean>(false);
+
   // Plan Switcher Modal State
   const [planModalCustomer, setPlanModalCustomer] = useState<CustomerItem | null>(null);
   const [selectedPlanName, setSelectedPlanName] = useState('');
@@ -111,6 +118,31 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
     return isNaN(dt.getTime())
       ? 'Recently'
       : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const openDetailModal = (cust: CustomerItem) => {
+    setDetailCustomer(cust);
+    setIsEditingPhone(false);
+    setEditedPhone(cust.phone || cust.businesses.find((b) => b.phone)?.phone || '');
+  };
+
+  const handleSavePhone = async () => {
+    if (!detailCustomer) return;
+    setIsSavingPhone(true);
+    try {
+      await apiFetch(`/api/admin/crm/customers/${detailCustomer.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ phone: editedPhone.trim() })
+      });
+      showNotice?.('Customer phone number updated successfully!');
+      setDetailCustomer({ ...detailCustomer, phone: editedPhone.trim() });
+      setIsEditingPhone(false);
+      if (onRefresh) await onRefresh();
+    } catch (err: any) {
+      showNotice?.(err?.message || 'Failed to update phone number', 'error');
+    } finally {
+      setIsSavingPhone(false);
+    }
   };
 
   const openPlanModal = (customer: CustomerItem) => {
@@ -422,10 +454,18 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                   const displayPhone = cust.phone || cust.businesses.find((b) => b.phone)?.phone;
 
                   return (
-                    <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={cust.id}
+                      onClick={() => openDetailModal(cust)}
+                      className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                      title="Click to view full customer details"
+                    >
                       {/* Merchant Customer */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-sm">{cust.name}</div>
+                        <div className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                          <span>{cust.name}</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                        </div>
                         <div className="text-slate-500 font-mono text-[11px] mt-0.5">{cust.email}</div>
                         {displayPhone && (
                           <div className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
@@ -462,7 +502,10 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                           </div>
                           <button
                             type="button"
-                            onClick={() => openPlanModal(cust)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPlanModal(cust);
+                            }}
                             className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-colors"
                             title="Upgrade or Downgrade Subscription Plan"
                           >
@@ -536,7 +579,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                           <span>{cust.totalReviews} Reviews</span>
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-                          <MessageSquare className="w-3 h-3 text-purple-600" />
+                          <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
                           <span>{cust.totalReplies} AI Replies</span>
                         </div>
                       </td>
@@ -558,7 +601,10 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                           {/* 1-Click Renew (+1M) Button */}
                           <Button
                             size="sm"
-                            onClick={() => openRenewModal(cust)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRenewModal(cust);
+                            }}
                             className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 cursor-pointer shadow-2xs"
                             title="Record UPI payment and renew subscription for +1 month"
                           >
@@ -570,7 +616,10 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openRemindModal(cust)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRemindModal(cust);
+                            }}
                             className="h-7 px-2 text-xs border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold gap-1 cursor-pointer"
                             title={`Send WhatsApp payment & renewal reminder to ${displayPhone || cust.name}`}
                           >
@@ -581,7 +630,10 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openPlanModal(cust)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPlanModal(cust);
+                            }}
                             className="h-7 px-2 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold gap-1 cursor-pointer"
                             title="Upgrade / Downgrade Plan"
                           >
@@ -593,7 +645,10 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onSelectCustomerForBilling(cust)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectCustomerForBilling(cust);
+                              }}
                               className="h-7 px-2.5 text-xs text-slate-700 border-slate-200 hover:bg-slate-50 font-bold cursor-pointer"
                               title="Create custom invoice for this customer"
                             >
@@ -603,6 +658,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
 
                           <a
                             href={`mailto:${cust.email}?subject=Loctimize ReviewQR Platform Support`}
+                            onClick={(e) => e.stopPropagation()}
                             className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-indigo-600 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
                             title="Email Customer"
                           >
@@ -628,6 +684,327 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
           colorScheme="indigo"
         />
       </div>
+
+      {/* Customer 360 Full Details Popup Modal */}
+      {detailCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Top Header */}
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-start justify-between shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 text-white font-black text-xl flex items-center justify-center shadow-md shrink-0">
+                  {detailCustomer.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-white">{detailCustomer.name}</h3>
+                    <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 text-[10px] font-bold">
+                      Merchant Customer
+                    </Badge>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${detailCustomer.isBlocked ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${detailCustomer.isBlocked ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                      {detailCustomer.isBlocked ? 'Suspended' : 'Active Account'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-mono mt-0.5">{detailCustomer.email}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDetailCustomer(null)}
+                className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Contact Details Card */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5 text-slate-400">
+                  <Phone className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Contact Information</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Mobile Phone Number with Inline Edit & Call/WhatsApp */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 block">Mobile / WhatsApp Number</span>
+                    {isEditingPhone ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="tel"
+                          value={editedPhone}
+                          onChange={(e) => setEditedPhone(e.target.value)}
+                          placeholder="e.g. 9876543210"
+                          className="h-8 text-xs font-mono font-bold"
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          disabled={isSavingPhone}
+                          onClick={handleSavePhone}
+                          className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]"
+                        >
+                          {isSavingPhone ? 'Saving...' : 'Save'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setIsEditingPhone(false)}
+                          className="h-8 px-2 text-slate-500 text-[11px]"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-slate-900 text-xs">
+                            {detailCustomer.phone || detailCustomer.businesses.find((b) => b.phone)?.phone || 'Not provided'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditedPhone(detailCustomer.phone || detailCustomer.businesses.find((b) => b.phone)?.phone || '');
+                              setIsEditingPhone(true);
+                            }}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-1.5 py-0.5 rounded cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          {(detailCustomer.phone || detailCustomer.businesses.find((b) => b.phone)?.phone) && (
+                            <>
+                              <a
+                                href={`tel:${detailCustomer.phone || detailCustomer.businesses.find((b) => b.phone)?.phone}`}
+                                className="h-6 w-6 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
+                                title="Call Customer"
+                              >
+                                <Phone className="w-3 h-3" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const c = detailCustomer;
+                                  setDetailCustomer(null);
+                                  openRemindModal(c);
+                                }}
+                                className="h-6 w-6 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center transition-colors cursor-pointer"
+                                title="WhatsApp Customer"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Email Address */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 block">Registered Email</span>
+                    <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200">
+                      <span className="font-mono font-semibold text-slate-800 text-xs truncate mr-2">
+                        {detailCustomer.email}
+                      </span>
+                      <a
+                        href={`mailto:${detailCustomer.email}?subject=Loctimize Platform Support`}
+                        className="h-6 px-2 rounded-md bg-slate-100 text-slate-600 hover:text-indigo-600 flex items-center gap-1 font-bold text-[10px]"
+                      >
+                        <Mail className="w-3 h-3" />
+                        <span>Email</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-[11px] border-t border-slate-200/60">
+                  <div>
+                    <span className="text-slate-400 block font-semibold">Account Onboarding:</span>
+                    <span className="font-bold text-slate-800">{formatSafeDate(detailCustomer.createdAt)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-semibold">Last Active:</span>
+                    <span className="font-bold text-slate-800">{detailCustomer.lastLoginAt ? formatSafeDate(detailCustomer.lastLoginAt) : 'Recently Registered'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-semibold">Customer ID:</span>
+                    <span className="font-mono text-[10px] text-slate-500">{detailCustomer.id}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Plan & Subscription Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-tr from-indigo-50/60 via-purple-50/40 to-white border border-indigo-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-xs uppercase tracking-wider flex items-center gap-1.5 text-indigo-900">
+                    <Zap className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Subscription & Validity</span>
+                  </h4>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const c = detailCustomer;
+                        setDetailCustomer(null);
+                        openRenewModal(c);
+                      }}
+                      className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 shadow-2xs cursor-pointer"
+                    >
+                      <CreditCard className="w-3 h-3" />
+                      <span>Renew (+1M)</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const c = detailCustomer;
+                        setDetailCustomer(null);
+                        openPlanModal(c);
+                      }}
+                      className="h-7 px-2.5 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50 font-bold gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      <span>Change Plan</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Active Plan</span>
+                    <span className="font-black text-slate-900 text-xs block mt-0.5">{detailCustomer.plan?.name || 'Starter'}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Validity Status</span>
+                    <span className="font-bold text-xs capitalize mt-0.5 block text-emerald-700">
+                      {detailCustomer.plan?.status === 'expired' ? '🔴 Expired' : detailCustomer.plan?.status === 'expiring_soon' ? '🟡 Expiring Soon' : '🟢 Active'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Expires On</span>
+                    <span className="font-bold font-mono text-slate-800 text-xs block mt-0.5">{formatSafeDate(detailCustomer.plan?.expiresAt)}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Last UTR / UPI Ref</span>
+                    <span className="font-mono text-[11px] text-indigo-700 font-bold block mt-0.5 truncate">{detailCustomer.plan?.lastUpiRef || 'Direct Transfer'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Connected Outlets & Businesses */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5 text-slate-400">
+                    <Building className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Registered Store Outlets ({detailCustomer.businesses.length})</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-400 font-bold font-mono">
+                    Total Outlets: {detailCustomer.totalLocations}
+                  </span>
+                </div>
+
+                {detailCustomer.businesses.length === 0 ? (
+                  <p className="text-slate-400 text-center py-3">No business outlets configured yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {detailCustomer.businesses.map((biz) => (
+                      <div key={biz.id} className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-slate-900 text-xs">{biz.name}</span>
+                            {biz.city && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold">
+                                {biz.city}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">Slug: /r/{biz.slug}</span>
+                        </div>
+                        <a
+                          href={`/r/${biz.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-7 px-2.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center gap-1 text-[11px] font-bold transition-colors"
+                        >
+                          <span>Live Review QR</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Live Analytics & Financials */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-100 text-center">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase block">Total Scans</span>
+                  <span className="text-lg font-black text-blue-950 font-mono mt-0.5 block">{detailCustomer.totalScans}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-100 text-center">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase block">Google Reviews</span>
+                  <span className="text-lg font-black text-amber-950 font-mono mt-0.5 block">{detailCustomer.totalReviews}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 text-center">
+                  <span className="text-[10px] font-bold text-purple-700 uppercase block">AI Replies</span>
+                  <span className="text-lg font-black text-purple-950 font-mono mt-0.5 block">{detailCustomer.totalReplies}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase block">Total Paid (₹)</span>
+                  <span className="text-lg font-black text-emerald-950 font-mono mt-0.5 block">₹{detailCustomer.billing.totalPaid.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Modal Bottom Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const c = detailCustomer;
+                    setDetailCustomer(null);
+                    openRemindModal(c);
+                  }}
+                  className="h-9 px-3 text-xs border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold gap-1.5 cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Send WhatsApp Reminder</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {onSelectCustomerForBilling && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const c = detailCustomer;
+                        setDetailCustomer(null);
+                        onSelectCustomerForBilling(c);
+                      }}
+                      className="h-9 px-3 text-xs text-slate-700 border-slate-200 hover:bg-slate-50 font-bold cursor-pointer"
+                    >
+                      Create Bill
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={() => setDetailCustomer(null)}
+                    className="h-9 px-4 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* WhatsApp Payment Reminder Modal */}
       {remindModalCustomer && (
