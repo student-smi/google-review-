@@ -45,6 +45,7 @@ import { apiFetch } from '@/lib/api';
 import { getCurrentUser, isAdminUser } from '@/lib/auth';
 import { CrmLeadsTab, LeadItem } from '@/components/admin/CrmLeadsTab';
 import { CrmCustomersTab, CustomerItem } from '@/components/admin/CrmCustomersTab';
+import { CrmPlansTab, PlanItem } from '@/components/admin/CrmPlansTab';
 import { CrmBillingTab } from '@/components/admin/CrmBillingTab';
 import { CrmTeamTab, TeamMemberItem } from '@/components/admin/CrmTeamTab';
 import { InvoiceData } from '@/components/admin/PaymentReceiptModal';
@@ -150,6 +151,7 @@ export function AdminUsersPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [crmLeads, setCrmLeads] = useState<LeadItem[]>([]);
   const [crmCustomers, setCrmCustomers] = useState<CustomerItem[]>([]);
+  const [crmPlans, setCrmPlans] = useState<PlanItem[]>([]);
   const [crmInvoices, setCrmInvoices] = useState<InvoiceData[]>([]);
   const [crmTeam, setCrmTeam] = useState<TeamMemberItem[]>([]);
   const [preSelectedCustomer, setPreSelectedCustomer] = useState<CustomerItem | null>(null);
@@ -180,11 +182,12 @@ export function AdminUsersPage() {
   const loadAdminData = async () => {
     setIsLoading(true);
     try {
-      const [overviewRes, usersRes, leadsRes, customersRes, invoicesRes, teamRes] = await Promise.all([
+      const [overviewRes, usersRes, leadsRes, customersRes, plansRes, invoicesRes, teamRes] = await Promise.all([
         apiFetch<{ success: boolean; stats: AdminOverviewStats; telemetry?: AdminTelemetry }>('/api/admin/overview'),
         apiFetch<{ success: boolean; users: EnrichedUser[] }>('/api/admin/users'),
         apiFetch<{ success: boolean; leads: LeadItem[] }>('/api/admin/crm/leads').catch(() => ({ success: false, leads: [] })),
         apiFetch<{ success: boolean; customers: CustomerItem[] }>('/api/admin/crm/customers').catch(() => ({ success: false, customers: [] })),
+        apiFetch<{ success: boolean; plans: PlanItem[] }>('/api/admin/crm/plans').catch(() => ({ success: false, plans: [] })),
         apiFetch<{ success: boolean; invoices: InvoiceData[] }>('/api/admin/crm/invoices').catch(() => ({ success: false, invoices: [] })),
         apiFetch<{ success: boolean; team: TeamMemberItem[] }>('/api/admin/crm/team').catch(() => ({ success: false, team: [] }))
       ]);
@@ -203,6 +206,9 @@ export function AdminUsersPage() {
       }
       if (customersRes?.customers) {
         setCrmCustomers(customersRes.customers);
+      }
+      if (plansRes?.plans) {
+        setCrmPlans(plansRes.plans);
       }
       if (invoicesRes?.invoices) {
         setCrmInvoices(invoicesRes.invoices);
@@ -361,6 +367,7 @@ export function AdminUsersPage() {
         leadsCount={crmLeads.length}
         newLeadsCount={crmLeads.filter((l) => (l.stage || l.status) === 'new').length}
         customersCount={crmCustomers.length}
+        plansCount={crmPlans.length}
         invoicesCount={crmInvoices.length}
         teamCount={crmTeam.length}
         usersCount={users.length}
@@ -393,6 +400,7 @@ export function AdminUsersPage() {
                 <span className="text-indigo-600 truncate font-semibold">
                   {activeAdminTab === 'leads' && 'CRM Pipeline'}
                   {activeAdminTab === 'customers' && 'Customer 360'}
+                  {activeAdminTab === 'plans' && 'Plan Management'}
                   {activeAdminTab === 'billing' && 'Billing'}
                   {activeAdminTab === 'team' && 'Roles & RBAC'}
                   {activeAdminTab === 'users' && 'Merchants'}
@@ -409,6 +417,12 @@ export function AdminUsersPage() {
                   <>
                     <span className="hidden sm:inline">Customer 360 & Outlets Directory</span>
                     <span className="sm:hidden">Customer 360 Outlets</span>
+                  </>
+                )}
+                {activeAdminTab === 'plans' && (
+                  <>
+                    <span className="hidden sm:inline">Subscription Plans & Hardware Packages</span>
+                    <span className="sm:hidden">Plan Management</span>
                   </>
                 )}
                 {activeAdminTab === 'billing' && (
@@ -503,6 +517,11 @@ export function AdminUsersPage() {
         <div className="max-w-7xl mx-auto">
           <CrmLeadsTab
             leads={crmLeads}
+            plans={crmPlans}
+            onLeadConverted={async () => {
+              await loadAdminData();
+              setActiveAdminTab('customers');
+            }}
             executives={
               crmTeam
                 .filter((t) => t.role === 'executive' || t.role === 'manager' || t.role === 'admin')
@@ -520,10 +539,23 @@ export function AdminUsersPage() {
         <div className="max-w-7xl mx-auto">
           <CrmCustomersTab
             customers={crmCustomers}
+            plans={crmPlans}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
             onSelectCustomerForBilling={(cust) => {
               setPreSelectedCustomer(cust);
               setActiveAdminTab('billing');
             }}
+          />
+        </div>
+      )}
+
+      {activeAdminTab === 'plans' && (
+        <div className="max-w-7xl mx-auto">
+          <CrmPlansTab
+            plans={crmPlans}
+            onRefresh={loadAdminData}
+            showNotice={showNotice}
           />
         </div>
       )}

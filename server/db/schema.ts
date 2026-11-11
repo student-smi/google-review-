@@ -10,6 +10,8 @@ export const users = sqliteTable('users', {
   role: text('role').default('owner').notNull(), // 'admin' | 'owner'
   isBlocked: integer('is_blocked', { mode: 'boolean' }).default(false).notNull(),
   blockReason: text('block_reason'),
+  planId: text('plan_id'),
+  planName: text('plan_name'),
   lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
@@ -330,6 +332,20 @@ export const invoices = sqliteTable('invoices', {
   index('idx_invoices_customer').on(t.customerId),
   index('idx_invoices_status').on(t.status)
 ]);
+
+export const plans = sqliteTable('plans', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  badge: text('badge'), // e.g. 'Popular', 'Bestseller', 'Starter', 'Enterprise'
+  price: integer('price').notNull(), // in INR (e.g. 999, 2499, 4999)
+  billingPeriod: text('billing_period').default('monthly').notNull(), // 'monthly' | 'yearly' | 'one_time'
+  maxLocations: integer('max_locations').default(1).notNull(),
+  featuresJson: text('features_json').notNull(), // JSON array of feature bullets
+  isActive: integer('is_active').default(1).notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+});
+
 
 
 

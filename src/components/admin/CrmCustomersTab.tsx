@@ -15,12 +15,17 @@ import {
   MessageCircle,
   Clock,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles,
+  Check,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { apiFetch } from '@/lib/api';
 import { TablePagination } from './TablePagination';
+import { PlanItem } from './CrmPlansTab';
 
 export interface CustomerItem {
   id: string;
@@ -36,6 +41,7 @@ export interface CustomerItem {
   totalReviews: number;
   totalReplies: number;
   plan: {
+    id?: string | null;
     name: string;
     status: string;
     billingCycle: string;
@@ -50,17 +56,69 @@ export interface CustomerItem {
 
 interface CrmCustomersTabProps {
   customers: CustomerItem[];
+  plans?: PlanItem[];
   onSelectCustomerForBilling?: (customer: CustomerItem) => void;
+  onRefresh?: () => Promise<void>;
+  showNotice?: (text: string, type?: 'success' | 'error') => void;
 }
 
 export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
   customers,
-  onSelectCustomerForBilling
+  plans = [],
+  onSelectCustomerForBilling,
+  onRefresh,
+  showNotice
 }) => {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Plan Switcher Modal State
+  const [planModalCustomer, setPlanModalCustomer] = useState<CustomerItem | null>(null);
+  const [selectedPlanName, setSelectedPlanName] = useState('');
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
+
+  const formatSafeDate = (d: any): string => {
+    if (!d) return 'Recently';
+    let dt: Date;
+    if (d instanceof Date) dt = d;
+    else if (typeof d === 'number') dt = new Date(d < 1e11 ? d * 1000 : d);
+    else dt = new Date(d);
+    return isNaN(dt.getTime())
+      ? 'Recently'
+      : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const openPlanModal = (customer: CustomerItem) => {
+    setPlanModalCustomer(customer);
+    setSelectedPlanName(customer.plan?.name || 'Starter');
+    setSelectedPlanId(customer.plan?.id || null);
+  };
+
+  const handleUpdateCustomerPlan = async () => {
+    if (!planModalCustomer || !selectedPlanName) return;
+    setIsUpdatingPlan(true);
+
+    try {
+      await apiFetch(`/api/admin/crm/customers/${planModalCustomer.id}/plan`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          planId: selectedPlanId,
+          planName: selectedPlanName
+        })
+      });
+
+      showNotice?.(`Subscription plan for "${planModalCustomer.name}" updated to "${selectedPlanName}"!`);
+      setPlanModalCustomer(null);
+      if (onRefresh) await onRefresh();
+    } catch (err: any) {
+      showNotice?.(err?.message || 'Failed to update plan', 'error');
+    } finally {
+      setIsUpdatingPlan(false);
+    }
+  };
 
   const filteredCustomers = customers.filter((c) => {
     const q = search.toLowerCase().trim();
@@ -144,13 +202,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                 </tr>
               ) : (
                 paginatedCustomers.map((cust) => {
-                  const joinDate = new Date(
-                    cust.createdAt * (cust.createdAt < 10000000000 ? 1000 : 1)
-                  ).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  });
+                  const joinDate = formatSafeDate(cust.createdAt);
 
                   return (
                     <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
@@ -180,9 +232,19 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
 
                       {/* Active Plan & Subscriptions */}
                       <td className="py-3.5 px-4">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-800 border border-indigo-200">
-                          <Zap className="w-3 h-3 text-indigo-600" />
-                          <span>{cust.plan.name}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-800 border border-indigo-200">
+                            <Zap className="w-3 h-3 text-indigo-600" />
+                            <span>{cust.plan.name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openPlanModal(cust)}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-colors"
+                            title="Upgrade or Downgrade Subscription Plan"
+                          >
+                            Change
+                          </button>
                         </div>
                         <div className="flex items-center gap-2 mt-1.5 text-[11px]">
                           <span
@@ -237,19 +299,29 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPlanModal(cust)}
+                            className="h-7 px-2 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold gap-1 cursor-pointer"
+                            title="Upgrade / Downgrade Plan"
+                          >
+                            <Sparkles className="w-3 h-3 text-indigo-600" />
+                            <span>Plan</span>
+                          </Button>
                           {onSelectCustomerForBilling && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => onSelectCustomerForBilling(cust)}
-                              className="h-7 px-2.5 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold"
+                              className="h-7 px-2.5 text-xs text-slate-700 border-slate-200 hover:bg-slate-50 font-bold cursor-pointer"
                             >
                               Create Bill
                             </Button>
                           )}
                           <a
                             href={`mailto:${cust.email}?subject=Loctimize ReviewQR Platform Support`}
-                            className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-indigo-600 hover:bg-slate-50 flex items-center justify-center transition-colors"
+                            className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-indigo-600 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
                             title="Email Customer"
                           >
                             <Mail className="w-3.5 h-3.5" />
@@ -274,6 +346,110 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
           colorScheme="indigo"
         />
       </div>
+
+      {/* Plan Upgrade / Downgrade Modal */}
+      {planModalCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+                  Subscription Plan Manager
+                </span>
+                <h3 className="text-base font-black text-white mt-0.5">
+                  Change Plan: {planModalCustomer.name}
+                </h3>
+                <p className="text-xs text-slate-400 font-mono mt-0.5">{planModalCustomer.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlanModalCustomer(null)}
+                className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+                <span className="text-slate-500 block font-medium">Currently Active Plan:</span>
+                <strong className="text-slate-900 font-bold text-sm block mt-0.5">
+                  {planModalCustomer.plan.name}
+                </strong>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Select New Plan (Upgrade / Downgrade)
+                </label>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {(plans.length > 0 ? plans : [
+                    { id: 'plan_starter', name: 'Starter', price: 999, badge: 'Hardware', maxLocations: 1 },
+                    { id: 'plan_growth', name: 'Growth (NFC + Review Sync)', price: 2499, badge: 'Popular', maxLocations: 3 },
+                    { id: 'plan_enterprise', name: 'Enterprise (Multi-Outlet)', price: 4999, badge: 'Bestseller', maxLocations: 10 }
+                  ] as any[]).map((p) => {
+                    const isSelected = selectedPlanName === p.name || selectedPlanId === p.id;
+
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlanName(p.name);
+                          setSelectedPlanId(p.id);
+                        }}
+                        className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-slate-900">{p.name}</span>
+                            {p.badge && (
+                              <Badge className="bg-indigo-100 text-indigo-700 border-none text-[9px] font-black h-4 px-1.5">
+                                {p.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-500 mt-0.5 block">
+                            Up to {p.maxLocations || 1} Outlets • ₹{p.price?.toLocaleString('en-IN') || 0}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <div className="h-6 w-6 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPlanModalCustomer(null)}
+                  className="h-10 px-4 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isUpdatingPlan || !selectedPlanName}
+                  onClick={handleUpdateCustomerPlan}
+                  className="h-10 px-5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                >
+                  {isUpdatingPlan ? 'Updating...' : 'Confirm Plan Update'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

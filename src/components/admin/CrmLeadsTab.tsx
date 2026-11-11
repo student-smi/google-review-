@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { apiFetch } from '@/lib/api';
 import { TablePagination } from './TablePagination';
+import { PlanItem } from './CrmPlansTab';
 
 export interface LeadActivity {
   id: string;
@@ -60,15 +61,19 @@ export interface LeadItem {
 interface CrmLeadsTabProps {
   leads: LeadItem[];
   executives: string[];
+  plans?: PlanItem[];
   onRefresh: () => Promise<void>;
   showNotice: (text: string, type?: 'success' | 'error') => void;
+  onLeadConverted?: (customerId: string) => void;
 }
 
 export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
   leads,
   executives,
+  plans = [],
   onRefresh,
-  showNotice
+  showNotice,
+  onLeadConverted
 }) => {
   const [search, setSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState<string>('all');
@@ -79,6 +84,12 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   
+  // Convert Lead Modal state
+  const [convertingLead, setConvertingLead] = useState<LeadItem | null>(null);
+  const [selectedConvertPlanName, setSelectedConvertPlanName] = useState('Growth (NFC + Review Sync)');
+  const [selectedConvertPlanId, setSelectedConvertPlanId] = useState<string | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+
   // Selected lead for detail/notes slideover
   const [activeLead, setActiveLead] = useState<LeadItem | null>(null);
   const [newNoteText, setNewNoteText] = useState('');
@@ -293,6 +304,51 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
       await onRefresh();
     } catch (err: any) {
       showNotice(err?.message || 'Failed to delete lead', 'error');
+    }
+  };
+
+  // Open Convert Lead Modal
+  const openConvertModal = (lead: LeadItem) => {
+    setConvertingLead(lead);
+    if (plans && plans.length > 0) {
+      const match = plans.find((p) => p.name.toLowerCase().includes('growth')) || plans[0];
+      setSelectedConvertPlanId(match.id);
+      setSelectedConvertPlanName(match.name);
+    } else {
+      setSelectedConvertPlanId(null);
+      setSelectedConvertPlanName('Growth (NFC + Review Sync)');
+    }
+  };
+
+  // Convert lead to Customer 360
+  const handleConvertLead = async () => {
+    if (!convertingLead) return;
+    setIsConverting(true);
+    try {
+      const res = await apiFetch<{ success: boolean; message: string; customer: any; generatedPassword?: string }>(
+        `/api/admin/crm/leads/${convertingLead.id}/convert`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            planId: selectedConvertPlanId,
+            planName: selectedConvertPlanName
+          })
+        }
+      );
+      showNotice(res.message || `${convertingLead.company} successfully converted to Customer!`);
+      const convertedId = res.customer?.id || convertingLead.id;
+      setConvertingLead(null);
+      if (activeLead?.id === convertingLead.id) {
+        setActiveLead(null);
+      }
+      await onRefresh();
+      if (onLeadConverted) {
+        onLeadConverted(convertedId);
+      }
+    } catch (err: any) {
+      showNotice(err?.message || 'Failed to convert lead to customer', 'error');
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -575,6 +631,16 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => openConvertModal(lead)}
+                            className="h-7 px-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 transition-colors flex items-center gap-1 shadow-2xs"
+                            title="Convert Lead to Customer 360"
+                          >
+                            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Convert</span>
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => handleDeleteLead(lead.id)}
                             className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
@@ -618,14 +684,28 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                   Contact: <span className="font-semibold text-white">{activeLead.contactPerson}</span> ({activeLead.mobile})
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveLead(null)}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8 p-0"
-              >
-                ✕
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const leadToConvert = activeLead;
+                    setActiveLead(null);
+                    openConvertModal(leadToConvert);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8 px-3 gap-1.5 shadow-sm"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  Convert to Customer
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveLead(null)}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 w-8 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
             </div>
 
             {/* Lead Status & Attributes Bar */}
@@ -841,6 +921,130 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Convert Lead to Customer Modal */}
+      {convertingLead && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95">
+            <div className="p-6 bg-gradient-to-r from-emerald-900 to-slate-900 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">
+                  Lead Conversion
+                </span>
+                <h3 className="text-lg font-black text-white">Convert to Customer 360</h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Provision merchant account & add directly to Customer 360
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConvertingLead(null)}
+                className="text-slate-400 hover:text-white h-8 w-8 p-0"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              {/* Lead Summary Info */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{convertingLead.company}</h4>
+                    <p className="text-slate-500 font-medium">{convertingLead.contactPerson} • {convertingLead.mobile}</p>
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-800 font-bold border-emerald-300">
+                    {convertingLead.locations} Outlets
+                  </Badge>
+                </div>
+                {convertingLead.email && (
+                  <p className="text-slate-500 text-[11px] font-mono">Email: {convertingLead.email}</p>
+                )}
+                {convertingLead.product && (
+                  <p className="text-slate-500 text-[11px]">Product: <span className="font-semibold text-slate-700">{convertingLead.product}</span></p>
+                )}
+              </div>
+
+              {/* Subscription Plan Selection */}
+              <div>
+                <label className="font-black text-slate-800 block mb-1.5 uppercase text-[11px] tracking-wider">
+                  Assign Customer Plan & Pricing Tier
+                </label>
+                <select
+                  value={selectedConvertPlanId || selectedConvertPlanName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const matched = plans.find((p) => p.id === val || p.name === val);
+                    if (matched) {
+                      setSelectedConvertPlanId(matched.id);
+                      setSelectedConvertPlanName(matched.name);
+                    } else {
+                      setSelectedConvertPlanId(null);
+                      setSelectedConvertPlanName(val);
+                    }
+                  }}
+                  className="w-full h-11 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white shadow-xs focus:ring-2 focus:ring-emerald-500"
+                >
+                  {plans && plans.length > 0 ? (
+                    plans.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} - ₹{p.price.toLocaleString('en-IN')} / {p.billingPeriod} (Max {p.maxLocations} Locations)
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Starter">Starter - ₹0 / Lifetime (1 Location)</option>
+                      <option value="Growth (NFC + Review Sync)">Growth (NFC + Review Sync) - ₹999 / year (3 Locations)</option>
+                      <option value="Enterprise (Multi-Outlet)">Enterprise (Multi-Outlet) - ₹2,999 / year (10 Locations)</option>
+                    </>
+                  )}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  You can also upgrade or downgrade the customer's plan at any time from Customer 360.
+                </p>
+              </div>
+
+              {/* Conversion Benefits Callout */}
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-900 space-y-1.5 text-[11px]">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  What happens upon conversion:
+                </div>
+                <ul className="list-disc pl-5 space-y-0.5 text-emerald-800 font-medium">
+                  <li>Creates an active merchant account and store outlet profile.</li>
+                  <li>Assigns the chosen subscription plan with full platform features.</li>
+                  <li>Updates this lead stage to Won / Converted in CRM.</li>
+                  <li>Immediately appears in Customer 360 and Billing directory.</li>
+                </ul>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConvertingLead(null)}
+                  disabled={isConverting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleConvertLead}
+                  disabled={isConverting}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 shadow-sm px-4"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  {isConverting ? 'Converting to Customer...' : 'Confirm & Convert to Customer'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

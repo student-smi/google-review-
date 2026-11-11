@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { logoutApi } from '@/lib/auth';
 
-export type AdminTabType = 'leads' | 'customers' | 'billing' | 'team' | 'users';
+export type AdminTabType = 'leads' | 'customers' | 'plans' | 'billing' | 'team' | 'users';
 
 interface AdminSidebarProps {
   activeTab: AdminTabType;
@@ -29,6 +29,7 @@ interface AdminSidebarProps {
   leadsCount: number;
   newLeadsCount: number;
   customersCount: number;
+  plansCount?: number;
   invoicesCount: number;
   teamCount: number;
   usersCount: number;
@@ -46,6 +47,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   leadsCount,
   newLeadsCount,
   customersCount,
+  plansCount = 0,
   invoicesCount,
   teamCount,
   usersCount,
@@ -90,6 +92,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     {
       groupLabel: 'FINANCE & BILLING',
       items: [
+        {
+          id: 'plans' as AdminTabType,
+          label: 'Plan Management',
+          icon: Sparkles,
+          count: plansCount,
+          badge: null,
+          badgeColor: ''
+        },
         {
           id: 'billing' as AdminTabType,
           label: 'Billing & Receipts',

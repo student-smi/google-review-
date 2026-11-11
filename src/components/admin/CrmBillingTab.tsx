@@ -340,11 +340,10 @@ export const CrmBillingTab: React.FC<CrmBillingTabProps> = ({
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(inv.id, inv.status)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                            inv.status === 'paid'
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${inv.status === 'paid'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                               : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                          }`}
+                            }`}
                           title="Click to toggle status"
                         >
                           {inv.status === 'paid' ? (

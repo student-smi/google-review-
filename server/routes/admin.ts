@@ -19,7 +19,8 @@ import {
   aiDraftEvents,
   aiUsageDaily,
   enquiries,
-  invoices
+  invoices,
+  plans
 } from '../db/schema';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 import type { Env } from './public';
@@ -28,6 +29,102 @@ export const adminRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: strin
 
 // All admin routes require Super Admin authentication
 adminRoutes.use('*', requireAuth, requireAdmin);
+
+async function ensurePlansTable(d1: D1Database) {
+  try {
+    await d1.prepare(`
+      CREATE TABLE IF NOT EXISTS plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        badge TEXT,
+        price INTEGER NOT NULL,
+        billing_period TEXT NOT NULL DEFAULT 'monthly',
+        max_locations INTEGER NOT NULL DEFAULT 1,
+        features_json TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `).run();
+  } catch (e) {}
+
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN plan_id TEXT`).run();
+  } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN plan_name TEXT`).run();
+  } catch (e) {}
+
+  // Seed default 3 plans if empty
+  try {
+    const existing = await d1.prepare(`SELECT COUNT(*) as cnt FROM plans`).first<{ cnt: number }>();
+    if (!existing || existing.cnt === 0) {
+      const now = Date.now();
+      const defaultPlans = [
+        {
+          id: 'plan_starter',
+          name: 'Starter',
+          badge: 'Starter',
+          price: 999,
+          billing_period: 'one_time',
+          max_locations: 1,
+          features_json: JSON.stringify([
+            '1 NFC + QR Smart Acrylic Standee',
+            'Static Review QR Code',
+            'Ungated Direct Google Review Flow',
+            'WhatsApp Support'
+          ]),
+          is_active: 1,
+          created_at: now,
+          updated_at: now
+        },
+        {
+          id: 'plan_growth',
+          name: 'Growth (NFC + Review Sync)',
+          badge: 'Popular',
+          price: 2499,
+          billing_period: 'monthly',
+          max_locations: 3,
+          features_json: JSON.stringify([
+            '3 NFC + QR Smart Standees',
+            'AI Multilingual Review Copilot',
+            'AI-Powered Owner Reply Studio',
+            'Real-Time Scan & Click Analytics',
+            'Priority WhatsApp & Call Support'
+          ]),
+          is_active: 1,
+          created_at: now,
+          updated_at: now
+        },
+        {
+          id: 'plan_enterprise',
+          name: 'Enterprise (Multi-Outlet)',
+          badge: 'Bestseller',
+          price: 4999,
+          billing_period: 'monthly',
+          max_locations: 10,
+          features_json: JSON.stringify([
+            'Custom Branded Standees',
+            'Multi-Outlet Franchise Dashboard',
+            'Automated Daily Review Sync',
+            'Role-Based Access Control (RBAC)',
+            'Dedicated Account Manager'
+          ]),
+          is_active: 1,
+          created_at: now,
+          updated_at: now
+        }
+      ];
+
+      for (const p of defaultPlans) {
+        await d1.prepare(`
+          INSERT INTO plans (id, name, badge, price, billing_period, max_locations, features_json, is_active, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(p.id, p.name, p.badge, p.price, p.billing_period, p.max_locations, p.features_json, p.is_active, p.created_at, p.updated_at).run();
+      }
+    }
+  } catch (e) {}
+}
 
 // ──────────────────────────────────────────────
 // 1. Admin System Overview & KPI Metrics
@@ -644,11 +741,129 @@ adminRoutes.delete('/crm/leads/:id', async (c) => {
   }
 });
 
+// Convert Lead to Registered Merchant Customer
+adminRoutes.post('/crm/leads/:id/convert', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const leadId = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+
+    // 1. Fetch lead
+    const [lead] = await db.select().from(enquiries).where(eq(enquiries.id, leadId)).limit(1);
+    if (!lead) {
+      return c.json({ error: 'Lead not found' }, 404);
+    }
+
+    const assignedPlanName = body.planName || lead.product || 'Growth (NFC + Review Sync)';
+    const assignedPlanId = body.planId || null;
+    const leadEmail = (lead.email || '').trim().toLowerCase();
+    const leadName = lead.contactPerson?.trim() || lead.company?.trim() || 'Valued Merchant';
+
+    if (!leadEmail) {
+      return c.json({ error: 'Lead must have a valid email address to convert' }, 400);
+    }
+
+    // 2. Check if user already exists
+    const [existingUser] = await db.select().from(users).where(eq(users.email, leadEmail)).limit(1);
+    let customerUser = existingUser;
+
+    if (!customerUser) {
+      const newUserId = 'usr_' + Math.random().toString(36).substring(2, 10);
+      const now = new Date();
+      await db.insert(users).values({
+        id: newUserId,
+        name: leadName,
+        email: leadEmail,
+        role: 'owner',
+        planId: assignedPlanId,
+        planName: assignedPlanName,
+        createdAt: now,
+        updatedAt: now
+      });
+      customerUser = { id: newUserId, name: leadName, email: leadEmail, role: 'owner' } as any;
+    } else {
+      await db.update(users).set({
+        planId: assignedPlanId,
+        planName: assignedPlanName,
+        updatedAt: new Date()
+      }).where(eq(users.id, customerUser.id));
+    }
+
+    // 3. Create initial business if merchant has no business yet
+    const existingBiz = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.ownerId, customerUser.id)).limit(1);
+    if (existingBiz.length === 0) {
+      const newBizId = 'biz_' + Math.random().toString(36).substring(2, 10);
+      const companyName = lead.company?.trim() || `${leadName}'s Business`;
+      const bizSlug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24).replace(/^-|-$/g, '') + '-' + Math.random().toString(36).substring(2, 6);
+      const nowEpoch = Math.floor(Date.now() / 1000);
+
+      await db.insert(businesses).values({
+        id: newBizId,
+        ownerId: customerUser.id,
+        name: companyName,
+        slug: bizSlug,
+        googleReviewUrl: `https://search.google.com/local/writereview?placeid=preview`,
+        phone: lead.mobile || null,
+        contactEmail: leadEmail,
+        category: 'retail',
+        brandVoice: 'warm_grateful',
+        brandColor: '#2563EB',
+        brandColorSecondary: '#F59E0B',
+        isPrimary: true,
+        status: 'active',
+        createdAt: nowEpoch,
+        updatedAt: nowEpoch
+      });
+
+      // Create primary QR code
+      await db.insert(qrCodes).values({
+        id: 'qr_' + Math.random().toString(36).substring(2, 10),
+        businessId: newBizId,
+        code: bizSlug,
+        label: 'Main Cash Counter',
+        destinationUrl: `/r/${bizSlug}`,
+        styleJson: JSON.stringify({ color: '#2563EB' }),
+        isActive: 1,
+        createdAt: nowEpoch,
+        updatedAt: nowEpoch
+      }).catch(() => {});
+    }
+
+    // 4. Update Lead to Won / Converted & add conversion note in conversation timeline
+    const currentActivities: any[] = lead.activityLog ? JSON.parse(lead.activityLog) : [];
+    currentActivities.unshift({
+      id: 'act_' + Date.now(),
+      text: `Converted to Merchant Customer with "${assignedPlanName}" plan. Account created & visible in Customer 360.`,
+      author: 'Super Admin',
+      createdAt: Date.now(),
+      type: 'conversion'
+    });
+
+    await db.update(enquiries).set({
+      stage: 'won',
+      status: 'converted',
+      activityLog: JSON.stringify(currentActivities),
+      updatedAt: Math.floor(Date.now() / 1000)
+    }).where(eq(enquiries.id, leadId));
+
+    return c.json({
+      success: true,
+      message: `Lead successfully converted! Customer "${leadName}" is now active in Customer 360 with plan "${assignedPlanName}".`,
+      customerId: customerUser.id
+    });
+  } catch (err: any) {
+    console.error('Lead conversion failed:', err);
+    return c.json({ error: err.message || 'Failed to convert lead to customer' }, 500);
+  }
+});
+
 // ──────────────────────────────────────────────
 // 8. Customer 360 Management & Subscriptions
 // ──────────────────────────────────────────────
 adminRoutes.get('/crm/customers', async (c) => {
   try {
+    await ensurePlansTable(c.env.DB);
     const db = getDb(c.env.DB);
 
     const [userList, bizList, scanList, reviewList, invoiceList, locationList] = await Promise.all([
@@ -714,8 +929,13 @@ adminRoutes.get('/crm/customers', async (c) => {
       const totalBilled = myInvoices.reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
       const totalPaid = myInvoices.filter((i) => i.status === 'paid').reduce((acc, inv) => acc + (inv.totalAmount || 0), 0);
 
-      const planName = myBusinesses.length > 3 ? 'Enterprise (Multi-Outlet)' : myBusinesses.length > 0 ? 'Growth (NFC + Review Sync)' : 'Starter';
+      const planName = (u as any).planName || (myBusinesses.length > 3 ? 'Enterprise (Multi-Outlet)' : myBusinesses.length > 0 ? 'Growth (NFC + Review Sync)' : 'Starter');
+      const planId = (u as any).planId || null;
       const planStatus = u.isBlocked ? 'suspended' : 'active';
+
+      // Parse timestamp safely to number epoch ms
+      const createdAtMs = u.createdAt instanceof Date ? u.createdAt.getTime() : typeof u.createdAt === 'number' ? (u.createdAt < 1e11 ? u.createdAt * 1000 : u.createdAt) : (new Date(u.createdAt).getTime() || Date.now());
+      const lastLoginAtMs = u.lastLoginAt ? (u.lastLoginAt instanceof Date ? u.lastLoginAt.getTime() : typeof u.lastLoginAt === 'number' ? (u.lastLoginAt < 1e11 ? u.lastLoginAt * 1000 : u.lastLoginAt) : new Date(u.lastLoginAt).getTime()) : null;
 
       return {
         id: u.id,
@@ -723,14 +943,15 @@ adminRoutes.get('/crm/customers', async (c) => {
         email: u.email,
         role: u.role || 'owner',
         isBlocked: Boolean(u.isBlocked),
-        createdAt: u.createdAt,
-        lastLoginAt: u.lastLoginAt,
+        createdAt: createdAtMs,
+        lastLoginAt: lastLoginAtMs,
         businesses: myBusinesses.map((b) => ({ id: b.id, name: b.name, city: b.city, slug: b.slug })),
         totalLocations: Math.max(1, totalLocations),
         totalScans,
         totalReviews,
         totalReplies,
         plan: {
+          id: planId,
           name: planName,
           status: planStatus,
           billingCycle: 'monthly',
@@ -748,6 +969,30 @@ adminRoutes.get('/crm/customers', async (c) => {
   } catch (err: any) {
     console.error('Fetch CRM customers failed:', err);
     return c.json({ error: err.message || 'Failed to fetch customers' }, 500);
+  }
+});
+
+// Upgrade / Downgrade customer subscription plan
+adminRoutes.patch('/crm/customers/:id/plan', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const customerId = c.req.param('id');
+    const body = await c.req.json();
+    const { planId, planName } = body;
+    if (!planName) {
+      return c.json({ error: 'Plan name is required' }, 400);
+    }
+
+    await db.update(users).set({
+      planId: planId || null,
+      planName: planName.trim(),
+      updatedAt: new Date()
+    }).where(eq(users.id, customerId));
+
+    return c.json({ success: true, message: `Customer plan successfully updated to "${planName}"` });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update customer plan' }, 500);
   }
 });
 
@@ -864,6 +1109,9 @@ adminRoutes.get('/crm/team', async (c) => {
     const team = allUsers.map((u) => {
       const isSuperAdmin = (u.email || '').toLowerCase().trim() === 'smitpanchal734@gmail.com';
       const role = isSuperAdmin ? 'admin' : (u.role || 'owner');
+      const createdAtMs = u.createdAt instanceof Date ? u.createdAt.getTime() : typeof u.createdAt === 'number' ? (u.createdAt < 1e11 ? u.createdAt * 1000 : u.createdAt) : (new Date(u.createdAt).getTime() || Date.now());
+      const lastLoginAtMs = u.lastLoginAt ? (u.lastLoginAt instanceof Date ? u.lastLoginAt.getTime() : typeof u.lastLoginAt === 'number' ? (u.lastLoginAt < 1e11 ? u.lastLoginAt * 1000 : u.lastLoginAt) : new Date(u.lastLoginAt).getTime()) : null;
+
       return {
         id: u.id,
         name: u.name,
@@ -871,14 +1119,96 @@ adminRoutes.get('/crm/team', async (c) => {
         role,
         isBlocked: Boolean(u.isBlocked),
         assignedLeadsCount: workload[u.name] || workload[u.email] || 0,
-        createdAt: u.createdAt,
-        lastLoginAt: u.lastLoginAt
+        createdAt: createdAtMs,
+        lastLoginAt: lastLoginAtMs
       };
     });
 
     return c.json({ success: true, team });
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to fetch team' }, 500);
+  }
+});
+
+// ──────────────────────────────────────────────
+// 11. Plans Catalog Management (Add, Edit, Delete)
+// ──────────────────────────────────────────────
+adminRoutes.get('/crm/plans', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const list = await db.select().from(plans).orderBy(desc(plans.createdAt));
+    return c.json({ success: true, plans: list });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to fetch plans' }, 500);
+  }
+});
+
+adminRoutes.post('/crm/plans', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const body = await c.req.json();
+    if (!body.name || body.price === undefined) {
+      return c.json({ error: 'Plan name and price are required' }, 400);
+    }
+
+    const planId = 'plan_' + Math.random().toString(36).substring(2, 9);
+    const now = Date.now();
+    const newPlan = {
+      id: planId,
+      name: body.name.trim(),
+      badge: body.badge?.trim() || null,
+      price: Number(body.price) || 0,
+      billingPeriod: body.billingPeriod || 'monthly',
+      maxLocations: Number(body.maxLocations) || 1,
+      featuresJson: typeof body.features === 'string' ? body.features : JSON.stringify(body.features || []),
+      isActive: body.isActive !== undefined ? (body.isActive ? 1 : 0) : 1,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await db.insert(plans).values(newPlan);
+    return c.json({ success: true, message: 'Plan created successfully', plan: newPlan }, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to create plan' }, 500);
+  }
+});
+
+adminRoutes.put('/crm/plans/:id', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const id = c.req.param('id');
+    const body = await c.req.json();
+
+    const updateData: any = { updatedAt: Date.now() };
+    if (body.name !== undefined) updateData.name = body.name.trim();
+    if (body.badge !== undefined) updateData.badge = body.badge?.trim() || null;
+    if (body.price !== undefined) updateData.price = Number(body.price);
+    if (body.billingPeriod !== undefined) updateData.billingPeriod = body.billingPeriod;
+    if (body.maxLocations !== undefined) updateData.maxLocations = Number(body.maxLocations);
+    if (body.features !== undefined) {
+      updateData.featuresJson = typeof body.features === 'string' ? body.features : JSON.stringify(body.features);
+    }
+    if (body.isActive !== undefined) updateData.isActive = body.isActive ? 1 : 0;
+
+    await db.update(plans).set(updateData).where(eq(plans.id, id));
+    return c.json({ success: true, message: 'Plan updated successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update plan' }, 500);
+  }
+});
+
+adminRoutes.delete('/crm/plans/:id', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const id = c.req.param('id');
+    await db.delete(plans).where(eq(plans.id, id));
+    return c.json({ success: true, message: 'Plan deleted successfully' });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to delete plan' }, 500);
   }
 });
 
