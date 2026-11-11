@@ -54,6 +54,18 @@ async function ensurePlansTable(d1: D1Database) {
   try {
     await d1.prepare(`ALTER TABLE users ADD COLUMN plan_name TEXT`).run();
   } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN plan_expires_at INTEGER`).run();
+  } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN plan_status TEXT DEFAULT 'active'`).run();
+  } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN last_upi_ref TEXT`).run();
+  } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'`).run();
+  } catch (e) {}
 
   // Seed default 3 plans if empty
   try {
@@ -771,6 +783,7 @@ adminRoutes.post('/crm/leads/:id/convert', async (c) => {
     if (!customerUser) {
       const newUserId = 'usr_' + Math.random().toString(36).substring(2, 10);
       const now = new Date();
+      const initialExpiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
       await db.insert(users).values({
         id: newUserId,
         name: leadName,
@@ -778,14 +791,24 @@ adminRoutes.post('/crm/leads/:id/convert', async (c) => {
         role: 'owner',
         planId: assignedPlanId,
         planName: assignedPlanName,
+        planExpiresAt: initialExpiresAt,
+        planStatus: 'active',
+        billingCycle: 'monthly',
         createdAt: now,
         updatedAt: now
       });
       customerUser = { id: newUserId, name: leadName, email: leadEmail, role: 'owner' } as any;
     } else {
+      const curExpires = (customerUser as any).planExpiresAt;
+      const newExpires = (curExpires && curExpires > Date.now())
+        ? curExpires + 30 * 24 * 60 * 60 * 1000
+        : Date.now() + 30 * 24 * 60 * 60 * 1000;
+
       await db.update(users).set({
         planId: assignedPlanId,
         planName: assignedPlanName,
+        planExpiresAt: newExpires,
+        planStatus: 'active',
         updatedAt: new Date()
       }).where(eq(users.id, customerUser.id));
     }
@@ -937,6 +960,32 @@ adminRoutes.get('/crm/customers', async (c) => {
       const createdAtMs = u.createdAt instanceof Date ? u.createdAt.getTime() : typeof u.createdAt === 'number' ? (u.createdAt < 1e11 ? u.createdAt * 1000 : u.createdAt) : (new Date(u.createdAt).getTime() || Date.now());
       const lastLoginAtMs = u.lastLoginAt ? (u.lastLoginAt instanceof Date ? u.lastLoginAt.getTime() : typeof u.lastLoginAt === 'number' ? (u.lastLoginAt < 1e11 ? u.lastLoginAt * 1000 : u.lastLoginAt) : new Date(u.lastLoginAt).getTime()) : null;
 
+      const nowMs = Date.now();
+      let expiresAtMs = (u as any).planExpiresAt;
+      if (!expiresAtMs) {
+        expiresAtMs = createdAtMs + 30 * 24 * 60 * 60 * 1000;
+      }
+      if (typeof expiresAtMs === 'number' && expiresAtMs < 1e11) {
+        expiresAtMs = expiresAtMs * 1000;
+      }
+
+      const diffMs = expiresAtMs - nowMs;
+      const daysLeft = Math.ceil(diffMs / (86400 * 1000));
+
+      let calculatedStatus: 'active' | 'expiring_soon' | 'expired' = 'active';
+      if (u.isBlocked) {
+        calculatedStatus = 'expired';
+      } else if (daysLeft < 0) {
+        calculatedStatus = 'expired';
+      } else if (daysLeft <= 5) {
+        calculatedStatus = 'expiring_soon';
+      } else {
+        calculatedStatus = 'active';
+      }
+
+      const lastUpiRef = (u as any).lastUpiRef || null;
+      const billingCycle = (u as any).billingCycle || 'monthly';
+
       return {
         id: u.id,
         name: u.name,
@@ -953,9 +1002,11 @@ adminRoutes.get('/crm/customers', async (c) => {
         plan: {
           id: planId,
           name: planName,
-          status: planStatus,
-          billingCycle: 'monthly',
-          expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000
+          status: calculatedStatus,
+          billingCycle,
+          expiresAt: expiresAtMs,
+          daysLeft,
+          lastUpiRef
         },
         billing: {
           invoiceCount: myInvoices.length,
@@ -993,6 +1044,102 @@ adminRoutes.patch('/crm/customers/:id/plan', async (c) => {
     return c.json({ success: true, message: `Customer plan successfully updated to "${planName}"` });
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to update customer plan' }, 500);
+  }
+});
+
+// Record direct UPI payment and renew subscription (+1 Month / +X Months)
+adminRoutes.post('/crm/customers/:id/renew', async (c) => {
+  try {
+    await ensurePlansTable(c.env.DB);
+    const db = getDb(c.env.DB);
+    const customerId = c.req.param('id');
+    const body = await c.req.json();
+    const {
+      monthsToAdd = 1,
+      upiRef = '',
+      amount = 999,
+      planId,
+      planName,
+      generateInvoice = true
+    } = body;
+
+    const [user] = await db.select().from(users).where(eq(users.id, customerId)).limit(1);
+    if (!user) {
+      return c.json({ error: 'Customer not found' }, 404);
+    }
+
+    const now = Date.now();
+    const currentExpires = (user as any).planExpiresAt;
+    const baseTimestamp = (currentExpires && currentExpires > now) ? currentExpires : now;
+    const durationMs = Number(monthsToAdd) * 30 * 24 * 60 * 60 * 1000;
+    const newExpiresAt = baseTimestamp + durationMs;
+
+    const finalPlanName = planName || (user as any).planName || 'Growth (NFC + Review Sync)';
+    const finalPlanId = planId || (user as any).planId || null;
+
+    // Update user record
+    await db.update(users).set({
+      planExpiresAt: newExpiresAt,
+      planStatus: 'active',
+      lastUpiRef: upiRef ? upiRef.trim() : (user as any).lastUpiRef,
+      planId: finalPlanId,
+      planName: finalPlanName,
+      updatedAt: new Date()
+    }).where(eq(users.id, customerId));
+
+    let createdInvoice = null;
+    if (generateInvoice && amount > 0) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const invNumber = `INV-${new Date().getFullYear()}-${randomNum}`;
+      
+      const subtotal = Math.round(Number(amount) / 1.18);
+      const taxAmount = Number(amount) - subtotal;
+
+      const items = [
+        {
+          id: 'item_1',
+          name: `${finalPlanName} Subscription (${monthsToAdd} Month Renewal)`,
+          quantity: 1,
+          rate: subtotal,
+          amount: subtotal
+        }
+      ];
+
+      await db.insert(invoices).values({
+        id: invId,
+        invoiceNumber: invNumber,
+        customerId: user.id,
+        customerName: user.name,
+        customerEmail: user.email,
+        itemsJson: JSON.stringify(items),
+        subtotal,
+        taxRate: 18,
+        taxAmount,
+        totalAmount: Number(amount),
+        status: 'paid',
+        paymentMethod: 'upi',
+        paymentId: upiRef ? upiRef.trim() : `UPI-${Date.now().toString().slice(-6)}`,
+        paidAt: nowSec,
+        dueDate: nowSec,
+        notes: `Subscription renewed via direct UPI for ${monthsToAdd} month(s). UTR: ${upiRef || 'Direct Transfer'}`,
+        createdAt: nowSec,
+        updatedAt: nowSec
+      });
+
+      createdInvoice = { id: invId, invoiceNumber: invNumber, totalAmount: Number(amount) };
+    }
+
+    return c.json({
+      success: true,
+      message: `Subscription successfully renewed! Valid until ${new Date(newExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.`,
+      newExpiresAt,
+      invoice: createdInvoice
+    });
+  } catch (err: any) {
+    console.error('Customer renewal failed:', err);
+    return c.json({ error: err.message || 'Failed to renew customer subscription' }, 500);
   }
 });
 
