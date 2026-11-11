@@ -245,6 +245,7 @@ export const CrmTeamTab: React.FC<CrmTeamTabProps> = ({
                           aria-label={`Change role for ${m.name}`}
                           className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs hover:border-slate-300 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                         >
+                          <option value="admin">Super Admin</option>
                           <option value="manager">Manager</option>
                           <option value="executive">Sales Executive</option>
                           <option value="agency">Agency (B2B)</option>

@@ -460,22 +460,20 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
       {/* Main Leads Table */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-full">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-4">Lead & Contact</th>
-                <th className="py-3 px-4">Stage / Pipeline</th>
-                <th className="py-3 px-4">Assigned To</th>
-                <th className="py-3 px-4">Next Follow-Up</th>
-                <th className="py-3 px-4">Requirement & Deal</th>
-                <th className="py-3 px-4">Source & Date</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-3 w-[28%]">Lead & Contact</th>
+                <th className="py-2.5 px-3 w-[22%]">Pipeline & Assigned</th>
+                <th className="py-2.5 px-3 w-[24%]">Requirement & Follow-Up</th>
+                <th className="py-2.5 px-3 w-[10%]">Source & Date</th>
+                <th className="py-2.5 px-3 text-right w-[16%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400">
+                  <td colSpan={5} className="text-center py-12 text-slate-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="font-semibold">No CRM leads found matching your criteria</p>
                     <p className="text-[11px] text-slate-400">Inquiries submitted from your landing page automatically show up here.</p>
@@ -495,27 +493,27 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                       onClick={() => setActiveLead(lead)}
                     >
                       {/* Lead & Contact */}
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3">
                         <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-sm">
                           {lead.company}
                         </div>
-                        <div className="text-slate-600 font-medium mt-0.5">
+                        <div className="text-slate-600 font-medium text-xs mt-0.5">
                           {lead.contactPerson}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 font-mono">
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500 font-mono">
                           <span>{lead.mobile}</span>
                           <span>•</span>
-                          <span className="truncate max-w-[120px]">{lead.email}</span>
+                          <span className="truncate max-w-[130px]">{lead.email}</span>
                         </div>
                       </td>
 
-                      {/* Stage / Pipeline */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      {/* Pipeline & Assigned */}
+                      <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={leadStage}
                           onChange={(e) => handleUpdateStage(lead.id, e.target.value)}
                           aria-label="Change lead stage"
-                          className={`text-xs font-bold rounded-lg px-2.5 py-1 border transition-all cursor-pointer ${stageObj.color}`}
+                          className={`text-xs font-bold rounded-lg px-2 py-1 border transition-all cursor-pointer w-full max-w-[160px] ${stageObj.color}`}
                         >
                           {STAGES.map((s) => (
                             <option key={s.id} value={s.id}>
@@ -523,40 +521,43 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                             </option>
                           ))}
                         </select>
-                      </td>
-
-                      {/* Assigned To */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={lead.assignedTo || 'Unassigned'}
-                          onChange={(e) => handleAssignLead(lead.id, e.target.value)}
-                          aria-label="Assign to team member"
-                          className="text-xs font-semibold rounded-lg px-2 py-1 border border-slate-200 bg-white text-slate-700 shadow-2xs hover:border-slate-300 cursor-pointer"
-                        >
-                          <option value="Unassigned">Unassigned</option>
-                          {executives.map((ex) => (
-                            <option key={ex} value={ex}>
-                              {ex}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* Next Follow-Up */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="datetime-local"
-                            value={lead.followUpDate ? lead.followUpDate.substring(0, 16) : ''}
-                            onChange={(e) => handleUpdateFollowUp(lead.id, e.target.value)}
-                            aria-label="Schedule follow-up date and time"
-                            className="text-[11px] font-mono px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-2xs focus:ring-1 focus:ring-blue-500"
-                          />
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <span className="text-[10px] text-slate-400 font-semibold shrink-0">By:</span>
+                          <select
+                            value={lead.assignedTo || 'Unassigned'}
+                            onChange={(e) => handleAssignLead(lead.id, e.target.value)}
+                            aria-label="Assign to team member"
+                            className="text-[11px] font-semibold rounded-md px-1.5 py-0.5 border border-slate-200 bg-white text-slate-700 shadow-2xs hover:border-slate-300 cursor-pointer w-full max-w-[140px]"
+                          >
+                            <option value="Unassigned">Unassigned</option>
+                            {executives.map((ex) => (
+                              <option key={ex} value={ex}>
+                                {ex}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                        {followUp && (
-                          <div className="mt-1">
+                      </td>
+
+                      {/* Requirement & Follow-Up */}
+                      <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="font-bold text-slate-800 text-xs truncate max-w-[180px]">{lead.product}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                          <span className="text-emerald-700 font-bold font-mono">₹{(lead.dealValue || 999).toLocaleString('en-IN')}</span>
+                          <span>•</span>
+                          <span>Qty: {lead.quantity} ({lead.locations} loc)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <input
+                            type="date"
+                            value={lead.followUpDate ? lead.followUpDate.substring(0, 10) : ''}
+                            onChange={(e) => handleUpdateFollowUp(lead.id, e.target.value)}
+                            aria-label="Schedule follow-up date"
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-700 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                          />
+                          {followUp && (
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
                                 followUp.type === 'today'
                                   ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse'
                                   : followUp.type === 'overdue'
@@ -567,25 +568,14 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                               <Clock className="w-2.5 h-2.5" />
                               {followUp.label}
                             </span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Requirement & Deal */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-800">{lead.product}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          Qty: <span className="font-mono text-slate-700 font-bold">{lead.quantity}</span> ({lead.locations} Outlets)
-                        </div>
-                        <div className="text-emerald-700 font-bold font-mono text-xs mt-0.5">
-                          ₹{(lead.dealValue || 999).toLocaleString('en-IN')}
+                          )}
                         </div>
                       </td>
 
                       {/* Source & Date */}
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-600 bg-slate-50">
-                          {lead.source?.replace('_', ' ') || 'landing page'}
+                      <td className="py-2.5 px-3">
+                        <Badge variant="outline" className="text-[9px] uppercase font-bold text-slate-600 bg-slate-50 px-1.5 py-0">
+                          {lead.source?.replace('_', ' ') || 'landing'}
                         </Badge>
                         <div className="text-[10px] text-slate-400 font-mono mt-1">
                           {new Date(lead.createdAt * (lead.createdAt < 10000000000 ? 1000 : 1)).toLocaleDateString('en-IN', {
@@ -597,8 +587,28 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-2.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openConvertModal(lead)}
+                            className="h-7 px-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                            title="Convert Lead to Customer 360"
+                          >
+                            <UserCheck className="w-3 h-3 text-emerald-600" />
+                            <span>Convert</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setActiveLead(lead)}
+                            className="h-7 px-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
+                            title="View Conversation Timeline"
+                          >
+                            <FileText className="w-3 h-3 mr-0.5" />
+                            Notes ({activities.length})
+                          </Button>
                           {lead.mobile && (
                             <a
                               href={`https://wa.me/${lead.mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi ${lead.contactPerson}, thank you for contacting Loctimize regarding ${lead.product}.`)}`}
@@ -607,46 +617,17 @@ export const CrmLeadsTab: React.FC<CrmLeadsTabProps> = ({
                               className="h-7 w-7 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center transition-colors"
                               title="WhatsApp Lead"
                             >
-                              <MessageCircle className="w-3.5 h-3.5" />
+                              <MessageCircle className="w-3 h-3" />
                             </a>
                           )}
-                          {lead.mobile && (
-                            <a
-                              href={`tel:${lead.mobile}`}
-                              className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:bg-slate-50 flex items-center justify-center transition-colors"
-                              title="Call Lead"
-                            >
-                              <Phone className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setActiveLead(lead)}
-                            className="h-7 px-2 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            title="View Conversation Timeline"
-                          >
-                            <FileText className="w-3.5 h-3.5 mr-1" />
-                            Notes ({activities.length})
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openConvertModal(lead)}
-                            className="h-7 px-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 transition-colors flex items-center gap-1 shadow-2xs"
-                            title="Convert Lead to Customer 360"
-                          >
-                            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Convert</span>
-                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleDeleteLead(lead.id)}
-                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                             title="Delete Lead"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </td>

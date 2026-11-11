@@ -7,6 +7,7 @@ import {
   MessageSquare,
   MapPin,
   Calendar,
+  Shield,
   ShieldCheck,
   Zap,
   Phone,
@@ -88,6 +89,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
   const [isEditingPhone, setIsEditingPhone] = useState<boolean>(false);
   const [editedPhone, setEditedPhone] = useState<string>('');
   const [isSavingPhone, setIsSavingPhone] = useState<boolean>(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState<boolean>(false);
 
   // Plan Switcher Modal State
   const [planModalCustomer, setPlanModalCustomer] = useState<CustomerItem | null>(null);
@@ -142,6 +144,28 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
       showNotice?.(err?.message || 'Failed to update phone number', 'error');
     } finally {
       setIsSavingPhone(false);
+    }
+  };
+
+  const handleToggleAdminRole = async () => {
+    if (!detailCustomer) return;
+    const nextRole = detailCustomer.role === 'admin' ? 'owner' : 'admin';
+    const actionLabel = nextRole === 'admin' ? 'promote to Super Administrator' : 'demote to standard Merchant Owner';
+    if (!confirm(`Are you sure you want to ${actionLabel} for ${detailCustomer.name}?`)) return;
+
+    setIsUpdatingRole(true);
+    try {
+      await apiFetch(`/api/admin/users/${detailCustomer.id}/role`, {
+        method: 'POST',
+        body: JSON.stringify({ role: nextRole })
+      });
+      showNotice?.(`User role successfully updated to ${nextRole.toUpperCase()}!`);
+      setDetailCustomer({ ...detailCustomer, role: nextRole });
+      if (onRefresh) await onRefresh();
+    } catch (err: any) {
+      showNotice?.(err?.message || 'Failed to update user role', 'error');
+    } finally {
+      setIsUpdatingRole(false);
     }
   };
 
@@ -312,21 +336,21 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
       {(expiredCount > 0 || expiringSoonCount > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {expiredCount > 0 && (
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
-                  <AlertCircle className="w-5 h-5 text-rose-600" />
+            <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-4 h-4 text-rose-600" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-sm">{expiredCount} Customer Subscriptions Expired!</h4>
-                  <p className="text-xs text-rose-700">1 month ended. Record UPI payment or send WhatsApp reminder.</p>
+                  <h4 className="font-extrabold text-xs sm:text-sm">{expiredCount} Subscriptions Expired!</h4>
+                  <p className="text-[11px] text-rose-700">1 month ended. Record UPI or send WhatsApp reminder.</p>
                 </div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setStatusFilter(statusFilter === 'expired' ? 'all' : 'expired')}
-                className={`text-xs font-bold border-rose-300 cursor-pointer ${
+                className={`text-[11px] font-bold border-rose-300 cursor-pointer h-7 px-2.5 ${
                   statusFilter === 'expired' ? 'bg-rose-600 text-white' : 'text-rose-800 bg-white hover:bg-rose-100'
                 }`}
               >
@@ -336,21 +360,21 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
           )}
 
           {expiringSoonCount > 0 && (
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5 text-amber-600" />
+            <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-amber-600" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-sm">{expiringSoonCount} Expiring Within 5 Days</h4>
-                  <p className="text-xs text-amber-700">Monthly renewal coming up. Follow up for UPI payment.</p>
+                  <h4 className="font-extrabold text-xs sm:text-sm">{expiringSoonCount} Expiring Within 5 Days</h4>
+                  <p className="text-[11px] text-amber-700">Monthly renewal due soon. Follow up for UPI payment.</p>
                 </div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setStatusFilter(statusFilter === 'expiring_soon' ? 'all' : 'expiring_soon')}
-                className={`text-xs font-bold border-amber-300 cursor-pointer ${
+                className={`text-[11px] font-bold border-amber-300 cursor-pointer h-7 px-2.5 ${
                   statusFilter === 'expiring_soon' ? 'bg-amber-600 text-white' : 'text-amber-800 bg-white hover:bg-amber-100'
                 }`}
               >
@@ -362,14 +386,14 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
       )}
 
       {/* Top Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search customers by name, phone, email, or business branch..."
-            className="pl-9 h-10 text-xs sm:text-sm border-slate-200 focus-visible:ring-indigo-500"
+            className="pl-9 h-9 sm:h-10 text-xs border-slate-200 focus-visible:ring-indigo-500"
           />
         </div>
 
@@ -379,7 +403,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer text-[11px] ${
                 statusFilter === 'all' ? 'bg-white text-indigo-700 shadow-2xs font-extrabold' : 'hover:text-slate-900'
               }`}
             >
@@ -388,8 +412,8 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('expiring_soon')}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                statusFilter === 'expiring_soon' ? 'bg-amber-500 text-white shadow-2xs' : 'text-amber-700 hover:text-amber-800'
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer text-[11px] ${
+                statusFilter === 'expiring_soon' ? 'bg-amber-500 text-white shadow-2xs font-bold' : 'text-amber-700 hover:text-amber-800'
               }`}
             >
               Expiring ({expiringSoonCount})
@@ -397,8 +421,8 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('expired')}
-              className={`px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                statusFilter === 'expired' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-700 hover:text-rose-800'
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer text-[11px] ${
+                statusFilter === 'expired' ? 'bg-rose-600 text-white shadow-2xs font-bold' : 'text-rose-700 hover:text-rose-800'
               }`}
             >
               Expired ({expiredCount})
@@ -409,7 +433,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
             aria-label="Filter by subscription plan"
-            className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            className="h-9 sm:h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs focus:ring-2 focus:ring-indigo-500 cursor-pointer"
           >
             <option value="all">All Plans ({customers.length})</option>
             <option value="growth">Growth Plans</option>
@@ -419,26 +443,23 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
         </div>
       </div>
 
-      {/* Customers Table */}
+      {/* Customers Table - Fully Responsive Compact View without Horizontal Scroll */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-full">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-4">Merchant Customer</th>
-                <th className="py-3 px-4">Active Plan</th>
-                <th className="py-3 px-4">Subscription Validity</th>
-                <th className="py-3 px-4 text-center">Total Outlets</th>
-                <th className="py-3 px-4 text-center">Live Scans</th>
-                <th className="py-3 px-4 text-center">Reviews & AI Replies</th>
-                <th className="py-3 px-4">Onboarding Date</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <th className="py-2.5 px-3.5 w-[28%]">Merchant Customer</th>
+                <th className="py-2.5 px-3 w-[24%]">Plan & Validity</th>
+                <th className="py-2.5 px-3 text-center w-[20%]">Outlets & Stats</th>
+                <th className="py-2.5 px-3 w-[12%]">Onboarded</th>
+                <th className="py-2.5 px-3.5 text-right w-[16%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                  <td colSpan={5} className="text-center py-12 text-slate-400">
                     <Building className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="font-semibold">No customers found</p>
                     <p className="text-[11px] text-slate-400 mt-1">Try resetting search or filter criteria</p>
@@ -458,161 +479,104 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                       key={cust.id}
                       onClick={() => openDetailModal(cust)}
                       className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
-                      title="Click to view full customer details"
+                      title="Click anywhere on row to view full customer 360 profile"
                     >
                       {/* Merchant Customer */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                      <td className="py-2.5 px-3.5">
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-indigo-600 transition-colors flex items-center gap-1.5 leading-tight">
                           <span>{cust.name}</span>
-                          <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
-                        </div>
-                        <div className="text-slate-500 font-mono text-[11px] mt-0.5">{cust.email}</div>
-                        {displayPhone && (
-                          <div className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
-                            <Phone className="w-2.5 h-2.5 text-emerald-600" />
-                            <span>{displayPhone}</span>
-                          </div>
-                        )}
-                        {cust.businesses.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {cust.businesses.slice(0, 2).map((b) => (
-                              <span
-                                key={b.id}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-100"
-                              >
-                                <Building className="w-2.5 h-2.5" />
-                                {b.name} {b.city ? `(${b.city})` : ''}
-                              </span>
-                            ))}
-                            {cust.businesses.length > 2 && (
-                              <span className="text-[10px] text-slate-400 font-bold self-center">
-                                +{cust.businesses.length - 2} more
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Active Plan & Subscriptions */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-800 border border-indigo-200">
-                            <Zap className="w-3 h-3 text-indigo-600" />
-                            <span>{cust.plan?.name || 'Starter'}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openPlanModal(cust);
-                            }}
-                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-colors"
-                            title="Upgrade or Downgrade Subscription Plan"
-                          >
-                            Change
-                          </button>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-1 capitalize font-medium">
-                          Billing: {cust.plan?.billingCycle || 'monthly'}
-                        </div>
-                      </td>
-
-                      {/* Subscription Validity & Expiry Column */}
-                      <td className="py-3.5 px-4">
-                        {isExpired ? (
-                          <div>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                              <AlertCircle className="w-3 h-3 text-rose-600" />
-                              Expired ({Math.abs(daysLeft)}d ago)
+                          {cust.role === 'admin' && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-purple-100 text-purple-700 border border-purple-200">
+                              Admin
                             </span>
-                            <div className="text-[10px] text-slate-400 font-mono mt-1">
-                              Ended: {expiryDate}
-                            </div>
-                          </div>
-                        ) : isExpiringSoon ? (
-                          <div>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                              <Clock className="w-3 h-3 text-amber-600" />
-                              Expiring in {daysLeft} {daysLeft === 1 ? 'day' : 'days'}!
+                          )}
+                          <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                        </div>
+                        <div className="text-slate-500 font-mono text-[11px] truncate mt-0.5 max-w-[210px]">{cust.email}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          {displayPhone && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>{displayPhone}</span>
                             </span>
-                            <div className="text-[10px] text-slate-500 font-mono mt-1">
-                              Valid till: {expiryDate}
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              Active ({daysLeft}d left)
+                          )}
+                          {cust.businesses.length > 0 && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-100 truncate max-w-[150px]">
+                              <Building className="w-2.5 h-2.5" />
+                              {cust.businesses[0].name}
                             </span>
-                            <div className="text-[10px] text-slate-400 font-mono mt-1">
-                              Valid till: {expiryDate}
-                            </div>
-                          </div>
-                        )}
-                        {cust.plan?.lastUpiRef && (
-                          <div className="text-[9px] text-indigo-600 font-mono font-semibold mt-0.5">
-                            UTR: {cust.plan.lastUpiRef}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Total Outlets */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center justify-center h-7 px-2.5 rounded-xl font-bold font-mono text-xs bg-slate-100 text-slate-800 border border-slate-200">
-                          {cust.totalLocations} {cust.totalLocations === 1 ? 'Location' : 'Locations'}
-                        </span>
-                      </td>
-
-                      {/* Live Scans */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1 font-mono font-black text-sm text-blue-700 bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100">
-                          <QrCode className="w-3.5 h-3.5 text-blue-600" />
-                          {cust.totalScans.toLocaleString()}
+                          )}
                         </div>
                       </td>
 
-                      {/* Reviews & AI Replies */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="font-mono font-bold text-slate-800 text-xs flex items-center justify-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
-                          <span>{cust.totalReviews} Reviews</span>
+                      {/* Plan & Validity */}
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs text-slate-900 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/80 text-indigo-800">
+                            {cust.plan?.name || 'Starter'}
+                          </span>
+                          {isExpired ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">
+                              🔴 Expired
+                            </span>
+                          ) : isExpiringSoon ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                              🟡 {daysLeft}d left
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                              🟢 {daysLeft}d left
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-                          <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
-                          <span>{cust.totalReplies} AI Replies</span>
+                        <div className="text-[10px] text-slate-400 font-mono mt-1">
+                          Till: {expiryDate} {cust.plan?.lastUpiRef ? `• UTR: ${cust.plan.lastUpiRef}` : ''}
                         </div>
                       </td>
 
-                      {/* Onboarding Date */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-700 font-medium">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{joinDate}</span>
+                      {/* Outlets & Stats */}
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            <Building className="w-2.5 h-2.5 text-slate-500" />
+                            <span>{cust.totalLocations} {cust.totalLocations === 1 ? 'Outlet' : 'Outlets'}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                            <QrCode className="w-2.5 h-2.5 text-blue-500" />
+                            <span>{cust.totalScans}</span>
+                          </span>
                         </div>
+                        <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-center gap-1">
+                          <span>⭐ {cust.totalReviews} Reviews</span>
+                          <span>•</span>
+                          <span>💬 {cust.totalReplies} AI Replies</span>
+                        </div>
+                      </td>
+
+                      {/* Onboarded Date */}
+                      <td className="py-2.5 px-3">
+                        <div className="font-mono text-[11px] text-slate-800 font-semibold">{joinDate}</div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
                           {cust.lastLoginAt ? 'Active Recently' : 'Account Created'}
                         </div>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-2.5 px-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* 1-Click Renew (+1M) Button */}
                           <Button
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               openRenewModal(cust);
                             }}
-                            className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 cursor-pointer shadow-2xs"
-                            title="Record UPI payment and renew subscription for +1 month"
+                            className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1 cursor-pointer shadow-2xs"
+                            title="Record UPI payment and renew subscription"
                           >
                             <CreditCard className="w-3 h-3" />
                             <span>Renew</span>
                           </Button>
 
-                          {/* WhatsApp Reminder Button with Customer Phone */}
                           <Button
                             size="sm"
                             variant="outline"
@@ -620,50 +584,25 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                               e.stopPropagation();
                               openRemindModal(cust);
                             }}
-                            className="h-7 px-2 text-xs border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold gap-1 cursor-pointer"
-                            title={`Send WhatsApp payment & renewal reminder to ${displayPhone || cust.name}`}
+                            className="h-7 px-2 text-[11px] border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold gap-1 cursor-pointer"
+                            title="Send WhatsApp payment & renewal reminder"
                           >
-                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="hidden xl:inline">Remind</span>
+                            <MessageCircle className="w-3 h-3 text-emerald-600" />
+                            <span>Remind</span>
                           </Button>
 
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openPlanModal(cust);
+                              openDetailModal(cust);
                             }}
-                            className="h-7 px-2 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50 font-bold gap-1 cursor-pointer"
-                            title="Upgrade / Downgrade Plan"
+                            className="h-7 px-2 text-[11px] text-slate-600 hover:text-indigo-600 hover:bg-slate-100 font-bold cursor-pointer"
+                            title="View Full Profile & Actions"
                           >
-                            <Sparkles className="w-3 h-3 text-indigo-600" />
-                            <span>Plan</span>
+                            Details
                           </Button>
-
-                          {onSelectCustomerForBilling && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectCustomerForBilling(cust);
-                              }}
-                              className="h-7 px-2.5 text-xs text-slate-700 border-slate-200 hover:bg-slate-50 font-bold cursor-pointer"
-                              title="Create custom invoice for this customer"
-                            >
-                              Create Bill
-                            </Button>
-                          )}
-
-                          <a
-                            href={`mailto:${cust.email}?subject=Loctimize ReviewQR Platform Support`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-indigo-600 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Email Customer"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                          </a>
                         </div>
                       </td>
                     </tr>
@@ -698,9 +637,15 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-lg font-black text-white">{detailCustomer.name}</h3>
-                    <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 text-[10px] font-bold">
-                      Merchant Customer
-                    </Badge>
+                    {detailCustomer.role === 'admin' ? (
+                      <Badge className="bg-purple-500 text-white border-none text-[10px] font-black uppercase">
+                        Super Administrator
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 text-[10px] font-bold">
+                        Merchant Owner
+                      </Badge>
+                    )}
                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${detailCustomer.isBlocked ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${detailCustomer.isBlocked ? 'bg-rose-400' : 'bg-emerald-400'}`} />
                       {detailCustomer.isBlocked ? 'Suspended' : 'Active Account'}
@@ -720,7 +665,46 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
             </div>
 
             {/* Modal Scrollable Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Role & Admin Privileges Bar */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-purple-700" />
+                  <div>
+                    <span className="font-black text-slate-900 text-xs block">
+                      Platform Access Role: {detailCustomer.role === 'admin' ? 'Super Administrator' : 'Standard Merchant'}
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {detailCustomer.role === 'admin'
+                        ? 'Has full access to Admin Panel, Plans, Customers, and Billing.'
+                        : 'Has access to their own store dashboard and review tools.'}
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isUpdatingRole || detailCustomer.email === 'smitpanchal734@gmail.com'}
+                  onClick={handleToggleAdminRole}
+                  className={`h-7 px-3 text-xs font-bold gap-1 cursor-pointer ${
+                    detailCustomer.role === 'admin'
+                      ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
+                      : 'border-purple-300 text-purple-700 bg-purple-100/70 hover:bg-purple-200'
+                  }`}
+                  title={detailCustomer.role === 'admin' ? 'Demote to regular merchant' : 'Grant Super Admin rights'}
+                >
+                  <Shield className="w-3 h-3" />
+                  <span>
+                    {isUpdatingRole
+                      ? 'Updating...'
+                      : detailCustomer.role === 'admin'
+                      ? 'Demote to Merchant'
+                      : 'Make Super Admin'}
+                  </span>
+                </Button>
+              </div>
+
               {/* Contact Details Card */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
                 <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5 text-slate-400">

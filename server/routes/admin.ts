@@ -460,11 +460,7 @@ adminRoutes.post('/users/:userId/role', async (c) => {
     }
 
     if (target.email === 'smitpanchal734@gmail.com' && newRole !== 'admin') {
-      return c.json({ error: 'Primary Super Administrator role cannot be changed' }, 403);
-    }
-
-    if (newRole === 'admin' && target.email !== 'smitpanchal734@gmail.com') {
-      return c.json({ error: 'Only smitpanchal734@gmail.com is authorized as Super Administrator' }, 403);
+      return c.json({ error: 'Primary Super Administrator role cannot be demoted' }, 403);
     }
 
     await db
@@ -477,7 +473,7 @@ adminRoutes.post('/users/:userId/role', async (c) => {
 
     return c.json({
       success: true,
-      message: `User ${target.name} role updated to ${newRole}.`,
+      message: `User ${target.name} role successfully updated to ${newRole.toUpperCase()}.`,
       role: newRole
     });
   } catch (err: any) {

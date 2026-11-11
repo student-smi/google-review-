@@ -1038,12 +1038,17 @@ export function AdminUsersPage() {
                             {user.email !== 'smitpanchal734@gmail.com' && !isCurrentAdmin && (
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => handleToggleAdminRole(user)}
-                                className="h-7 px-2 text-[11px] text-slate-500 hover:text-indigo-600"
-                                title={user.role === 'admin' ? 'Demote to Owner' : 'Promote to Admin'}
+                                className={`h-7 px-2.5 text-xs font-bold gap-1 ${
+                                  user.role === 'admin'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                    : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                                }`}
+                                title={user.role === 'admin' ? 'Remove Admin Privileges' : 'Make this User an Administrator'}
                               >
-                                <KeyRound className="w-3.5 h-3.5" />
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>{user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}</span>
                               </Button>
                             )}
 
