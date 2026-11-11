@@ -16,6 +16,7 @@ export const users = sqliteTable('users', {
   planStatus: text('plan_status').default('active'),
   lastUpiRef: text('last_upi_ref'),
   billingCycle: text('billing_cycle').default('monthly'),
+  phone: text('phone'),
   lastLoginAt: integer('last_login_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()

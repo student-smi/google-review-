@@ -21,7 +21,8 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
-  CreditCard
+  CreditCard,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ export interface CustomerItem {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
   role: string;
   isBlocked: boolean;
   createdAt: number;
@@ -94,6 +96,12 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
   const [renewGenerateInvoice, setRenewGenerateInvoice] = useState<boolean>(true);
   const [isSubmittingRenew, setIsSubmittingRenew] = useState<boolean>(false);
 
+  // WhatsApp Reminder Modal State
+  const [remindModalCustomer, setRemindModalCustomer] = useState<CustomerItem | null>(null);
+  const [remindPhone, setRemindPhone] = useState<string>('');
+  const [remindMessage, setRemindMessage] = useState<string>('');
+  const [copiedMessage, setCopiedMessage] = useState<boolean>(false);
+
   const formatSafeDate = (d: any): string => {
     if (!d) return 'Recently';
     let dt: Date;
@@ -128,6 +136,47 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
     } else {
       setRenewAmount(499);
     }
+  };
+
+  const openRemindModal = (cust: CustomerItem) => {
+    setRemindModalCustomer(cust);
+    const existingPhone = cust.phone || cust.businesses.find((b) => b.phone)?.phone || '';
+    setRemindPhone(existingPhone);
+    setCopiedMessage(false);
+
+    const bizName = cust.businesses[0]?.name || cust.name;
+    const planName = cust.plan?.name || 'Growth (NFC + Review Sync)';
+    const expiryDate = formatSafeDate(cust.plan?.expiresAt);
+    const isExpired = cust.plan?.status === 'expired' || cust.plan?.daysLeft < 0;
+    
+    const matchedPlan = plans.find((p) => p.name.toLowerCase() === cust.plan?.name?.toLowerCase());
+    const amount = matchedPlan?.price || (planName.toLowerCase().includes('enterprise') ? 2999 : 999);
+
+    const msg = isExpired
+      ? `Namaste ${cust.name}! Aapke business "${bizName}" ka Loctimize (${planName}) subscription plan khatam ho chuka hai.\n\nUninterrupted review collection aur NFC standee features jari rakhne ke liye kripya direct UPI par payment karein:\n\n📱 UPI ID: smitpanchal@okaxis\n💰 Amount: ₹${amount}/month\n\nPayment karne ke baad screenshot share karein taaki hum account turant renew kar sakein. Thank you!`
+      : `Namaste ${cust.name}! Aapke business "${bizName}" ka Loctimize (${planName}) subscription plan ${expiryDate} ko renew hona hai.\n\nService uninterrupted rakhne ke liye kripya direct UPI par renew karein:\n\n📱 UPI ID: smitpanchal@okaxis\n💰 Amount: ₹${amount}/month\n\nPayment ke baad screenshot share karein. Thank you!`;
+    
+    setRemindMessage(msg);
+  };
+
+  const handleSendWhatsApp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!remindPhone.trim()) {
+      showNotice?.('Please enter the customer mobile number', 'error');
+      return;
+    }
+
+    let cleanDigits = remindPhone.replace(/[^0-9]/g, '');
+    if (cleanDigits.length === 10) {
+      cleanDigits = '91' + cleanDigits;
+    } else if (cleanDigits.startsWith('0') && cleanDigits.length === 11) {
+      cleanDigits = '91' + cleanDigits.slice(1);
+    }
+
+    const url = `https://wa.me/${cleanDigits}?text=${encodeURIComponent(remindMessage)}`;
+    window.open(url, '_blank');
+    setRemindModalCustomer(null);
+    showNotice?.(`Opening WhatsApp for +${cleanDigits}`);
   };
 
   const handleUpdateCustomerPlan = async () => {
@@ -184,21 +233,6 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
     }
   };
 
-  const handleWhatsAppReminder = (cust: CustomerItem) => {
-    const bizName = cust.businesses[0]?.name || cust.name;
-    const planName = cust.plan?.name || 'ReviewQR';
-    const expiryDate = formatSafeDate(cust.plan?.expiresAt);
-    const isExpired = cust.plan?.status === 'expired';
-    
-    const msg = isExpired
-      ? `Namaste ${cust.name}! Aapke business "${bizName}" ka Loctimize (${planName}) subscription plan khatam ho chuka hai.\n\nUninterrupted review collection aur NFC standee features jari rakhne ke liye kripya direct UPI par payment karein:\n\n📱 UPI ID: smitpanchal@okaxis\n💰 Amount: ₹${renewAmount || 999}/month\n\nPayment karne ke baad screenshot share karein taaki hum account turant renew kar sakein. Thank you!`
-      : `Namaste ${cust.name}! Aapke business "${bizName}" ka Loctimize (${planName}) subscription plan ${expiryDate} ko renew hona hai.\n\nService uninterrupted rakhne ke liye kripya direct UPI par renew karein:\n\n📱 UPI ID: smitpanchal@okaxis\n💰 Amount: ₹${renewAmount || 999}/month\n\nPayment ke baad screenshot share karein. Thank you!`;
-    
-    const phone = cust.businesses[0]?.phone ? cust.businesses[0].phone.replace(/[^0-9]/g, '') : '';
-    const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-  };
-
   // Expiry counts for alert banners
   const expiredCount = customers.filter((c) => c.plan?.status === 'expired' || c.plan?.daysLeft < 0).length;
   const expiringSoonCount = customers.filter(
@@ -211,7 +245,8 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
       !q ||
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
-      c.businesses.some((b) => b.name.toLowerCase().includes(q) || b.city?.toLowerCase().includes(q));
+      (c.phone && c.phone.includes(q)) ||
+      c.businesses.some((b) => b.name.toLowerCase().includes(q) || b.city?.toLowerCase().includes(q) || (b.phone && b.phone.includes(q)));
 
     const matchesPlan =
       planFilter === 'all' ||
@@ -301,7 +336,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search customers by merchant name, email, or business branch..."
+            placeholder="Search customers by name, phone, email, or business branch..."
             className="pl-9 h-10 text-xs sm:text-sm border-slate-200 focus-visible:ring-indigo-500"
           />
         </div>
@@ -384,6 +419,7 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                   const daysLeft = cust.plan?.daysLeft ?? 30;
                   const isExpired = cust.plan?.status === 'expired' || daysLeft < 0;
                   const isExpiringSoon = cust.plan?.status === 'expiring_soon' || (daysLeft >= 0 && daysLeft <= 5);
+                  const displayPhone = cust.phone || cust.businesses.find((b) => b.phone)?.phone;
 
                   return (
                     <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
@@ -391,6 +427,12 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900 text-sm">{cust.name}</div>
                         <div className="text-slate-500 font-mono text-[11px] mt-0.5">{cust.email}</div>
+                        {displayPhone && (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-1">
+                            <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                            <span>{displayPhone}</span>
+                          </div>
+                        )}
                         {cust.businesses.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {cust.businesses.slice(0, 2).map((b) => (
@@ -524,13 +566,13 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
                             <span>Renew</span>
                           </Button>
 
-                          {/* WhatsApp Reminder Button */}
+                          {/* WhatsApp Reminder Button with Customer Phone */}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleWhatsAppReminder(cust)}
+                            onClick={() => openRemindModal(cust)}
                             className="h-7 px-2 text-xs border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold gap-1 cursor-pointer"
-                            title="Send WhatsApp payment & renewal reminder"
+                            title={`Send WhatsApp payment & renewal reminder to ${displayPhone || cust.name}`}
                           >
                             <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
                             <span className="hidden xl:inline">Remind</span>
@@ -586,6 +628,102 @@ export const CrmCustomersTab: React.FC<CrmCustomersTabProps> = ({
           colorScheme="indigo"
         />
       </div>
+
+      {/* WhatsApp Payment Reminder Modal */}
+      {remindModalCustomer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="p-5 bg-gradient-to-r from-emerald-950 to-slate-900 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider block">
+                  WhatsApp Payment Reminder
+                </span>
+                <h3 className="text-base font-black text-white mt-0.5">
+                  Send to: {remindModalCustomer.name}
+                </h3>
+                <p className="text-xs text-slate-300 font-mono mt-0.5">{remindModalCustomer.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRemindModalCustomer(null)}
+                className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendWhatsApp} className="p-6 space-y-4 text-xs">
+              {/* Customer Mobile Number */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Customer WhatsApp Mobile Number
+                  <span className="text-emerald-600 font-normal ml-1.5">(Customer ka phone number)</span>
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Input
+                    type="tel"
+                    value={remindPhone}
+                    onChange={(e) => setRemindPhone(e.target.value)}
+                    placeholder="e.g. 9876543210 or +919876543210"
+                    className="pl-9 h-10 text-xs font-mono font-bold border-slate-200"
+                    required
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Ye number lead form ya profile se liya gaya hai. Aap is number par WhatsApp chat open karenge.
+                </p>
+              </div>
+
+              {/* Message Preview & Editor */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700 block">
+                    WhatsApp Message Preview
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(remindMessage);
+                      setCopiedMessage(true);
+                      setTimeout(() => setCopiedMessage(false), 3000);
+                    }}
+                    className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    {copiedMessage ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                    {copiedMessage ? 'Copied!' : 'Copy Text'}
+                  </button>
+                </div>
+                <textarea
+                  value={remindMessage}
+                  onChange={(e) => setRemindMessage(e.target.value)}
+                  rows={6}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-800 font-sans leading-relaxed bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRemindModalCustomer(null)}
+                  className="h-10 px-4 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer gap-1.5 shadow-sm"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Open WhatsApp with this Number</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Record UPI Payment & Renew Subscription Modal */}
       {renewModalCustomer && (

@@ -66,6 +66,9 @@ async function ensurePlansTable(d1: D1Database) {
   try {
     await d1.prepare(`ALTER TABLE users ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'`).run();
   } catch (e) {}
+  try {
+    await d1.prepare(`ALTER TABLE users ADD COLUMN phone TEXT`).run();
+  } catch (e) {}
 
   // Seed default 3 plans if empty
   try {
@@ -788,6 +791,7 @@ adminRoutes.post('/crm/leads/:id/convert', async (c) => {
         id: newUserId,
         name: leadName,
         email: leadEmail,
+        phone: lead.mobile || null,
         role: 'owner',
         planId: assignedPlanId,
         planName: assignedPlanName,
@@ -797,7 +801,7 @@ adminRoutes.post('/crm/leads/:id/convert', async (c) => {
         createdAt: now,
         updatedAt: now
       });
-      customerUser = { id: newUserId, name: leadName, email: leadEmail, role: 'owner' } as any;
+      customerUser = { id: newUserId, name: leadName, email: leadEmail, phone: lead.mobile, role: 'owner' } as any;
     } else {
       const curExpires = (customerUser as any).planExpiresAt;
       const newExpires = (curExpires && curExpires > Date.now())
@@ -809,6 +813,7 @@ adminRoutes.post('/crm/leads/:id/convert', async (c) => {
         planName: assignedPlanName,
         planExpiresAt: newExpires,
         planStatus: 'active',
+        phone: lead.mobile || (customerUser as any).phone || null,
         updatedAt: new Date()
       }).where(eq(users.id, customerUser.id));
     }
@@ -889,14 +894,23 @@ adminRoutes.get('/crm/customers', async (c) => {
     await ensurePlansTable(c.env.DB);
     const db = getDb(c.env.DB);
 
-    const [userList, bizList, scanList, reviewList, invoiceList, locationList] = await Promise.all([
+    const [userList, bizList, scanList, reviewList, invoiceList, locationList, enquiryList] = await Promise.all([
       db.select().from(users).orderBy(desc(users.createdAt)),
       db.select().from(businesses),
       db.select({ id: scans.id, businessId: scans.businessId }).from(scans),
       db.select({ id: customerReviews.id, businessId: customerReviews.businessId, replyText: customerReviews.replyText }).from(customerReviews),
       db.select().from(invoices).catch(() => []),
-      db.select({ id: locations.id, businessId: locations.businessId }).from(locations)
+      db.select({ id: locations.id, businessId: locations.businessId }).from(locations),
+      db.select({ email: enquiries.email, mobile: enquiries.mobile }).from(enquiries).catch(() => [])
     ]);
+
+    // Map lead mobile number by email
+    const leadPhoneByEmail: Record<string, string> = {};
+    for (const enq of (enquiryList as any[])) {
+      if (enq.email && enq.mobile) {
+        leadPhoneByEmail[enq.email.toLowerCase().trim()] = enq.mobile.trim();
+      }
+    }
 
     // Group businesses by owner
     const bizByOwner: Record<string, typeof bizList> = {};
@@ -985,16 +999,19 @@ adminRoutes.get('/crm/customers', async (c) => {
 
       const lastUpiRef = (u as any).lastUpiRef || null;
       const billingCycle = (u as any).billingCycle || 'monthly';
+      const userEmail = (u.email || '').toLowerCase().trim();
+      const customerPhone = (u as any).phone || leadPhoneByEmail[userEmail] || myBusinesses.find((b) => b.phone)?.phone || null;
 
       return {
         id: u.id,
         name: u.name,
         email: u.email,
+        phone: customerPhone,
         role: u.role || 'owner',
         isBlocked: Boolean(u.isBlocked),
         createdAt: createdAtMs,
         lastLoginAt: lastLoginAtMs,
-        businesses: myBusinesses.map((b) => ({ id: b.id, name: b.name, city: b.city, slug: b.slug })),
+        businesses: myBusinesses.map((b) => ({ id: b.id, name: b.name, city: b.city, slug: b.slug, phone: b.phone })),
         totalLocations: Math.max(1, totalLocations),
         totalScans,
         totalReviews,
