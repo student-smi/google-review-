@@ -1036,17 +1036,44 @@ gmbRoutes.post('/posts/publish', async (c) => {
           topicType: draft.topicType === 'OFFER' ? 'OFFER' : 'STANDARD'
         };
 
-        if (draft.callToAction?.type && draft.callToAction.type !== 'NONE') {
-          payload.callToAction = {
-            actionType: draft.callToAction.type,
-            url: draft.callToAction.url || business?.googleReviewUrl || 'https://loctimize.in'
+        if (draft.topicType === 'OFFER') {
+          const startDateObj = new Date();
+          const endDateObj = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          payload.event = {
+            title: draft.headline || 'Special Limited Offer',
+            schedule: {
+              startDate: {
+                year: startDateObj.getFullYear(),
+                month: startDateObj.getMonth() + 1,
+                day: startDateObj.getDate()
+              },
+              endDate: {
+                year: endDateObj.getFullYear(),
+                month: endDateObj.getMonth() + 1,
+                day: endDateObj.getDate()
+              }
+            }
           };
+          if (draft.couponCode) {
+            payload.offer = {
+              couponCode: draft.couponCode
+            };
+          }
         }
 
-        if (draft.topicType === 'OFFER') {
-          payload.offer = {
-            couponCode: draft.couponCode || 'SPECIAL20'
-          };
+        // Call to action: If actionType is CALL, url MUST NOT be set (Google API strict rule).
+        // If BOOK / LEARN_MORE / ORDER, pass valid website url.
+        if (draft.callToAction?.type && draft.callToAction.type !== 'NONE') {
+          if (draft.callToAction.type === 'CALL') {
+            payload.callToAction = {
+              actionType: 'CALL'
+            };
+          } else {
+            payload.callToAction = {
+              actionType: draft.callToAction.type,
+              url: draft.callToAction.url || business?.googleReviewUrl || 'https://loctimize.in'
+            };
+          }
         }
 
         const gmbRes = await fetch(postUrl, {

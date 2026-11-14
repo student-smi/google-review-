@@ -725,6 +725,19 @@ export function GooglePostsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      {post.searchUrl && (
+                        <a
+                          href={post.searchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-8 px-2.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1 transition-colors"
+                          title="View live post on Google Maps"
+                        >
+                          <span>View on Google</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+
                       <Button
                         size="sm"
                         variant="ghost"
@@ -759,3 +772,4 @@ export function GooglePostsPage() {
     </div>
   );
 }
+
