@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,22 +13,24 @@ import {
   ExternalLink,
   RefreshCw,
   Tag,
-  Calendar,
-  Share2,
-  Trash2,
   Clock,
-  MessageSquare,
-  Building2,
+  Trash2,
   Phone,
   Store,
-  Layers,
-  ChevronRight,
-  Plus,
-  Flame,
   Check,
-  AlertTriangle,
   ArrowUpRight,
-  Info
+  Info,
+  Globe,
+  Camera,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  Share2,
+  Lightbulb,
+  Eye,
+  SlidersHorizontal,
+  Flame,
+  Star
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type { BusinessItem } from './DashboardLayout';
@@ -101,6 +103,7 @@ export function GooglePostsPage() {
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [gmbStatus, setGmbStatus] = useState<GmbStatus | null>(null);
   const [isConnectingGmb, setIsConnectingGmb] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   // Load GMB connection status & past posts
   useEffect(() => {
@@ -134,6 +137,32 @@ export function GooglePostsPage() {
     }
   };
 
+  // Quick 1-Click Idea Chips based on Goal
+  const quickIdeaChips = useMemo(() => {
+    if (postType === 'offer') {
+      return [
+        { label: '🎉 Flat 20% Weekend Promo', text: 'Flat 20% off on all services this weekend with priority booking' },
+        { label: '🎁 Free Strategy Audit', text: 'Complimentary zero-cost local audit and consultation session' },
+        { label: '⭐ VIP Client Privilege Package', text: 'Exclusive VIP privilege package with dedicated account support' },
+        { label: '⚡ Priority Slot Voucher', text: 'Limited fast-track priority appointment voucher' }
+      ];
+    }
+    if (postType === 'update') {
+      return [
+        { label: '🚀 Service Expansion', text: 'Announcing upgraded service packages and enhanced client deliverables' },
+        { label: '🏆 5-Star Trust Milestone', text: 'Celebrating 5-star Google rating and client success milestones' },
+        { label: '✨ Certified Team & Workflow', text: 'Showcasing our certified experts and modern high-tech workflow' },
+        { label: '📈 Local ROI Case Study', text: 'Real client ROI results: how local businesses scaled reach with us' }
+      ];
+    }
+    return [
+      { label: '🎉 Weekend Walk-In Welcome', text: 'Weekend priority consultation welcome—visit our local office' },
+      { label: '❤️ Customer Appreciation', text: 'Heartfelt thank you to our Ahmedabad customers for continuous trust' },
+      { label: '🌟 Seasonal Festive Package', text: 'Special seasonal festive package with complimentary onboarding' },
+      { label: '🤝 1-on-1 Discovery Meet', text: 'Face-to-face personalized strategy session with our senior team' }
+    ];
+  }, [postType]);
+
   // Generate AI Posts
   const handleGeneratePosts = async () => {
     if (!activeBusiness?.id) return;
@@ -156,14 +185,13 @@ export function GooglePostsPage() {
 
       if (res?.success && Array.isArray(res.drafts) && res.drafts.length > 0) {
         setDrafts(res.drafts);
-        // Initialize editable summaries
         const initialMap: { [id: string]: string } = {};
         res.drafts.forEach((d) => {
           initialMap[d.id] = d.summary;
         });
         setEditedSummaries(initialMap);
         setNotice({
-          message: '3 AI-optimized Google Maps posts generated successfully!',
+          message: '✨ 3 Brand-New AI Google Maps Posts Generated! Review on mobile cards below and hit publish.',
           type: 'success'
         });
       } else {
@@ -229,18 +257,19 @@ export function GooglePostsPage() {
     setCopiedId(draft.id);
     setTimeout(() => setCopiedId(null), 3000);
 
-    // Save to dashboard history in background
     if (activeBusiness?.id) {
       apiFetch('/api/gmb/posts/publish', {
         method: 'POST',
         body: JSON.stringify({
           businessId: activeBusiness.id,
-          draft: { ...draft, summary: textToCopy }
+          draft: {
+            ...draft,
+            summary: textToCopy
+          }
         })
       }).then(() => loadPastPosts()).catch(() => {});
     }
 
-    // Open Google Business Profile manager in new tab
     const placeId = activeBusiness?.googlePlaceId || '';
     const googlePostUrl = placeId
       ? `https://search.google.com/local/posts?placeid=${placeId}`
@@ -278,8 +307,22 @@ export function GooglePostsPage() {
     }
   };
 
+  // Filtered past posts
+  const filteredPosts = useMemo(() => {
+    if (historyFilter === 'published') {
+      return savedPosts.filter((p) => p.status === 'published');
+    }
+    if (historyFilter === 'draft') {
+      return savedPosts.filter((p) => p.status !== 'published');
+    }
+    return savedPosts;
+  }, [savedPosts, historyFilter]);
+
+  const publishedCount = savedPosts.filter((p) => p.status === 'published').length;
+  const draftCount = savedPosts.filter((p) => p.status !== 'published').length;
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
+    <div className="max-w-6xl mx-auto space-y-6 pb-16 font-sans">
       {/* Top Banner Notice */}
       {notice && (
         <div
@@ -288,7 +331,7 @@ export function GooglePostsPage() {
               ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
               : notice.type === 'error'
               ? 'bg-rose-50 border-rose-300 text-rose-900'
-              : 'bg-blue-50 border-blue-300 text-blue-900'
+              : 'bg-indigo-50 border-indigo-200 text-indigo-900'
           }`}
         >
           <div className="flex items-center gap-2.5">
@@ -297,153 +340,258 @@ export function GooglePostsPage() {
             ) : notice.type === 'error' ? (
               <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
             ) : (
-              <Info className="w-5 h-5 text-blue-600 shrink-0" />
+              <Info className="w-5 h-5 text-indigo-600 shrink-0" />
             )}
             <span>{notice.message}</span>
           </div>
           <button
             onClick={() => setNotice(null)}
-            className="text-slate-400 hover:text-slate-700 p-1 rounded-md cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 p-1 rounded-md cursor-pointer text-sm"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* Page Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Google Posts & Updates Studio</span>
-              <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-[10px] px-2 py-0.5">
-                AI Powered
+      {/* Hero Header & Google Connection Bar */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-7 rounded-3xl shadow-lg border border-indigo-900/40">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 tracking-wide shadow-xs border-0">
+                ⭐ GOOGLE MAPS RANK BOOSTER
               </Badge>
+              <span className="text-[11px] text-indigo-200/80 font-medium flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                Active posts boost local search ranking by 2.4x
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white">
+              Google Posts & Updates Studio
             </h1>
+            <p className="text-xs sm:text-sm text-indigo-200/90 leading-relaxed">
+              Create and publish weekly offers, announcements, and seasonal updates directly to {activeBusiness?.name || 'Your Business'} on Google Maps.
+            </p>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Publish weekly offers, news & festive updates to rank #{activeBusiness?.name || 'Your Business'} higher on Google Maps.
-          </p>
+
+          {/* Connection Status Card */}
+          <div className="shrink-0 bg-white/10 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-white/15 flex items-center gap-3">
+            {gmbStatus?.connected ? (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Google Account Connected</span>
+                </div>
+                <p className="text-[11px] text-slate-300 font-mono">
+                  {gmbStatus.meta?.connectedEmail || '1-Click Direct Publish Live'}
+                </p>
+              </div>
+            ) : (
+              <Button
+                onClick={handleConnectGoogle}
+                disabled={isConnectingGmb}
+                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 px-4 h-10 cursor-pointer border-0"
+              >
+                {isConnectingGmb ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Connecting…</span>
+                  </>
+                ) : (
+                  <>
+                    <Store className="w-3.5 h-3.5" />
+                    <span>Connect Google Profile</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Google Connection Status Pill */}
-        <div className="flex items-center gap-2 shrink-0">
-          {gmbStatus?.connected ? (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2 rounded-2xl text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Google Profile Connected</span>
+        {/* 3-Step Interactive Process Breadcrumb Bar */}
+        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-6 pt-5 border-t border-white/10">
+          <div className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+            <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
+              1
+            </span>
+            <div className="text-left">
+              <p className="text-xs font-bold text-white">Select Post Goal</p>
+              <p className="text-[10px] text-indigo-200/70">Deal, New Service, or Walk-in</p>
             </div>
-          ) : (
-            <Button
-              onClick={handleConnectGoogle}
-              disabled={isConnectingGmb}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs gap-1.5 px-4 h-10 cursor-pointer"
-            >
-              {isConnectingGmb ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Connecting…</span>
-                </>
-              ) : (
-                <>
-                  <Store className="w-3.5 h-3.5" />
-                  <span>Connect Google Account</span>
-                </>
-              )}
-            </Button>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+            <span className="w-6 h-6 rounded-full bg-indigo-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
+              2
+            </span>
+            <div className="text-left">
+              <p className="text-xs font-bold text-white">Review AI Mobile Previews</p>
+              <p className="text-[10px] text-indigo-200/70">3 Local SEO optimized variations</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+            <span className="w-6 h-6 rounded-full bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
+              3
+            </span>
+            <div className="text-left">
+              <p className="text-xs font-bold text-white">1-Click Publish Live</p>
+              <p className="text-[10px] text-indigo-200/70">Instantly visible on Google Maps</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main AI Generation Studio Card */}
-      <Card className="rounded-3xl border-slate-200/90 shadow-sm overflow-hidden bg-white">
-        <CardHeader className="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-gradient-to-br from-slate-50/60 to-purple-50/20">
-          <div className="flex items-center gap-2 text-indigo-700 font-extrabold text-xs uppercase tracking-wider">
-            <Sparkles className="w-4 h-4 text-purple-600" />
-            <span>AI Post Studio</span>
+      {/* Main Studio Controls Card */}
+      <Card className="rounded-3xl border-slate-200 shadow-sm overflow-hidden bg-white">
+        <CardHeader className="p-5 sm:p-6 pb-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-purple-50/20 to-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-black text-slate-900">
+                  Step 1: Choose Your Post Goal & Topic
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Pick a goal or tap a quick idea chip. AI generates 3 tailored options with emojis and call buttons.
+                </CardDescription>
+              </div>
+            </div>
           </div>
-          <CardTitle className="text-lg font-bold text-slate-900 mt-1">
-            Create an Eye-Catching Google Maps Update in Seconds
-          </CardTitle>
-          <CardDescription className="text-xs text-slate-500">
-            Select the type of post you want. Our AI will craft local SEO-rich copy, call-to-action buttons, and tags.
-          </CardDescription>
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 space-y-5">
-          {/* Post Type Selector Tabs */}
+          {/* Goal Selector Cards */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-2">Select Post Goal / Type:</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+              Choose Post Category:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Option 1: Offer */}
               <button
                 type="button"
                 onClick={() => setPostType('offer')}
-                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
                   postType === 'offer'
-                    ? 'border-purple-500 bg-purple-50/70 text-purple-950 ring-2 ring-purple-500/20 font-bold'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    ? 'border-purple-600 bg-purple-50/80 text-purple-950 ring-2 ring-purple-600/20 shadow-xs'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/60'
                 }`}
               >
-                <div className="flex items-center gap-2 text-sm font-black mb-1">
-                  <span>🏷️</span>
+                {postType === 'offer' && (
+                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-purple-600" />
+                )}
+                <div className="flex items-center gap-2 font-black text-sm mb-1.5">
+                  <span className="text-lg">🏷️</span>
                   <span>Special Offer / Deal</span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  Promote discounts, package deals, or limited-time seasonal coupons with "Call Now".
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Promote discounts, coupons, or limited packages with urgent "Call Now" buttons.
                 </p>
               </button>
 
+              {/* Option 2: Update */}
               <button
                 type="button"
                 onClick={() => setPostType('update')}
-                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
                   postType === 'update'
-                    ? 'border-blue-500 bg-blue-50/70 text-blue-950 ring-2 ring-blue-500/20 font-bold'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    ? 'border-blue-600 bg-blue-50/80 text-blue-950 ring-2 ring-blue-600/20 shadow-xs'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/60'
                 }`}
               >
-                <div className="flex items-center gap-2 text-sm font-black mb-1">
-                  <span>📢</span>
-                  <span>What's New / Announcement</span>
+                {postType === 'update' && (
+                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-blue-600" />
+                )}
+                <div className="flex items-center gap-2 font-black text-sm mb-1.5">
+                  <span className="text-lg">📢</span>
+                  <span>What's New & Upgrades</span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  Highlight new services, upgraded infrastructure, or signature products with "Book Online".
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Highlight new services, upgraded tools, or client case studies with "Book Online".
                 </p>
               </button>
 
+              {/* Option 3: Festive */}
               <button
                 type="button"
                 onClick={() => setPostType('festive')}
-                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
                   postType === 'festive'
-                    ? 'border-amber-500 bg-amber-50/70 text-amber-950 ring-2 ring-amber-500/20 font-bold'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    ? 'border-amber-600 bg-amber-50/80 text-amber-950 ring-2 ring-amber-600/20 shadow-xs'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50/60'
                 }`}
               >
-                <div className="flex items-center gap-2 text-sm font-black mb-1">
-                  <span>🎉</span>
-                  <span>Festive & Community</span>
+                {postType === 'festive' && (
+                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-amber-600" />
+                )}
+                <div className="flex items-center gap-2 font-black text-sm mb-1.5">
+                  <span className="text-lg">🌟</span>
+                  <span>Trust & Community</span>
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  Diwali, New Year, Sunday specials, customer appreciation, and warm walk-in welcomes.
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  5-star customer appreciation, walk-in welcomes, weekend specials, and festival greetings.
                 </p>
               </button>
             </div>
           </div>
 
-          {/* Custom Topic Input & Tone Controls */}
+          {/* 1-Click Idea Chips (Zero Typing Needed) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                <span>1-Click Popular Ideas (Tap to Auto-Fill):</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Zero typing required</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {quickIdeaChips.map((chip, idx) => {
+                const isSelected = customTopic === chip.text;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCustomTopic(chip.text)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/80'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom Details Input & Tone */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
             <div className="md:col-span-2 space-y-1.5">
               <label className="block text-xs font-bold text-slate-700">
-                Optional Custom Note or Offer Details:
+                Custom Offer / Focus Details (Optional):
               </label>
-              <Input
-                value={customTopic}
-                onChange={(e) => setCustomTopic(e.target.value)}
-                placeholder="e.g. Flat 20% off on dental implants, weekend special family combo (or leave blank for AI Autopilot)..."
-                className="h-11 rounded-xl text-xs sm:text-sm border-slate-200 focus-visible:ring-purple-500"
-              />
-              <span className="text-[10px] text-slate-400 block">
+              <div className="relative">
+                <Input
+                  value={customTopic}
+                  onChange={(e) => setCustomTopic(e.target.value)}
+                  placeholder="e.g. Flat 20% off this weekend on all services (or tap an idea chip above)..."
+                  className="h-11 rounded-xl text-xs sm:text-sm border-slate-200 focus-visible:ring-purple-500 pr-8"
+                />
+                {customTopic && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomTopic('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                    title="Clear"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <span className="text-[11px] text-slate-400 block">
                 💡 Leave blank to let AI automatically generate the best high-ranking local post for your business category!
               </span>
             </div>
@@ -456,8 +604,8 @@ export function GooglePostsPage() {
                 className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs focus:ring-2 focus:ring-purple-500 cursor-pointer"
               >
                 <option value="persuasive">Persuasive & High Click-Through</option>
-                <option value="friendly">Warm & Welcoming</option>
-                <option value="professional">Formal & Professional</option>
+                <option value="friendly">Warm, Welcoming & Friendly</option>
+                <option value="professional">Formal & Authoritative</option>
               </select>
             </div>
           </div>
@@ -467,17 +615,17 @@ export function GooglePostsPage() {
             <Button
               onClick={handleGeneratePosts}
               disabled={isGenerating}
-              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-2xl shadow-md gap-2 px-8 h-12 cursor-pointer transition-transform active:scale-98"
+              className="w-full sm:w-auto bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm rounded-2xl shadow-md gap-2 px-8 h-12 cursor-pointer transition-transform active:scale-98"
             >
               {isGenerating ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>AI Writing 3 Custom Google Posts…</span>
+                  <span>AI Crafting 3 Fresh Google Maps Posts…</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Generate 3 AI Google Posts Now</span>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Generate 3 Fresh AI Google Posts Now</span>
                 </>
               )}
             </Button>
@@ -485,80 +633,108 @@ export function GooglePostsPage() {
         </CardContent>
       </Card>
 
-      {/* Generated Google Maps Live Preview Section */}
+      {/* Step 2 & 3: Generated Google Maps Live Mobile Previews Section */}
       {drafts.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
             <div>
-              <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <span>Google Maps Live Previews</span>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 shadow-xs">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  <span>3 Unique AI Angles Ready</span>
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
+                  2
                 </span>
-              </h2>
-              <p className="text-xs text-slate-500">
-                Review, edit if desired, and hit Publish to send directly to Google Maps!
+                <h2 className="text-base sm:text-lg font-black text-slate-900">
+                  Step 2: Review Google Maps Live Previews
+                </h2>
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] px-2 py-0.5">
+                  3 AI Variations Ready
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                See exactly how your update looks on a customer's phone on Google Maps. Edit text if desired, then hit Publish.
               </p>
             </div>
+
             <Button
               variant="outline"
               size="sm"
               onClick={handleGeneratePosts}
               disabled={isGenerating}
-              className="rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer h-9 px-3 shrink-0"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
-              <span>{isGenerating ? 'Crafting New Variations...' : 'Generate New Variations (Re-Roll)'}</span>
+              <span>{isGenerating ? 'Generating Variations…' : '🔄 Generate Another Batch (Re-Roll)'}</span>
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 3 Mobile Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {drafts.map((draft, idx) => {
               const currentSummary = editedSummaries[draft.id] || draft.summary;
               const isPublishingThis = publishingId === draft.id;
               const isCopiedThis = copiedId === draft.id;
+              const wordCount = currentSummary.split(/\s+/).filter(Boolean).length;
 
               return (
                 <div
                   key={draft.id}
-                  className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow"
+                  className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-all ring-1 ring-slate-100"
                 >
-                  {/* Google Post Mock Header */}
                   <div>
-                    {/* Visual Card Header */}
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    {/* Realistic Google Maps Card Header */}
+                    <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
                           {activeBusiness?.name?.substring(0, 1) || 'G'}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-900 leading-tight">
-                            {activeBusiness?.name || 'Local Store'}
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-bold text-slate-900 leading-tight">
+                              {activeBusiness?.name || 'Local Business'}
+                            </p>
+                            {/* Verified check */}
+                            <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" title="Google Verified Profile">
+                              ✓
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-medium">
+                            ★ 4.9 • Google Business Profile • Just now
                           </p>
-                          <p className="text-[10px] text-slate-400">Google Business Profile • Just now</p>
                         </div>
                       </div>
+
                       <Badge
                         variant="outline"
-                        className={`text-[9px] font-black uppercase px-2 py-0.5 ${
+                        className={`text-[9px] font-black uppercase px-2 py-0.5 tracking-wider ${
                           draft.topicType === 'OFFER'
                             ? 'bg-amber-50 text-amber-800 border-amber-300'
                             : 'bg-blue-50 text-blue-800 border-blue-200'
                         }`}
                       >
-                        {draft.topicType === 'OFFER' ? 'Special Offer' : 'What\'s New'}
+                        {draft.topicType === 'OFFER' ? '🏷️ Special Offer' : '📢 What\'s New'}
                       </Badge>
                     </div>
 
-                    {/* Headline & Editable Body */}
+                    {/* Photo Placeholder Visual Banner */}
+                    <div className="p-3 bg-gradient-to-r from-purple-50/70 to-indigo-50/70 border-b border-slate-100 flex items-center justify-between text-[11px] text-indigo-900">
+                      <div className="flex items-center gap-1.5 line-clamp-1 pr-2">
+                        <Camera className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span className="font-semibold text-slate-700 truncate">
+                          Photo: {draft.suggestedPhoto}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-black bg-white px-2 py-0.5 rounded-full border border-purple-200 text-purple-700 shrink-0">
+                        High CTR
+                      </span>
+                    </div>
+
+                    {/* Headline & Editable Text */}
                     <div className="p-4 space-y-3">
                       <div className="font-bold text-sm text-slate-900 leading-snug">
                         {draft.headline}
                       </div>
 
-                      {/* Editable Text Area */}
-                      <div>
+                      {/* Editable Textarea with Word Counter */}
+                      <div className="space-y-1">
                         <textarea
                           rows={6}
                           value={currentSummary}
@@ -568,46 +744,59 @@ export function GooglePostsPage() {
                               [draft.id]: e.target.value
                             }))
                           }
-                          className="w-full text-xs text-slate-700 leading-relaxed p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-purple-500 bg-slate-50/50 resize-none font-sans"
+                          className="w-full text-xs text-slate-700 leading-relaxed p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-purple-500 bg-slate-50/60 resize-none font-sans"
                           placeholder="Post summary text..."
                         />
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
-                          <span>~{currentSummary.split(/\s+/).filter(Boolean).length} words</span>
-                          <span className="text-purple-600 font-semibold">✏️ Editable</span>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
+                          <span>~{wordCount} words (Optimal for Mobile)</span>
+                          <span className="text-purple-600 font-bold flex items-center gap-0.5">
+                            <span>✏️</span> Click text to edit
+                          </span>
                         </div>
                       </div>
 
                       {/* Coupon Code Pill if Offer */}
                       {draft.couponCode && (
-                        <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900">
-                          <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                          <span>Code:</span>
-                          <span className="font-mono font-black tracking-wider text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200">
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/90 border border-amber-300 text-xs text-amber-950 font-semibold">
+                          <div className="flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Voucher Code:</span>
+                          </div>
+                          <span className="font-mono font-black tracking-widest text-amber-900 bg-white px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
                             {draft.couponCode}
                           </span>
                         </div>
                       )}
 
-                      {/* CTA Button Mock */}
-                      <div className="p-2.5 rounded-xl bg-slate-100 text-center font-bold text-xs text-slate-800 border border-slate-200 flex items-center justify-center gap-1.5">
-                        <Phone className="w-3 h-3 text-emerald-600" />
-                        <span>Action: {draft.callToAction.label}</span>
+                      {/* Official Google CTA Mock Button */}
+                      <div className="p-2.5 rounded-xl bg-slate-100 text-center font-bold text-xs text-slate-800 border border-slate-200 flex items-center justify-center gap-2">
+                        {draft.callToAction.type === 'CALL' ? (
+                          <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Globe className="w-3.5 h-3.5 text-blue-600" />
+                        )}
+                        <span>Google Action: {draft.callToAction.label}</span>
                       </div>
 
-                      {/* Suggested Photo Tip */}
-                      <div className="text-[10px] text-slate-500 bg-purple-50/40 p-2 rounded-lg border border-purple-100 flex items-start gap-1.5">
-                        <span className="text-purple-600 font-bold shrink-0">📸 Photo:</span>
-                        <span className="line-clamp-2">{draft.suggestedPhoto}</span>
-                      </div>
+                      {/* Hashtags list */}
+                      {draft.hashtags && draft.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {draft.hashtags.map((tag, tIdx) => (
+                            <span key={tIdx} className="text-[10px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md font-medium">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Publishing Actions Footer */}
-                  <div className="p-4 pt-0 space-y-2 border-t border-slate-100 bg-slate-50/30">
+                  <div className="p-4 pt-0 space-y-2 border-t border-slate-100 bg-slate-50/40">
                     <Button
                       onClick={() => handlePublishPost(draft)}
                       disabled={isPublishingThis}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer"
                     >
                       {isPublishingThis ? (
                         <>
@@ -617,7 +806,7 @@ export function GooglePostsPage() {
                       ) : (
                         <>
                           <Send className="w-3.5 h-3.5" />
-                          <span>Publish to Google Maps</span>
+                          <span>Publish to Google Maps (1-Click)</span>
                         </>
                       )}
                     </Button>
@@ -635,7 +824,7 @@ export function GooglePostsPage() {
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Copy & Open Google</span>
+                          <span>Copy & Open Google Manually</span>
                           <ExternalLink className="w-3 h-3 text-slate-400 ml-auto" />
                         </>
                       )}
@@ -648,31 +837,65 @@ export function GooglePostsPage() {
         </div>
       )}
 
-      {/* Published Posts History Table / Feed */}
-      <Card className="rounded-3xl border-slate-200/90 shadow-sm overflow-hidden bg-white">
+      {/* Published Posts History & Activity Timeline */}
+      <Card className="rounded-3xl border-slate-200 shadow-sm overflow-hidden bg-white">
         <CardHeader className="p-5 sm:p-6 pb-3 border-b border-slate-100">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                <span>Recent Posts History</span>
-                <span className="text-xs font-semibold text-slate-500 font-mono">
-                  ({savedPosts.length} total)
-                </span>
+              <CardTitle className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                <span>Recent Posts & Activity Timeline</span>
+                <Badge variant="outline" className="text-xs font-mono font-bold text-slate-600">
+                  {savedPosts.length} Total
+                </Badge>
               </CardTitle>
               <CardDescription className="text-xs text-slate-500">
                 Log of published Google Maps updates and saved drafts for this outlet.
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadPastPosts}
-              disabled={isLoadingPosts}
-              className="text-xs font-semibold rounded-xl gap-1 text-slate-600 hover:text-slate-900 cursor-pointer h-8 px-2.5"
-            >
-              <RefreshCw className={`w-3 h-3 ${isLoadingPosts ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
-            </Button>
+
+            {/* Filter Tabs & Refresh */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  All ({savedPosts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('published')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyFilter === 'published' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  🟢 Live ({publishedCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('draft')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    historyFilter === 'draft' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  📝 Drafts ({draftCount})
+                </button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadPastPosts}
+                disabled={isLoadingPosts}
+                className="text-xs font-bold rounded-xl gap-1 text-slate-600 hover:text-slate-900 cursor-pointer h-8 px-2.5"
+              >
+                <RefreshCw className={`w-3 h-3 ${isLoadingPosts ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -682,17 +905,17 @@ export function GooglePostsPage() {
               <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
               <p className="text-xs font-semibold">Loading your post history…</p>
             </div>
-          ) : savedPosts.length === 0 ? (
+          ) : filteredPosts.length === 0 ? (
             <div className="p-12 text-center text-slate-400 space-y-2">
               <Share2 className="w-8 h-8 mx-auto opacity-30 text-slate-500" />
-              <p className="text-xs font-semibold text-slate-600">No posts published yet</p>
+              <p className="text-xs font-bold text-slate-700">No posts in this view</p>
               <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                Use the AI Studio above to create your first Google Maps update! Regular posts increase search rankings by up to 3x.
+                Use the AI Studio above to create your first Google Maps update! Regular posts increase search rankings by up to 2.4x.
               </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {savedPosts.map((post) => {
+              {filteredPosts.map((post) => {
                 const dateStr = new Date(post.createdAt * 1000).toLocaleDateString('en-IN', {
                   day: 'numeric',
                   month: 'short',
@@ -702,26 +925,26 @@ export function GooglePostsPage() {
                 return (
                   <div
                     key={post.id}
-                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
                   >
-                    <div className="space-y-1 max-w-2xl">
+                    <div className="space-y-1.5 max-w-2xl">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
                           variant="outline"
-                          className={`text-[9px] uppercase font-black ${
+                          className={`text-[9px] uppercase font-black px-2 py-0.5 ${
                             post.status === 'published'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                               : 'bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
-                          {post.status === 'published' ? '🟢 Live on Google' : '📝 Saved in App'}
+                          {post.status === 'published' ? '🟢 Live on Google Maps' : '📝 Saved in App'}
                         </Badge>
                         <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                           <Clock className="w-2.5 h-2.5" />
                           {dateStr}
                         </span>
                         {post.couponCode && (
-                          <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                          <span className="text-[10px] font-mono font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                             Code: {post.couponCode}
                           </span>
                         )}
@@ -741,7 +964,7 @@ export function GooglePostsPage() {
                           href={post.searchUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="h-8 px-2.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1 transition-colors"
+                          className="h-8 px-3 text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs"
                           title="View live post on Google Maps"
                         >
                           <span>View on Google</span>
@@ -754,7 +977,7 @@ export function GooglePostsPage() {
                         variant="ghost"
                         onClick={() => {
                           navigator.clipboard.writeText(post.summary);
-                          alert('Post text copied to clipboard!');
+                          setNotice({ message: 'Post text copied to clipboard!', type: 'success' });
                         }}
                         className="h-8 px-2.5 text-xs text-slate-600 hover:text-indigo-600 font-bold cursor-pointer"
                         title="Copy post text"
@@ -780,7 +1003,42 @@ export function GooglePostsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pro Tips Educational Drawer */}
+      <div className="bg-slate-50 rounded-3xl p-5 sm:p-6 border border-slate-200 space-y-3">
+        <div className="flex items-center gap-2 text-slate-900 font-black text-sm">
+          <Lightbulb className="w-4 h-4 text-amber-500" />
+          <span>Local SEO Best Practices for Maximum Google Maps Footfall</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+            <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <span>📸</span> Real Photos Win
+            </p>
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Posts with real photos of your office, store, or team get 2.4x more clicks than generic stock images.
+            </p>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+            <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <span>⏰</span> Post on Thursday/Friday
+            </p>
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Local searches surge before the weekend. Posting at the end of the week captures active buyers.
+            </p>
+          </div>
+
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+            <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <span>📞</span> High-Intent Action Buttons
+            </p>
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Always use "Call Now" for deals or urgent requests, and "Book Online" for appointments and consultations.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
