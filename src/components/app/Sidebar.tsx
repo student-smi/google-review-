@@ -20,7 +20,8 @@ import {
   X,
   CreditCard,
   Layers,
-  Network
+  Network,
+  Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logoutApi, isAdminUser } from '@/lib/auth';
@@ -54,6 +55,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
     { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'AI Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Google Posts & Updates', to: '/dashboard/posts', icon: Share2, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Review QR & Standees', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
@@ -66,6 +68,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branch Overview', to: '/dashboard', icon: LayoutDashboard, badge: 'Live' },
     { label: 'Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: '1-Click' },
+    { label: 'Google Posts & Updates', to: '/dashboard/posts', icon: Share2, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' }
   ];
@@ -77,6 +80,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'All Branches', to: '/dashboard/branches', icon: Store, badge: null },
     { label: 'All Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'AI Reply Center', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Google Posts & Updates', to: '/dashboard/posts', icon: Share2, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review Campaigns', to: '/dashboard/qr', icon: QrCode, badge: 'Standees' },
@@ -92,6 +96,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branches', to: '/dashboard/branches', icon: Store, badge: 'Outlets' },
     { label: 'Review Inbox', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'AI Replies', to: '/dashboard/ai-replies', icon: Sparkles, badge: 'AI' },
+    { label: 'Google Posts & Updates', to: '/dashboard/posts', icon: Share2, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review Collection', to: '/dashboard/qr', icon: QrCode, badge: 'QR/NFC' },
@@ -106,6 +111,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onCloseMobile
     { label: 'Branch Overview', to: '/dashboard', icon: LayoutDashboard, badge: null },
     { label: 'Reviews', to: '/dashboard/replies', icon: MessageSquareQuote, badge: null },
     { label: 'Reply Assistant', to: '/dashboard/ai-replies', icon: Sparkles, badge: '1-Click' },
+    { label: 'Google Posts & Updates', to: '/dashboard/posts', icon: Share2, badge: 'AI' },
     { label: 'Customer Requests', to: '/dashboard/customer-requests', icon: Inbox, badge: 'Private' },
     { label: 'Keyword Management', to: '/dashboard/keywords', icon: Tag, badge: 'SEO' },
     { label: 'Review QR & Link', to: '/dashboard/qr', icon: QrCode, badge: 'Standee' },

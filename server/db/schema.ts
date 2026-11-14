@@ -351,6 +351,31 @@ export const plans = sqliteTable('plans', {
   updatedAt: integer('updated_at').notNull()
 });
 
+export const gmbPosts = sqliteTable('gmb_posts', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').notNull().references(() => businesses.id, { onDelete: 'cascade' }),
+  branchId: text('branch_id'),
+  topicType: text('topic_type').default('STANDARD').notNull(), // 'STANDARD' | 'EVENT' | 'OFFER'
+  headline: text('headline'),
+  summary: text('summary').notNull(),
+  couponCode: text('coupon_code'),
+  callToActionType: text('call_to_action_type'), // 'CALL' | 'BOOK' | 'ORDER' | 'LEARN_MORE' | 'SIGN_UP'
+  callToActionUrl: text('call_to_action_url'),
+  mediaUrl: text('media_url'),
+  googlePostId: text('google_post_id'),
+  searchUrl: text('search_url'),
+  status: text('status').default('draft').notNull(), // 'draft' | 'published' | 'failed'
+  errorMessage: text('error_message'),
+  publishedAt: integer('published_at'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+}, (t) => [
+  index('idx_gmb_posts_business').on(t.businessId),
+  index('idx_gmb_posts_status').on(t.status),
+  index('idx_gmb_posts_created').on(t.createdAt)
+]);
+
+
 
 
 

@@ -1223,3 +1223,214 @@ Generate the JSON report.`;
   return fallback;
 }
 
+// ---------------------------------------------------------------------------
+// AI Google Business Profile (GBP) Posts & Updates Generator
+// ---------------------------------------------------------------------------
+
+export interface GooglePostDraft {
+  id: string;
+  topicType: 'STANDARD' | 'EVENT' | 'OFFER';
+  headline: string;
+  summary: string;
+  callToAction: {
+    type: 'CALL' | 'BOOK' | 'ORDER' | 'LEARN_MORE' | 'SIGN_UP';
+    url: string;
+    label: string;
+  };
+  couponCode?: string | null;
+  suggestedPhoto: string;
+  hashtags: string[];
+}
+
+export interface GenerateGooglePostParams {
+  businessName: string;
+  category?: string | null;
+  city?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  postType?: 'offer' | 'update' | 'festive' | 'seasonal' | string;
+  customTopic?: string | null;
+  tone?: 'persuasive' | 'friendly' | 'professional' | string;
+  seed?: number;
+}
+
+function getDeterministicPostFallbacks(params: GenerateGooglePostParams): GooglePostDraft[] {
+  const { businessName, category, city, address, phone, website, customTopic } = params;
+  const loc = city || (address ? address.split(',')[0].trim() : 'Local Area');
+  const cat = category || 'Quality Services';
+  const ctaPhone = phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : (website || 'tel:+919876543210');
+  const ctaWeb = website || (phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : 'https://loctimize.in');
+
+  const topicNote = customTopic ? `Featuring ${customTopic}!` : `Your Trusted Destination for ${cat}!`;
+
+  return [
+    {
+      id: 'post_1_offer',
+      topicType: 'OFFER',
+      headline: `Special Limited Offer at ${businessName}! 🌟`,
+      summary: `Looking for top-tier ${cat} in ${loc}? 🌟\n\n${topicNote}\nEnjoy exclusive privileges and complimentary expert consultations this week only. Our verified team ensures unmatched hygiene, warm hospitality, and 5-star customer care.\n\n📍 Visit us at ${address || `${loc}`}\n📞 Call now to lock in your appointment or walk in today!`,
+      callToAction: {
+        type: 'CALL',
+        url: ctaPhone,
+        label: 'Call Now'
+      },
+      couponCode: 'SAVE20NOW',
+      suggestedPhoto: 'Storefront signage or welcome reception desk',
+      hashtags: [`#${businessName.replace(/[^a-zA-Z0-9]/g, '')}`, `#${cat.replace(/[^a-zA-Z0-9]/g, '')}`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Deals`]
+    },
+    {
+      id: 'post_2_update',
+      topicType: 'STANDARD',
+      headline: `What's New at ${businessName} in ${loc} ✨`,
+      summary: `We are committed to delivering the finest ${cat} experience in ${loc}! ✨\n\n${customTopic ? `We have introduced: ${customTopic}. ` : ''}From seamless service to certified professionals and sanitized premises, experience the difference that our happy customers talk about.\n\n⭐ Rated 5 Stars on Google Maps by loyal locals.\n👉 Tap below to schedule your visit or browse our full catalogue today!`,
+      callToAction: {
+        type: 'BOOK',
+        url: ctaWeb,
+        label: 'Book Online'
+      },
+      couponCode: null,
+      suggestedPhoto: 'Signature products, service equipment, or staff in action',
+      hashtags: [`#BestIn${loc.replace(/[^a-zA-Z0-9]/g, '')}`, `#${cat.replace(/[^a-zA-Z0-9]/g, '')}`, `#LocalSpotlight`]
+    },
+    {
+      id: 'post_3_festive',
+      topicType: 'STANDARD',
+      headline: `Weekend Spotlight: Experience ${businessName} 💫`,
+      summary: `Make your week memorable with ${businessName}! 💫\n\nWhether you are a first-time visitor or a regular patron, our doors are open in ${loc} to provide exceptional care, authentic value, and prompt attention.\n\n✨ Walk-ins warmly welcomed\n📍 Conveniently located at ${address || loc}\n💬 Ask our team for customized recommendations!`,
+      callToAction: {
+        type: 'LEARN_MORE',
+        url: ctaWeb,
+        label: 'Learn More'
+      },
+      couponCode: null,
+      suggestedPhoto: 'High-resolution interior ambiance or customer celebration',
+      hashtags: [`#${loc.replace(/[^a-zA-Z0-9]/g, '')}`, `#${businessName.replace(/[^a-zA-Z0-9]/g, '')}`, `#TopRatedLocal`]
+    }
+  ];
+}
+
+export async function generateGooglePostDrafts(
+  aiBinding: any,
+  params: GenerateGooglePostParams
+): Promise<{ success: boolean; drafts: GooglePostDraft[]; usedFallback: boolean }> {
+  const fallbacks = getDeterministicPostFallbacks(params);
+  if (!aiBinding) {
+    return { success: true, drafts: fallbacks, usedFallback: true };
+  }
+
+  const { businessName, category, city, address, phone, website, postType, customTopic, tone } = params;
+  const loc = city || (address ? address.split(',')[0].trim() : 'Local Area');
+  const cat = category || 'Local Business';
+  const ctaPhone = phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : (website || 'tel:+919876543210');
+  const ctaWeb = website || (phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : 'https://loctimize.in');
+
+  const systemPrompt = `You are an elite Google Business Profile (GBP) Local SEO content strategist.
+TASK: Write 3 DISTINCT, HIGH-CONVERTING, GOOGLE MAPS UPDATE POSTS for "${businessName}" located in ${loc}.
+
+POST REQUIREMENTS:
+1. Google Posts are short, visual updates on Google Maps. Each post summary MUST be between 60 and 120 words.
+2. Naturally incorporate local area references (${loc}), core services (${cat}), and high-intent local search keywords without keyword stuffing.
+3. Use engaging, tasteful emojis (2-4 per post) to drive high click-through rates.
+4. If a custom topic or promo is specified ("${customTopic || 'none'}"), emphasize it powerfully.
+5. Tone: ${tone || 'friendly and professional'}.
+6. Option 1 MUST be an OFFER/PROMO post (topicType: "OFFER", include a short headline, discount/incentive, and coupon code).
+7. Option 2 MUST be an ANNOUNCEMENT / WHAT'S NEW post (topicType: "STANDARD", highlight signature service or upgrade).
+8. Option 3 MUST be a COMMUNITY & TRUST post (topicType: "STANDARD", customer appreciation, walk-in invitation, weekend spotlight).
+
+RETURN FORMAT: Return ONLY valid JSON matching this schema:
+{
+  "drafts": [
+    {
+      "topicType": "OFFER",
+      "headline": "Catchy headline with emoji",
+      "summary": "Engaging 60-120 word post body including local area and call to action",
+      "callToActionType": "CALL",
+      "couponCode": "SPECIAL20",
+      "suggestedPhoto": "Short photo recommendation",
+      "hashtags": ["#Tag1", "#Tag2", "#Tag3"]
+    },
+    {
+      "topicType": "STANDARD",
+      "headline": "Catchy headline with emoji",
+      "summary": "Engaging 60-120 word post body",
+      "callToActionType": "BOOK",
+      "couponCode": null,
+      "suggestedPhoto": "Short photo recommendation",
+      "hashtags": ["#Tag1", "#Tag2", "#Tag3"]
+    },
+    {
+      "topicType": "STANDARD",
+      "headline": "Catchy headline with emoji",
+      "summary": "Engaging 60-120 word post body",
+      "callToActionType": "LEARN_MORE",
+      "couponCode": null,
+      "suggestedPhoto": "Short photo recommendation",
+      "hashtags": ["#Tag1", "#Tag2", "#Tag3"]
+    }
+  ]
+}
+Do NOT include markdown backticks or commentary outside the JSON.`;
+
+  const userPrompt = `Business: ${businessName}
+Category: ${cat}
+Location: ${loc} (${address || ''})
+Requested Focus: ${postType || 'All types'}
+Custom Note/Discount: ${customTopic || 'Generate best weekly local SEO post'}
+Tone: ${tone || 'persuasive'}
+
+Generate 3 unique, high-CTR Google Business Profile posts ready to publish on Google Maps.`;
+
+  try {
+    const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.82
+    });
+
+    let rawText = '';
+    if (typeof response === 'string') {
+      rawText = response;
+    } else if (response && typeof response === 'object') {
+      rawText = (response as any).response || (response as any).result || JSON.stringify(response);
+    }
+
+    const jsonMatch = rawText.match(/\{[\s\S]*"drafts"[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.drafts) && parsed.drafts.length >= 2) {
+        const validatedDrafts: GooglePostDraft[] = parsed.drafts.slice(0, 3).map((d: any, idx: number) => {
+          const ctaType = d.callToActionType === 'CALL' ? 'CALL' : d.callToActionType === 'BOOK' ? 'BOOK' : 'LEARN_MORE';
+          const ctaUrl = ctaType === 'CALL' ? ctaPhone : ctaWeb;
+          const ctaLabel = ctaType === 'CALL' ? 'Call Now' : ctaType === 'BOOK' ? 'Book Online' : 'Learn More';
+
+          return {
+            id: `ai_post_${Date.now()}_${idx + 1}`,
+            topicType: d.topicType === 'OFFER' ? 'OFFER' : 'STANDARD',
+            headline: String(d.headline || fallbacks[idx].headline).trim(),
+            summary: String(d.summary || fallbacks[idx].summary).trim(),
+            callToAction: {
+              type: ctaType,
+              url: ctaUrl,
+              label: ctaLabel
+            },
+            couponCode: d.couponCode ? String(d.couponCode).trim() : (d.topicType === 'OFFER' ? 'SAVE15' : null),
+            suggestedPhoto: String(d.suggestedPhoto || fallbacks[idx].suggestedPhoto).trim(),
+            hashtags: Array.isArray(d.hashtags) && d.hashtags.length > 0 ? d.hashtags.map((t: any) => String(t).trim()) : fallbacks[idx].hashtags
+          };
+        });
+
+        return { success: true, drafts: validatedDrafts, usedFallback: false };
+      }
+    }
+  } catch (err) {
+    console.warn('AI Google Post generation failed, using rich fallbacks:', err);
+  }
+
+  return { success: true, drafts: fallbacks, usedFallback: true };
+}
+
+

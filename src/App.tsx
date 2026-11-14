@@ -8,6 +8,7 @@ import { QrStudioPage } from './pages/dashboard/QrStudioPage';
 import { ReviewsRepliesPage } from './pages/dashboard/ReviewsRepliesPage';
 import { AnalyticsPage } from './pages/dashboard/AnalyticsPage';
 import { LocalSeoPage } from './pages/dashboard/LocalSeoPage';
+import { GooglePostsPage } from './pages/dashboard/GooglePostsPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { BusinessesPage } from './pages/dashboard/BusinessesPage';
 import { KeywordManagementPage } from './pages/dashboard/KeywordManagementPage';
@@ -62,6 +63,7 @@ export function App() {
           <Route path="team" element={<TeamPermissionsPage />} />
           <Route path="billing" element={<PackageBillingPage />} />
           <Route path="keywords" element={<KeywordManagementPage />} />
+          <Route path="posts" element={<GooglePostsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="local-seo" element={<LocalSeoPage />} />
           <Route path="settings" element={<SettingsPage />} />

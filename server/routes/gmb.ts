@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { accounts, businesses, customerReviews } from '../db/schema';
+import { accounts, businesses, customerReviews, gmbPosts } from '../db/schema';
 import { createScopedDb } from '../db/scoped';
+import { generateGooglePostDrafts } from '../ai/provider';
 import type { Env } from './public';
 
 export const gmbRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: string } }>();
@@ -948,3 +949,202 @@ gmbRoutes.post('/import-browser-reviews', async (c) => {
     reviews: freshReviews
   });
 });
+
+// ──────────────────────────────────────────────
+// 8. AI Google Posts & Updates Manager Endpoints
+// ──────────────────────────────────────────────
+
+// Generate 3 AI Google Post Drafts
+gmbRoutes.post('/posts/generate', async (c) => {
+  const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
+  const body = await c.req.json().catch(() => ({}));
+  const { businessId, postType = 'offer', customTopic = '', tone = 'persuasive' } = body;
+
+  if (!businessId) {
+    return c.json({ error: 'businessId is required' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+  let business = await scoped.getBusiness(businessId);
+
+  if (!business) {
+    const [fallbackBiz] = await db
+      .select()
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .limit(1);
+    if (fallbackBiz) business = fallbackBiz;
+  }
+
+  const result = await generateGooglePostDrafts(c.env.AI, {
+    businessName: business?.name || 'Local Business',
+    category: business?.category,
+    city: business?.city,
+    address: business?.address,
+    phone: business?.phone,
+    website: business?.googleReviewUrl || 'https://loctimize.in',
+    postType,
+    customTopic,
+    tone
+  });
+
+  return c.json({
+    success: true,
+    drafts: result.drafts,
+    usedFallback: result.usedFallback
+  });
+});
+
+// Publish a Post (Direct to Google Maps API if connected, else saved as ready draft)
+gmbRoutes.post('/posts/publish', async (c) => {
+  const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
+  const body = await c.req.json().catch(() => ({}));
+  const { businessId, branchId, draft } = body;
+
+  if (!businessId || !draft?.summary) {
+    return c.json({ error: 'businessId and post summary are required' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const scoped = createScopedDb(db, ownerId);
+  let business = await scoped.getBusiness(businessId);
+  if (!business) {
+    const [fallbackBiz] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
+    if (fallbackBiz) business = fallbackBiz;
+  }
+
+  const { accessToken: savedToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const now = Math.floor(Date.now() / 1000);
+  const postId = `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  let googlePostStatus = 'draft';
+  let googlePostId: string | null = null;
+  let searchUrl: string | null = null;
+  let googleNotice = '';
+
+  // If connected via OAuth, attempt live Google Local Posts API publish
+  if (savedToken) {
+    try {
+      const { cleanAcc, cleanLoc } = await resolveGmbIds(savedToken, meta, business);
+      if (cleanAcc && cleanLoc) {
+        const postUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/localPosts`;
+        
+        const payload: any = {
+          languageCode: 'en-US',
+          summary: draft.summary,
+          topicType: draft.topicType === 'OFFER' ? 'OFFER' : 'STANDARD'
+        };
+
+        if (draft.callToAction?.type && draft.callToAction.type !== 'NONE') {
+          payload.callToAction = {
+            actionType: draft.callToAction.type,
+            url: draft.callToAction.url || business?.googleReviewUrl || 'https://loctimize.in'
+          };
+        }
+
+        if (draft.topicType === 'OFFER') {
+          payload.offer = {
+            couponCode: draft.couponCode || 'SPECIAL20'
+          };
+        }
+
+        const gmbRes = await fetch(postUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${savedToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (gmbRes.ok) {
+          const gmbData: any = await gmbRes.json();
+          googlePostStatus = 'published';
+          googlePostId = gmbData.name || null;
+          searchUrl = gmbData.searchUrl || null;
+          googleNotice = 'Successfully published directly to your Google Business Profile!';
+        } else if (gmbRes.status === 401) {
+          googleNotice = 'Google session expired. Saved locally. Please re-authorize Google Business Profile.';
+        } else {
+          const errText = await gmbRes.text().catch(() => '');
+          googleNotice = `Google API returned status ${gmbRes.status}. Post saved to dashboard.`;
+          console.warn('Google localPost error:', gmbRes.status, errText);
+        }
+      }
+    } catch (err: any) {
+      console.warn('Google API post execution failed:', err);
+      googleNotice = err?.message || 'Could not reach Google API. Post saved locally.';
+    }
+  } else {
+    googleNotice = 'Saved to dashboard. Connect Google account for direct 1-click publishing or use Copy & Open Google.';
+  }
+
+  // Record in D1 gmbPosts table
+  const newPostRecord = {
+    id: postId,
+    businessId,
+    branchId: branchId || null,
+    topicType: draft.topicType || 'STANDARD',
+    headline: draft.headline || null,
+    summary: draft.summary,
+    couponCode: draft.couponCode || null,
+    callToActionType: draft.callToAction?.type || 'CALL',
+    callToActionUrl: draft.callToAction?.url || null,
+    mediaUrl: draft.mediaUrl || null,
+    googlePostId,
+    searchUrl,
+    status: googlePostStatus,
+    errorMessage: googleNotice,
+    publishedAt: googlePostStatus === 'published' ? now : null,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await db.insert(gmbPosts).values(newPostRecord);
+
+  return c.json({
+    success: true,
+    post: newPostRecord,
+    googlePublished: googlePostStatus === 'published',
+    message: googleNotice
+  });
+});
+
+// Fetch past posts for a business
+gmbRoutes.get('/posts', async (c) => {
+  const businessId = c.req.query('businessId');
+  if (!businessId) {
+    return c.json({ error: 'businessId query param is required' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  const posts = await db
+    .select()
+    .from(gmbPosts)
+    .where(eq(gmbPosts.businessId, businessId))
+    .orderBy(desc(gmbPosts.createdAt))
+    .limit(50);
+
+  return c.json({
+    success: true,
+    posts
+  });
+});
+
+// Delete a post
+gmbRoutes.delete('/posts/:postId', async (c) => {
+  const postId = c.req.param('postId');
+  if (!postId) {
+    return c.json({ error: 'postId is required' }, 400);
+  }
+
+  const db = getDb(c.env.DB);
+  await db.delete(gmbPosts).where(eq(gmbPosts.id, postId));
+
+  return c.json({
+    success: true,
+    message: 'Post deleted successfully'
+  });
+});
+
