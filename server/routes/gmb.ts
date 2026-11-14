@@ -977,22 +977,63 @@ gmbRoutes.post('/posts/generate', async (c) => {
     if (fallbackBiz) business = fallbackBiz;
   }
 
+  // Parse chips or business services
+  let services: string[] = [];
+  if (business?.chipsJson) {
+    try {
+      const parsed = JSON.parse(business.chipsJson);
+      if (Array.isArray(parsed)) {
+        services = parsed.map(String).filter(Boolean);
+      }
+    } catch {}
+  }
+
+  const isUpmark = business?.name?.toLowerCase().includes('upmark') || businessId.toLowerCase().includes('upmark');
+  if (services.length === 0) {
+    if (isUpmark) {
+      services = ['SEO & Google Maps Ranking', 'Google & Meta Performance Ads', 'Custom Web Development', 'Brand Strategy', 'Social Media Marketing'];
+    } else if (business?.category) {
+      services = [business.category, 'Expert Solutions', 'Premium Customer Service'];
+    }
+  }
+
+  // Generate dynamic seed for every request to guarantee 100% fresh, varied posts
+  const seed = Date.now() + Math.floor(Math.random() * 1000000);
+
+  let effectiveTopic = customTopic?.trim() || '';
+  if (!effectiveTopic) {
+    if (postType === 'offer') {
+      effectiveTopic = isUpmark
+        ? 'Flat 20% off on complete Google Business Profile local SEO setup and digital audit'
+        : 'Special limited seasonal offer with priority consultation and exclusive savings';
+    } else if (postType === 'update') {
+      effectiveTopic = isUpmark
+        ? 'Announcing high-performance Meta and Google Ads growth frameworks for local businesses'
+        : 'Highlighting certified service upgrades, streamlined appointments, and 5-star customer experience';
+    } else if (postType === 'festive') {
+      effectiveTopic = 'Community celebration, customer appreciation, and warm walk-in consultations';
+    }
+  }
+
   const result = await generateGooglePostDrafts(c.env.AI, {
-    businessName: business?.name || 'Local Business',
-    category: business?.category,
-    city: business?.city,
-    address: business?.address,
-    phone: business?.phone,
+    businessName: business?.name || (isUpmark ? 'Upmark' : 'Local Business'),
+    category: business?.category || (isUpmark ? 'Digital Agency & IT' : 'Local Business'),
+    city: business?.city || 'Ahmedabad',
+    address: business?.address || (isUpmark ? '503, Ambience, Commerce Six Roads, Navrangpura, Ahmedabad, Gujarat 380009' : undefined),
+    phone: business?.phone || (isUpmark ? '+91 83206 99679' : undefined),
     website: business?.googleReviewUrl || 'https://loctimize.in',
     postType,
-    customTopic,
-    tone
+    customTopic: effectiveTopic,
+    tone,
+    seed,
+    services
   });
 
   return c.json({
     success: true,
     drafts: result.drafts,
-    usedFallback: result.usedFallback
+    usedFallback: result.usedFallback,
+    seed
   });
 });
 
