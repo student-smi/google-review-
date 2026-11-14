@@ -32,7 +32,11 @@ import {
   ShoppingBag,
   Car,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Phone,
+  TrendingUp,
+  Tag,
+  Camera
 } from 'lucide-react';
 import './LandingPage.css';
 
@@ -130,6 +134,7 @@ const softwarePlans: SoftwarePlan[] = [
       'Everything in Basic Direct',
       'AI review writer for your customers',
       '1-click AI reply copilot for owners',
+      'Google Posts & Updates Studio (New)',
       'Review analytics & rating trends',
       'Priority WhatsApp support'
     ],
@@ -142,6 +147,7 @@ const softwarePlans: SoftwarePlan[] = [
     description: 'Unified command center for chains, franchises & clinics.',
     features: [
       'Up to 10 location dashboards',
+      'Multi-location Google Posts Publisher',
       'Centralized Google reviews inbox',
       'Bulk standee QR manager',
       'Custom webhook & API integrations',
@@ -263,7 +269,66 @@ const replyScenarios = [
 
 const languages = ['English', 'Hindi (हिंदी)', 'Gujarati (ગુજરાતી)', 'Hinglish'];
 
+const googlePostScenarios = [
+  {
+    category: 'Special Weekend Deal',
+    categoryIcon: '🏷️',
+    businessName: 'The Roastery Coffee Co.',
+    businessLocation: 'Commerce Six Roads, Navrangpura',
+    badge: 'Special Offer',
+    badgeColor: 'amber',
+    headline: '⚡ Flat 20% Off Weekend Cold Brew & Bakery Special!',
+    summary: 'Make your weekend mornings special with fresh single-origin brews and artisanal pastries at The Roastery. Show this post at our Navrangpura counter or order for priority pickup!',
+    couponCode: 'ROAST20',
+    ctaType: 'Call Now',
+    photoTip: 'Signature cold brew pour & artisanal croissant display',
+    hashtags: ['#AhmedabadCafes', '#WeekendSpecial', '#NavrangpuraEats'],
+    rankImpact: '+142% Customer Inquiries on Saturdays',
+    rating: '★ 4.9 (148 reviews)'
+  },
+  {
+    category: 'New Service Launch',
+    categoryIcon: '📢',
+    businessName: 'Apex Multispeciality Dental',
+    businessLocation: 'Bodakdev, SG Highway',
+    badge: "What's New",
+    badgeColor: 'blue',
+    headline: '✨ Painless Laser Teeth Whitening Now Available!',
+    summary: 'Upgrade your smile in just 45 minutes! We have introduced advanced German laser whitening technology with zero sensitivity and immediate results. 100% painless and supervised by certified specialists.',
+    couponCode: null,
+    ctaType: 'Book Online',
+    photoTip: 'Modern sterile treatment suite & consultation desk',
+    hashtags: ['#DentalAhmedabad', '#LaserWhitening', '#BodakdevDentist'],
+    rankImpact: 'Ranked #1 for "Teeth Whitening Bodakdev"',
+    rating: '★ 4.9 (210 reviews)'
+  },
+  {
+    category: 'Customer Trust & Community',
+    categoryIcon: '🌟',
+    businessName: 'Luxe Salon & Hair Studio',
+    businessLocation: 'Prahlad Nagar, Ahmedabad',
+    badge: 'Community Spotlight',
+    badgeColor: 'purple',
+    headline: '❤️ Celebrating 500+ Five-Star Google Reviews!',
+    summary: 'A heartfelt thank you to our wonderful Ahmedabad patrons! Your trust fuels our artistry everyday. To celebrate, enjoy a complimentary deep conditioning treatment with any hair styling this week.',
+    couponCode: 'LUXE500',
+    ctaType: 'Call Now',
+    photoTip: 'Styling team celebration & 5-star Google recognition plaque',
+    hashtags: ['#LuxeHairStudio', '#PrahladNagarSalon', '#5StarHairCare'],
+    rankImpact: '3.1x More Walk-ins on Weekends',
+    rating: '★ 4.8 (520 reviews)'
+  }
+];
+
 const primaryFaqs = [
+  {
+    q: 'How does the Google Posts Studio help my business get more customers?',
+    a: 'Google’s local ranking algorithm heavily favors active profiles. By publishing weekly updates, seasonal discounts, or service announcements directly to Google Maps, your profile signals activity to Google, helping you rank in the coveted Local 3-Pack. Plus, customers browsing Google Maps see your active offers with a direct "Call Now" button, resulting in up to 2.4x more inquiries.'
+  },
+  {
+    q: 'Do I need technical skills or copywriting experience to post?',
+    a: 'None at all! Loctimize’s AI Studio comes pre-loaded with high-converting local business templates. Simply tap a goal (e.g. Weekend Deal or What’s New), and our system drafts a punchy, 60-word SEO update with emojis, coupon codes, and action buttons ready to publish in 1-click.'
+  },
   {
     q: 'Does a customer need to install an app to scan the ReviewQR standee?',
     a: 'No app is needed! On modern iPhones and Android phones, customers simply open their built-in camera or tap their phone near the standee (via contactless NFC). It immediately opens your Google Maps review dialog in their native browser or Google Maps app.'
@@ -330,6 +395,7 @@ export function LandingPage() {
   const [pricingTab, setPricingTab] = useState<'products' | 'software'>('products');
   const [activeIndustry, setActiveIndustry] = useState(0);
   const [activeScenario, setActiveScenario] = useState(0);
+  const [activePostScenario, setActivePostScenario] = useState(0);
   const [draftTone, setDraftTone] = useState<'Warm tone' | 'Professional'>('Warm tone');
   const [assistantInput, setAssistantInput] = useState(experiencePresets[0].prompt);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
@@ -481,6 +547,10 @@ export function LandingPage() {
             <a href="#products" className="hover:text-blue-600 transition">Review QR</a>
             <a href="#how-it-works" className="hover:text-blue-600 transition">How It Works</a>
             <a href="#features" className="hover:text-blue-600 transition">Features</a>
+            <a href="#google-posts" className="hover:text-blue-600 transition flex items-center gap-1.5">
+              <span>Google Posts</span>
+              <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">New</span>
+            </a>
             <a href="#pricing" className="hover:text-blue-600 transition">Pricing</a>
             <a href="#faq" className="hover:text-blue-600 transition">FAQ</a>
           </nav>
@@ -542,6 +612,10 @@ export function LandingPage() {
             <a href="#products" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Review QR</a>
             <a href="#how-it-works" onClick={closeMobileNav} className="py-2 border-b border-slate-100">How It Works</a>
             <a href="#features" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Features</a>
+            <a href="#google-posts" onClick={closeMobileNav} className="py-2 border-b border-slate-100 flex items-center justify-between">
+              <span>Google Posts Studio</span>
+              <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">New</span>
+            </a>
             <a href="#pricing" onClick={closeMobileNav} className="py-2 border-b border-slate-100">Pricing</a>
             <a href="#faq" onClick={closeMobileNav} className="py-2 border-b border-slate-100">FAQ</a>
             <div className="pt-2 flex flex-col gap-2">
@@ -593,6 +667,10 @@ export function LandingPage() {
               <span>4.9 / 5 Rating</span>
               <span className="text-slate-300">·</span>
               <span>Trusted by 1,200+ Businesses in India</span>
+              <span className="text-slate-300">·</span>
+              <a href="#google-posts" className="text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                <span>✨ New: Google Posts Studio</span>
+              </a>
             </div>
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#04143c] tracking-tight leading-[1.14] break-words">
               Turn Happy Customers Into <span className="text-blue-600">Google Reviews.</span>
@@ -617,9 +695,9 @@ export function LandingPage() {
               </a>
             </div>
             <div className="mt-5 sm:mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-500">
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> QR scan & NFC tap</span>
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> No app needed to scan</span>
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 100% Google policy compliant</span>
+              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 1-Tap NFC & QR Standees</span>
+              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 1-Click AI Review Replies</span>
+              <span className="flex items-center gap-1.5"><Check size={14} className="text-indigo-600" /> Weekly Google Maps Posts Studio</span>
             </div>
           </div>
           <div className="flex flex-col items-center justify-center">
@@ -1169,6 +1247,232 @@ export function LandingPage() {
               >
                 {aiCopierStatus ? <Fragment><Check size={15} /> Copied to Clipboard!</Fragment> : <Fragment><Sparkles size={15} /> 1-Click Copy Reply</Fragment>}
               </button>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* 9.5. GOOGLE MAPS POSTS STUDIO */}
+      <motion.section
+        id="google-posts"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
+        variants={fadeInUp}
+        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-indigo-50/25 to-white border-t border-slate-100 flex items-center justify-center"
+      >
+        <div className="max-w-6xl w-full">
+          <div className="text-center mb-10 sm:mb-12">
+            <div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200/80 rounded-full px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 shadow-2xs">
+              <TrendingUp size={13} className="text-indigo-600" />
+              <span>LOCAL SEO RANK ACCELERATOR · NEW FEATURE</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#04143c] tracking-tight mt-1 mb-3">
+              Turn Google Maps Into a <span className="text-blue-600">24/7 Customer Magnet.</span>
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+              Never let your Google Business Profile sit idle. Publish weekly discounts, service launches, and weekend deals directly to Google Maps in 1-click. Active profiles get up to 2.4x more customer calls.
+            </p>
+          </div>
+
+          {/* Scenario Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
+            <span className="text-xs font-bold text-slate-500 mr-1 hidden sm:inline">⚡ Real Business Scenarios:</span>
+            {googlePostScenarios.map((scenario, sIdx) => {
+              const isSelected = activePostScenario === sIdx;
+              return (
+                <button
+                  key={sIdx}
+                  type="button"
+                  onClick={() => setActivePostScenario(sIdx)}
+                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/20'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <span>{scenario.categoryIcon}</span>
+                  <span>{scenario.category}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Interactive 2-Column Showcase */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.3fr] gap-8 items-center">
+            {/* Left: Strategic Value & Benefits */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center shrink-0">
+                    01
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Dominate the Google Local 3-Pack</h3>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Google's local algorithm rewards active profiles. Weekly posts tell Google your business is open, thriving, and relevant for local searches in your city.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 font-black text-sm flex items-center justify-center shrink-0">
+                    02
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">2.4x More Customer Phone Calls</h3>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Customers browsing Google Maps see your active offer with a direct "Call Now" or "Book Online" action button before they even visit your website.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 font-black text-sm flex items-center justify-center shrink-0">
+                    03
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Zero Technical Effort (1-Click Publish)</h3>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Skip the confusing Google Business manager. Pick a goal, let Loctimize format the local SEO copy, and hit publish directly to Google Maps in 5 seconds.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real Impact Metric Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Verified Ranking Impact</p>
+                  <p className="text-sm font-black text-slate-900 mt-0.5">{googlePostScenarios[activePostScenario].rankImpact}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full shadow-2xs">
+                    🟢 Live on Google Maps
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleCtaClick}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition inline-flex items-center gap-2 cursor-pointer"
+                >
+                  {userLoggedIn ? 'Open Google Posts Studio' : 'Get Started with Loctimize'} <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Realistic Smartphone Google Maps Post Preview */}
+            <div className="relative mx-auto w-full max-w-md">
+              {/* Phone Frame Mockup */}
+              <div className="rounded-[2.5rem] bg-slate-900 p-3 sm:p-3.5 shadow-2xl ring-1 ring-slate-800">
+                <div className="rounded-[2rem] bg-white overflow-hidden border border-slate-100">
+                  {/* Phone Top Speaker & Camera Notch */}
+                  <div className="bg-slate-900 px-6 py-2 flex items-center justify-between text-white text-[10px] font-bold">
+                    <span>9:41</span>
+                    <div className="w-16 h-3 bg-black rounded-full" />
+                    <span>5G 100%</span>
+                  </div>
+
+                  {/* Google Maps Search Bar Mock */}
+                  <div className="bg-slate-50 p-3 border-b border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+                    <span className="text-red-500 font-black">G</span>
+                    <span className="truncate">{googlePostScenarios[activePostScenario].businessLocation}</span>
+                  </div>
+
+                  {/* Business Header in Google Maps */}
+                  <div className="p-4 pb-3 flex items-center justify-between bg-white border-b border-slate-50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                        {googlePostScenarios[activePostScenario].businessName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <strong className="text-xs font-bold text-slate-900 leading-tight">
+                            {googlePostScenarios[activePostScenario].businessName}
+                          </strong>
+                          <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" title="Google Verified">
+                            ✓
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          {googlePostScenarios[activePostScenario].rating} • Google Business Profile
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                      googlePostScenarios[activePostScenario].badgeColor === 'amber'
+                        ? 'bg-amber-50 text-amber-800 border-amber-300'
+                        : googlePostScenarios[activePostScenario].badgeColor === 'blue'
+                        ? 'bg-blue-50 text-blue-800 border-blue-200'
+                        : 'bg-purple-50 text-purple-800 border-purple-200'
+                    }`}>
+                      {googlePostScenarios[activePostScenario].badge}
+                    </span>
+                  </div>
+
+                  {/* Suggested Photo Advice Banner */}
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] text-slate-600">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Camera size={12} className="text-blue-600 shrink-0" />
+                      <span className="truncate">{googlePostScenarios[activePostScenario].photoTip}</span>
+                    </span>
+                    <span className="text-[9px] font-bold text-blue-600 shrink-0 bg-blue-50 px-1.5 py-0.5 rounded">High CTR</span>
+                  </div>
+
+                  {/* Post Content */}
+                  <div className="p-4 space-y-3">
+                    <h4 className="font-bold text-sm text-slate-900 leading-snug">
+                      {googlePostScenarios[activePostScenario].headline}
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {googlePostScenarios[activePostScenario].summary}
+                    </p>
+
+                    {/* Coupon Code Pill */}
+                    {googlePostScenarios[activePostScenario].couponCode && (
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-950 font-semibold">
+                        <span className="flex items-center gap-1 text-[11px]">
+                          <Tag size={13} className="text-amber-600" /> Voucher Code:
+                        </span>
+                        <span className="font-mono font-black tracking-widest text-amber-900 bg-white px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
+                          {googlePostScenarios[activePostScenario].couponCode}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Google Action Button */}
+                    <div className="p-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs">
+                      {googlePostScenarios[activePostScenario].ctaType === 'Call Now' ? (
+                        <Phone size={13} />
+                      ) : (
+                        <Globe size={13} />
+                      )}
+                      <span>Action: {googlePostScenarios[activePostScenario].ctaType}</span>
+                    </div>
+
+                    {/* Hashtags */}
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {googlePostScenarios[activePostScenario].hashtags.map((tag, tIdx) => (
+                        <span key={tIdx} className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mock Phone Footer Action */}
+                  <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live on Google Maps</span>
+                    </span>
+                    <span className="text-slate-400 font-mono text-[10px]">1-Click Published</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
