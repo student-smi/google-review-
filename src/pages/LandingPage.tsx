@@ -1259,25 +1259,25 @@ export function LandingPage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
         variants={fadeInUp}
-        className="scroll-mt-20 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-indigo-50/25 to-white border-t border-slate-100 flex items-center justify-center"
+        className="scroll-mt-20 py-8 sm:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-indigo-50/20 to-white border-t border-slate-100 flex items-center justify-center"
       >
-        <div className="max-w-6xl w-full">
-          <div className="text-center mb-10 sm:mb-12">
-            <div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200/80 rounded-full px-3.5 py-1 text-xs font-bold text-indigo-700 mb-3 shadow-2xs">
-              <TrendingUp size={13} className="text-indigo-600" />
+        <div className="max-w-5xl w-full">
+          <div className="text-center mb-5 sm:mb-6">
+            <div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200/80 rounded-full px-3 py-0.5 text-[11px] font-bold text-indigo-700 mb-2 shadow-2xs">
+              <TrendingUp size={12} className="text-indigo-600" />
               <span>LOCAL SEO RANK ACCELERATOR · NEW FEATURE</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#04143c] tracking-tight mt-1 mb-3">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#04143c] tracking-tight mt-0.5 mb-1.5">
               Turn Google Maps Into a <span className="text-blue-600">24/7 Customer Magnet.</span>
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-600 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
               Never let your Google Business Profile sit idle. Publish weekly discounts, service launches, and weekend deals directly to Google Maps in 1-click. Active profiles get up to 2.4x more customer calls.
             </p>
           </div>
 
           {/* Scenario Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
-            <span className="text-xs font-bold text-slate-500 mr-1 hidden sm:inline">⚡ Real Business Scenarios:</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
+            <span className="text-xs font-bold text-slate-400 mr-1 hidden sm:inline">⚡ Real Scenarios:</span>
             {googlePostScenarios.map((scenario, sIdx) => {
               const isSelected = activePostScenario === sIdx;
               return (
@@ -1285,10 +1285,10 @@ export function LandingPage() {
                   key={sIdx}
                   type="button"
                   onClick={() => setActivePostScenario(sIdx)}
-                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                     isSelected
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/20'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                   }`}
                 >
                   <span>{scenario.categoryIcon}</span>
@@ -1299,110 +1299,108 @@ export function LandingPage() {
           </div>
 
           {/* Interactive 2-Column Showcase */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.3fr] gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.1fr] gap-6 lg:gap-8 items-center">
             {/* Left: Strategic Value & Benefits */}
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center shrink-0">
+            <div className="space-y-3.5">
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 font-black text-xs flex items-center justify-center shrink-0">
                     01
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Dominate the Google Local 3-Pack</h3>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                      Google's local algorithm rewards active profiles. Weekly posts tell Google your business is open, thriving, and relevant for local searches in your city.
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">Dominate the Google Local 3-Pack</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                      Google's local algorithm rewards active profiles. Weekly posts tell Google your business is thriving and open for local searches.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 font-black text-sm flex items-center justify-center shrink-0">
+                <div className="flex items-start gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 font-black text-xs flex items-center justify-center shrink-0">
                     02
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">2.4x More Customer Phone Calls</h3>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                      Customers browsing Google Maps see your active offer with a direct "Call Now" or "Book Online" action button before they even visit your website.
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">2.4x More Customer Phone Calls</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                      Customers browsing Google Maps see your active offer with a direct "Call Now" or "Book Online" action button before contacting competitors.
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 font-black text-sm flex items-center justify-center shrink-0">
+                <div className="flex items-start gap-3 bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 font-black text-xs flex items-center justify-center shrink-0">
                     03
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Zero Technical Effort (1-Click Publish)</h3>
-                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                      Skip the confusing Google Business manager. Pick a goal, let Loctimize format the local SEO copy, and hit publish directly to Google Maps in 5 seconds.
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">Zero Technical Effort (1-Click Publish)</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                      Skip the confusing Google Business panel. Pick a goal, let Loctimize format local SEO copy, and hit publish directly to Google Maps in 5 seconds.
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Real Impact Metric Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-100 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-100 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Verified Ranking Impact</p>
-                  <p className="text-sm font-black text-slate-900 mt-0.5">{googlePostScenarios[activePostScenario].rankImpact}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Verified Ranking Impact</p>
+                  <p className="text-xs sm:text-sm font-black text-slate-900 mt-0.5">{googlePostScenarios[activePostScenario].rankImpact}</p>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full shadow-2xs">
-                    🟢 Live on Google Maps
-                  </span>
-                </div>
+                <span className="text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full shadow-2xs shrink-0">
+                  🟢 Live on Maps
+                </span>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={handleCtaClick}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition inline-flex items-center gap-2 cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  {userLoggedIn ? 'Open Google Posts Studio' : 'Get Started with Loctimize'} <ArrowRight size={16} />
+                  {userLoggedIn ? 'Open Google Posts Studio' : 'Get Started with Loctimize'} <ArrowRight size={14} />
                 </button>
               </div>
             </div>
 
-            {/* Right: Realistic Smartphone Google Maps Post Preview */}
-            <div className="relative mx-auto w-full max-w-md">
+            {/* Right: Realistic Smartphone Google Maps Post Preview (Compact) */}
+            <div className="relative mx-auto w-full max-w-[340px] sm:max-w-[350px]">
               {/* Phone Frame Mockup */}
-              <div className="rounded-[2.5rem] bg-slate-900 p-3 sm:p-3.5 shadow-2xl ring-1 ring-slate-800">
-                <div className="rounded-[2rem] bg-white overflow-hidden border border-slate-100">
+              <div className="rounded-[2rem] bg-slate-900 p-2.5 shadow-xl ring-1 ring-slate-800">
+                <div className="rounded-[1.6rem] bg-white overflow-hidden border border-slate-100">
                   {/* Phone Top Speaker & Camera Notch */}
-                  <div className="bg-slate-900 px-6 py-2 flex items-center justify-between text-white text-[10px] font-bold">
+                  <div className="bg-slate-900 px-4 py-1.5 flex items-center justify-between text-white text-[9px] font-bold">
                     <span>9:41</span>
-                    <div className="w-16 h-3 bg-black rounded-full" />
+                    <div className="w-12 h-2.5 bg-black rounded-full" />
                     <span>5G 100%</span>
                   </div>
 
                   {/* Google Maps Search Bar Mock */}
-                  <div className="bg-slate-50 p-3 border-b border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+                  <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-100 flex items-center gap-1.5 text-[10px] text-slate-500">
                     <span className="text-red-500 font-black">G</span>
                     <span className="truncate">{googlePostScenarios[activePostScenario].businessLocation}</span>
                   </div>
 
                   {/* Business Header in Google Maps */}
-                  <div className="p-4 pb-3 flex items-center justify-between bg-white border-b border-slate-50">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                  <div className="p-3 pb-2 flex items-center justify-between bg-white border-b border-slate-50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[10px] flex items-center justify-center shadow-xs">
                         {googlePostScenarios[activePostScenario].businessName.charAt(0)}
                       </div>
                       <div>
                         <div className="flex items-center gap-1">
-                          <strong className="text-xs font-bold text-slate-900 leading-tight">
+                          <strong className="text-[11px] font-bold text-slate-900 leading-tight truncate max-w-[150px]">
                             {googlePostScenarios[activePostScenario].businessName}
                           </strong>
-                          <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" title="Google Verified">
+                          <span className="w-3 h-3 rounded-full bg-blue-500 text-white text-[7px] font-bold flex items-center justify-center shrink-0" title="Google Verified">
                             ✓
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-medium">
-                          {googlePostScenarios[activePostScenario].rating} • Google Business Profile
+                        <p className="text-[9px] text-slate-400 font-medium">
+                          {googlePostScenarios[activePostScenario].rating}
                         </p>
                       </div>
                     </div>
-                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                    <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full border shrink-0 ${
                       googlePostScenarios[activePostScenario].badgeColor === 'amber'
                         ? 'bg-amber-50 text-amber-800 border-amber-300'
                         : googlePostScenarios[activePostScenario].badgeColor === 'blue'
@@ -1414,49 +1412,49 @@ export function LandingPage() {
                   </div>
 
                   {/* Suggested Photo Advice Banner */}
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] text-slate-600">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <Camera size={12} className="text-blue-600 shrink-0" />
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[9px] text-slate-600">
+                    <span className="flex items-center gap-1 truncate pr-1">
+                      <Camera size={11} className="text-blue-600 shrink-0" />
                       <span className="truncate">{googlePostScenarios[activePostScenario].photoTip}</span>
                     </span>
-                    <span className="text-[9px] font-bold text-blue-600 shrink-0 bg-blue-50 px-1.5 py-0.5 rounded">High CTR</span>
+                    <span className="text-[8px] font-bold text-blue-600 shrink-0 bg-blue-50 px-1 py-0.2 rounded">High CTR</span>
                   </div>
 
                   {/* Post Content */}
-                  <div className="p-4 space-y-3">
-                    <h4 className="font-bold text-sm text-slate-900 leading-snug">
+                  <div className="p-3 space-y-2">
+                    <h4 className="font-bold text-xs text-slate-900 leading-snug">
                       {googlePostScenarios[activePostScenario].headline}
                     </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-3">
                       {googlePostScenarios[activePostScenario].summary}
                     </p>
 
                     {/* Coupon Code Pill */}
                     {googlePostScenarios[activePostScenario].couponCode && (
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-950 font-semibold">
-                        <span className="flex items-center gap-1 text-[11px]">
-                          <Tag size={13} className="text-amber-600" /> Voucher Code:
+                      <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-amber-50 border border-amber-300 text-[10px] text-amber-950 font-semibold">
+                        <span className="flex items-center gap-1">
+                          <Tag size={11} className="text-amber-600" /> Voucher:
                         </span>
-                        <span className="font-mono font-black tracking-widest text-amber-900 bg-white px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
+                        <span className="font-mono font-black tracking-wider text-amber-900 bg-white px-1.5 py-0.2 rounded border border-amber-200">
                           {googlePostScenarios[activePostScenario].couponCode}
                         </span>
                       </div>
                     )}
 
                     {/* Google Action Button */}
-                    <div className="p-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs">
+                    <div className="p-2 rounded-lg bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-xs">
                       {googlePostScenarios[activePostScenario].ctaType === 'Call Now' ? (
-                        <Phone size={13} />
+                        <Phone size={11} />
                       ) : (
-                        <Globe size={13} />
+                        <Globe size={11} />
                       )}
                       <span>Action: {googlePostScenarios[activePostScenario].ctaType}</span>
                     </div>
 
                     {/* Hashtags */}
-                    <div className="flex flex-wrap gap-1 pt-1">
+                    <div className="flex flex-wrap gap-1 pt-0.5">
                       {googlePostScenarios[activePostScenario].hashtags.map((tag, tIdx) => (
-                        <span key={tIdx} className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                        <span key={tIdx} className="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-medium">
                           {tag}
                         </span>
                       ))}
@@ -1464,12 +1462,12 @@ export function LandingPage() {
                   </div>
 
                   {/* Mock Phone Footer Action */}
-                  <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <div className="p-2 px-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px]">
                     <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span>Live on Google Maps</span>
                     </span>
-                    <span className="text-slate-400 font-mono text-[10px]">1-Click Published</span>
+                    <span className="text-slate-400 font-mono text-[9px]">1-Click Published</span>
                   </div>
                 </div>
               </div>
