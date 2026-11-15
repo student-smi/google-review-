@@ -898,7 +898,7 @@ export function GooglePostsPage() {
                               <span>Change Photo</span>
                               <input
                                 type="file"
-                                accept="image/png,image/jpeg,image/webp,image/jpg"
+                                accept="image/*, .png, .jpg, .jpeg, .webp"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0];
@@ -926,19 +926,31 @@ export function GooglePostsPage() {
                               High CTR
                             </span>
                           </div>
-                          <label className="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50/50 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition text-center group">
+                          <label
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const f = e.dataTransfer.files?.[0];
+                              if (f) handlePhotoSelect(draft.id, f);
+                            }}
+                            className="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50/50 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition text-center group"
+                          >
                             <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
                               <Camera size={15} />
                             </div>
                             <span className="text-xs font-black text-slate-800">
-                              Upload Real Photo
+                              Upload Real Photo or Drag & Drop
                             </span>
                             <span className="text-[10px] text-slate-400">
-                              JPG, PNG, WEBP · Storefront, team, work or food
+                              Click to browse or drop photo from Downloads / Desktop
                             </span>
                             <input
                               type="file"
-                              accept="image/png,image/jpeg,image/webp,image/jpg"
+                              accept="image/*, .png, .jpg, .jpeg, .webp"
                               className="hidden"
                               onChange={(e) => {
                                 const f = e.target.files?.[0];
