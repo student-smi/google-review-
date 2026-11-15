@@ -368,7 +368,7 @@ export function GooglePostsPage() {
     // Guard 1: Check if Google Profile is connected
     if (!gmbStatus.isConnected) {
       setNotice({
-        message: '⚠️ Google Profile connect nahi hai! Live publish karne ke liye pehle "Connect Google Profile" karein.',
+        message: '⚠️ Google Profile is not connected. Please connect your Google account to publish directly.',
         type: 'error'
       });
       handleSyncGmb();
@@ -378,7 +378,7 @@ export function GooglePostsPage() {
     // Guard 2: Check if Google session is expired
     if (gmbStatus.isExpired) {
       setNotice({
-        message: '⚠️ Google session expire ho gaya hai! Post publish nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+        message: '⚠️ Google session has expired. Please 1-click sync your Google account first.',
         type: 'error'
       });
       handleSyncGmb();
@@ -421,7 +421,7 @@ export function GooglePostsPage() {
       } else if (res?.sessionExpired) {
         setGmbStatus((prev) => ({ ...prev, isConnected: true, isExpired: true }));
         setNotice({
-          message: '⚠️ Google session expire ho gaya hai! Post live nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+          message: '⚠️ Google session has expired. Post not published. Please 1-click sync your Google account first.',
           type: 'error'
         });
         handleSyncGmb();
@@ -432,7 +432,7 @@ export function GooglePostsPage() {
       if (err?.message?.includes('expired') || err?.status === 401) {
         setGmbStatus((prev) => ({ ...prev, isConnected: true, isExpired: true }));
         setNotice({
-          message: '⚠️ Google session expire ho gaya hai! Post live nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+          message: '⚠️ Google session has expired. Post not published. Please 1-click sync your Google account first.',
           type: 'error'
         });
         handleSyncGmb();
@@ -660,7 +660,7 @@ export function GooglePostsPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-700 leading-relaxed max-w-2xl">
-                Google security policy ke hisaab se OAuth session expire ho gaya hai. Google Maps par live post karne ke liye pehle 1-click sync karein.
+                Google OAuth security tokens expire periodically. Please re-sync your account in 1-click before publishing directly to Google Maps.
               </p>
             </div>
           </div>
@@ -1139,7 +1139,7 @@ export function GooglePostsPage() {
                         ) : (
                           <>
                             <RefreshCw className="w-3.5 h-3.5" />
-                            <span>⚡ Pehle Google Sync Karein (Session Expired)</span>
+                            <span>⚡ Sync Google to Publish (Session Expired)</span>
                           </>
                         )}
                       </Button>
@@ -1158,7 +1158,7 @@ export function GooglePostsPage() {
                         ) : (
                           <>
                             <Store className="w-3.5 h-3.5" />
-                            <span>Pehle Google Connect Karein</span>
+                            <span>Connect Google to Publish</span>
                           </>
                         )}
                       </Button>
