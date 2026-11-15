@@ -668,3 +668,42 @@ publicRoutes.post('/enquiry', async (c) => {
     return c.json({ error: err.message || 'Failed to submit enquiry' }, 500);
   }
 });
+
+// Public media asset serving (for Google Posts photo crawlers & previews)
+publicRoutes.get('/media/:id', async (c) => {
+  const id = c.req.param('id');
+  if (!id || !c.env.KV) {
+    return c.text('Not found', 404);
+  }
+
+  try {
+    const metaStr = await c.env.KV.get(`media_meta:${id}`, { type: 'json' });
+    const imageBase64 = await c.env.KV.get(`media_data:${id}`);
+
+    if (!imageBase64) {
+      return c.text('Media not found', 404);
+    }
+
+    const contentType = metaStr?.contentType || 'image/jpeg';
+
+    const binaryStr = atob(imageBase64);
+    const len = binaryStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    return new Response(bytes.buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  } catch (err: any) {
+    console.error('Failed to serve media:', err);
+    return c.text('Media serve error', 500);
+  }
+});
+

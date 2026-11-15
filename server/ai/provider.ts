@@ -1258,8 +1258,8 @@ export interface GenerateGooglePostParams {
 }
 
 function getDeterministicPostFallbacks(params: GenerateGooglePostParams): GooglePostDraft[] {
-  const { businessName, category, city, address, phone, website, customTopic } = params;
-  const loc = city || (address ? address.split(',')[0].trim() : 'Ahmedabad');
+  const { businessName, category, city, address, phone, website, customTopic, keywords, services } = params;
+  const loc = city || (address ? address.split(',').pop()?.trim() || 'Ahmedabad' : 'Ahmedabad');
   const cat = category || 'Digital Agency & IT Services';
   const ctaPhone = phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : (website || 'tel:+918320699679');
   const ctaWeb = website || (phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : 'https://loctimize.in');
@@ -1272,44 +1272,64 @@ function getDeterministicPostFallbacks(params: GenerateGooglePostParams): Google
   const neighborhoods = ['Navrangpura', 'SG Highway', 'Prahlad Nagar', 'Bodakdev', 'Sindhu Bhavan Road', 'C.G. Road', 'Satellite'];
   const randomSeed = Math.abs((params.seed || Date.now()) + Math.floor(Math.random() * 100000));
   const nhIndex = randomSeed % neighborhoods.length;
-  const targetArea = neighborhoods[nhIndex];
+  
+  // Extract specific landmark or micro-location from address if available
+  let targetArea = neighborhoods[nhIndex];
+  if (address) {
+    const parts = address.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      targetArea = parts.slice(1, 3).join(', ');
+    } else if (parts.length >= 2) {
+      targetArea = parts[1];
+    }
+  }
+
+  // Active Managed Keywords from Keyword Management
+  const activeKeywords = (keywords && keywords.length > 0 ? keywords : services) || [
+    'Digital Marketing Agency Ahmedabad',
+    'Local SEO & Google Maps Ranking',
+    'Performance Google Ads'
+  ];
+  const kw1 = activeKeywords[0] || cat;
+  const kw2 = activeKeywords[1] || `${cat} Solutions`;
+  const kw3 = activeKeywords[2] || `${loc} Services`;
 
   const coupons = ['UPMARK25', 'GROWTH20', 'AHMEDABAD10', 'MAPS15', 'VIP2026', 'SCALE30', 'SAVE20NOW'];
   const couponCode = coupons[randomSeed % coupons.length];
 
   const customNote = customTopic ? `✨ Highlight: ${customTopic}` : '';
 
-  // 12 High-Converting Dynamic Google Maps Post Archetypes
+  // 12 High-Converting Dynamic Google Maps Post Archetypes with Managed Keywords & Maps Pin
   const allTemplates = [
     // 1. Limited Flash Offer
     {
       topicType: 'OFFER' as const,
-      headline: `⚡ Exclusive Limited Offer at ${businessName}! 🌟`,
-      summary: `Looking to accelerate your ${cat} in ${loc}? 🌟\n\nFor a limited time, get premium privileges, priority consulting, and verified ROI-focused solutions right here in ${targetArea}.\n\n${customNote ? `${customNote}\n\n` : ''}📍 Office: ${address || `${targetArea}, ${loc}`}\n📞 Call now or tap below to lock in exclusive promo code "${couponCode}" before slots fill up!`,
+      headline: `⚡ Exclusive Limited Offer: ${kw1} at ${businessName}! 🌟`,
+      summary: `Looking to scale with top-tier ${kw1} in ${loc}? 🌟\n\nFor a limited time, get premium privileges, priority consulting, and verified ROI-focused solutions right here at our ${targetArea} office.\n\n${customNote ? `${customNote}\n\n` : ''}📍 Google Maps Pin: ${address || `${targetArea}, ${loc}`}\n📞 Call now or tap below with promo code "${couponCode}" before slots fill up!`,
       callToAction: { type: 'CALL' as const, url: ctaPhone, label: 'Call Now' },
       couponCode: couponCode,
       suggestedPhoto: 'Front office reception, team in meeting, or certified work desk',
-      hashtags: [`#${businessName.replace(/[^a-zA-Z0-9]/g, '')}`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Deals`, `#${cat.replace(/[^a-zA-Z0-9]/g, '')}`]
+      hashtags: [`#${kw1.replace(/[^a-zA-Z0-9]/g, '')}`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Deals`, `#GoogleMapsSEO`]
     },
     // 2. Local Business Growth Case Study
     {
       topicType: 'STANDARD' as const,
-      headline: `📈 How Local Brands in ${loc} Scale with ${businessName} 🚀`,
-      summary: `Real results speak louder than promises! 🚀\n\nWe recently helped businesses across ${loc} and ${targetArea} multiply their local reach and high-intent customer inquiries. When your ${cat} strategy is dialed in, consistent growth follows.\n\n⭐ Rated 5 Stars on Google Maps by leading local founders.\n👉 Tap Learn More below to check out our proven client frameworks!`,
+      headline: `📈 Proven Results: ${kw2} by ${businessName} in ${loc} 🚀`,
+      summary: `Real results speak louder than promises! 🚀\n\nWe recently helped businesses across ${loc} and ${targetArea} multiply their local reach and high-intent inquiries with tailored ${kw1} frameworks. When your local search strategy is dialed in, consistent growth follows.\n\n⭐ Rated 5 Stars on Google Maps by leading local founders.\n👉 Tap Learn More below to check out our proven client frameworks!`,
       callToAction: { type: 'LEARN_MORE' as const, url: ctaWeb, label: 'Learn More' },
       couponCode: null,
       suggestedPhoto: 'Performance analytics charts, growth metrics, or client handshake',
-      hashtags: [`#LocalGrowth`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Business`, `#TopRatedLocal`]
+      hashtags: [`#${kw2.replace(/[^a-zA-Z0-9]/g, '')}`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Business`, `#TopRatedLocal`]
     },
     // 3. Free Growth Strategy Audit
     {
       topicType: 'STANDARD' as const,
-      headline: `🔍 Free 1-on-1 Strategy & Audit Session at ${businessName}`,
-      summary: `Want to find out where your brand is losing potential customers in ${loc}? 🔍\n\nClaim our complimentary, zero-obligation growth audit this ${dayName}. Our senior ${cat} specialists will examine your online presence and provide 3 immediate high-impact fixes.\n\n💡 100% Free Consultation • Strictly 5 Spots This Week\n📲 Tap Book Online to reserve your slot now!`,
+      headline: `🔍 Free 1-on-1 ${kw1} Strategy & Audit at ${businessName}`,
+      summary: `Want to find out where your brand is losing potential customers in ${loc}? 🔍\n\nClaim our complimentary, zero-obligation growth audit this ${dayName}. Our senior ${cat} specialists will examine your online presence and provide 3 immediate high-impact fixes.\n\n📍 Office Location: ${address || `${targetArea}, ${loc}`}\n📲 Tap Book Online to reserve your slot now!`,
       callToAction: { type: 'BOOK' as const, url: ctaWeb, label: 'Book Online' },
       couponCode: null,
       suggestedPhoto: 'Expert consultant reviewing digital reports on laptop screen',
-      hashtags: [`#FreeAudit`, `#${businessName.replace(/[^a-zA-Z0-9]/g, '')}`, `#${targetArea.replace(/[^a-zA-Z0-9]/g, '')}`]
+      hashtags: [`#FreeAudit`, `#${kw1.replace(/[^a-zA-Z0-9]/g, '')}`, `#${targetArea.replace(/[^a-zA-Z0-9]/g, '')}`]
     },
     // 4. Weekend / Midweek Spotlight
     {
@@ -1431,8 +1451,8 @@ export async function generateGooglePostDrafts(
     return { success: true, drafts: fallbacks, usedFallback: true };
   }
 
-  const { businessName, category, city, address, phone, website, postType, customTopic, tone, services } = params;
-  const loc = city || (address ? address.split(',')[0].trim() : 'Ahmedabad');
+  const { businessName, category, city, address, phone, website, postType, customTopic, tone, services, keywords } = params;
+  const loc = city || (address ? address.split(',').pop()?.trim() || 'Ahmedabad' : 'Ahmedabad');
   const cat = category || 'Digital Agency & IT Services';
   const ctaPhone = phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : (website || 'tel:+918320699679');
   const ctaWeb = website || (phone ? `tel:${phone.replace(/[^0-9+]/g, '')}` : 'https://loctimize.in');
@@ -1440,6 +1460,21 @@ export async function generateGooglePostDrafts(
   const randomSeed = Math.abs((params.seed || Date.now()) + Math.floor(Math.random() * 100000));
   const neighborhoods = ['Navrangpura', 'SG Highway', 'Prahlad Nagar', 'Bodakdev', 'Sindhu Bhavan Road', 'C.G. Road', 'Satellite'];
   const neighborhood = neighborhoods[randomSeed % neighborhoods.length];
+
+  // Micro-location & Landmark extraction from verified address
+  let microLocation = neighborhood;
+  if (address) {
+    const parts = address.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      microLocation = parts.slice(1, 3).join(', ');
+    } else if (parts.length >= 2) {
+      microLocation = parts[1];
+    }
+  }
+
+  // Active Managed Keywords from Keyword Management
+  const activeKeywords = (keywords && keywords.length > 0 ? keywords : services) || [];
+  const keywordsText = activeKeywords.length > 0 ? activeKeywords.join(', ') : 'Local SEO, Google Ads, Meta Ads, Web Design';
 
   const angleThemes = [
     'Exclusive Limited-Time VIP Offer with discount code & urgent call-to-action',
@@ -1457,20 +1492,20 @@ export async function generateGooglePostDrafts(
   const angle2 = angleThemes[3 + (randomSeed % 3)];
   const angle3 = angleThemes[6 + (randomSeed % 3)];
 
-  const servicesText = services && services.length > 0 ? services.join(', ') : 'SEO, Google Ads, Meta Ads, Web Design, Brand Strategy, Social Media Marketing';
-
   const systemPrompt = `You are an elite Google Business Profile (GBP) Local SEO content strategist and copywriting master.
 TASK: Write 3 DISTINCT, HIGH-CONVERTING, FRESH GOOGLE MAPS UPDATE POSTS for "${businessName}" located in ${loc}.
 
 CRITICAL COPYWRITING & FORMATTING RULES:
 1. PUNCHY LENGTH: Each post summary MUST be strictly between 50 and 85 words. NEVER write rambling or cut-off sentences. Google Maps users read on mobile!
 2. DISTINCT TONE & ANGLES: Never use the same phrases or templates twice. Every option must have a fresh, unique opening hook and clear value proposition.
-3. LOCAL SEO INTEGRATION: Naturally weave in "${loc}", "${neighborhood}", and "${cat}" without sounding spammy.
-4. EMOJIS: Use 2 to 4 tasteful emojis per post to command attention in the Google Maps feed.
-5. OPTION 1: Must be topicType "OFFER" (Urgent promo or perk, headline, coupon code e.g. SAVE20 / VIP25, CTA "CALL" or "LEARN_MORE").
-6. OPTION 2: Must be topicType "STANDARD" (What's new, case study, or free audit, CTA "BOOK" or "LEARN_MORE").
-7. OPTION 3: Must be topicType "STANDARD" (Trust, community appreciation, insider tip, or weekend walk-in, CTA "LEARN_MORE" or "CALL").
-8. Tone: ${tone || 'persuasive, high-energy, and professional'}.
+3. MANAGED KEYWORDS INTEGRATION: Strictly weave 1 or 2 of these active target keywords naturally into each post summary: [${keywordsText}]. Do not stuff keywords—weave them seamlessly into benefits.
+4. GOOGLE MAPS MICRO-LOCATION: The business is verified at: "${address || loc}". Prominently reference the micro-area or street landmark ("${microLocation}" or "${loc}") so local customers recognize the exact spot and Google Maps ranks this post for "near me" searches.
+5. HASHTAGS: Derive 1-2 hashtags directly from the target keywords (e.g. #${activeKeywords[0]?.replace(/[^a-zA-Z0-9]/g, '') || 'LocalSEO'}).
+6. EMOJIS: Use 2 to 4 tasteful emojis per post to command attention in the Google Maps feed.
+7. OPTION 1: Must be topicType "OFFER" (Urgent promo or perk, headline, coupon code e.g. SAVE20 / VIP25, CTA "CALL" or "LEARN_MORE").
+8. OPTION 2: Must be topicType "STANDARD" (What's new, case study, or free audit, CTA "BOOK" or "LEARN_MORE").
+9. OPTION 3: Must be topicType "STANDARD" (Trust, community appreciation, insider tip, or weekend walk-in, CTA "LEARN_MORE" or "CALL").
+10. Tone: ${tone || 'persuasive, high-energy, and professional'}.
 
 RETURN STRICTLY A SINGLE VALID JSON OBJECT matching this structure, with no markdown backticks, no commentary:
 {
@@ -1507,9 +1542,9 @@ RETURN STRICTLY A SINGLE VALID JSON OBJECT matching this structure, with no mark
 
   const userPrompt = `Business Name: ${businessName}
 Category: ${cat}
-City / Region: ${loc} (${address || ''})
-Local Micro-Area: ${neighborhood}
-Key Services: ${servicesText}
+Verified Google Maps Address: ${address || loc}
+Local Landmark / Micro-Area: ${microLocation}
+Active Target Keywords from Keyword Management: ${keywordsText}
 Custom Note / Offer: ${customTopic || 'Showcase top-tier services, exceptional customer care, and limited booking advantages'}
 Unique Batch Hash: #${randomSeed}
 

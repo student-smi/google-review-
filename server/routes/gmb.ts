@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, and, desc } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { accounts, businesses, customerReviews, gmbPosts } from '../db/schema';
+import { accounts, businesses, customerReviews, gmbPosts, locations } from '../db/schema';
 import { createScopedDb } from '../db/scoped';
 import { generateGooglePostDrafts } from '../ai/provider';
 import type { Env } from './public';
@@ -954,11 +954,41 @@ gmbRoutes.post('/import-browser-reviews', async (c) => {
 // 8. AI Google Posts & Updates Manager Endpoints
 // ──────────────────────────────────────────────
 
-// Generate 3 AI Google Post Drafts
+// Upload real business photo for Google Maps Post
+gmbRoutes.post('/posts/upload-image', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const { imageBase64, contentType = 'image/jpeg' } = body;
+
+  if (!imageBase64) {
+    return c.json({ error: 'imageBase64 string is required' }, 400);
+  }
+
+  const mediaId = `postimg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+
+  if (c.env.KV) {
+    await c.env.KV.put(`media_data:${mediaId}`, cleanBase64);
+    await c.env.KV.put(`media_meta:${mediaId}`, JSON.stringify({
+      contentType: contentType || 'image/jpeg',
+      createdAt: Date.now()
+    }));
+  }
+
+  const reqUrl = new URL(c.req.url);
+  const mediaUrl = `${reqUrl.origin}/api/public/media/${mediaId}`;
+
+  return c.json({
+    success: true,
+    mediaId,
+    mediaUrl
+  });
+});
+
+// Generate 3 AI Google Post Drafts with Managed Keywords & Google Maps Pin
 gmbRoutes.post('/posts/generate', async (c) => {
   const ownerId = c.get('ownerId') || c.req.header('X-Owner-Id') || 'owner-default';
   const body = await c.req.json().catch(() => ({}));
-  const { businessId, postType = 'offer', customTopic = '', tone = 'persuasive' } = body;
+  const { businessId, branchId, postType = 'offer', customTopic = '', tone = 'persuasive' } = body;
 
   if (!businessId) {
     return c.json({ error: 'businessId is required' }, 400);
@@ -977,25 +1007,47 @@ gmbRoutes.post('/posts/generate', async (c) => {
     if (fallbackBiz) business = fallbackBiz;
   }
 
-  // Parse chips or business services
-  let services: string[] = [];
-  if (business?.chipsJson) {
+  // Branch lookup if specified
+  let branch: any = null;
+  if (branchId) {
+    const [b] = await db.select().from(locations).where(eq(locations.id, branchId)).limit(1);
+    if (b) branch = b;
+  }
+
+  // Extract managed keywords from Keyword Management (branch chipsJson or business chipsJson)
+  let keywords: string[] = [];
+  const chipsSource = branch?.chipsJson || business?.chipsJson;
+  if (chipsSource) {
     try {
-      const parsed = JSON.parse(business.chipsJson);
+      const parsed = JSON.parse(chipsSource);
       if (Array.isArray(parsed)) {
-        services = parsed.map(String).filter(Boolean);
+        keywords = parsed.map(String).map((s) => s.trim()).filter(Boolean);
       }
     } catch {}
   }
 
   const isUpmark = business?.name?.toLowerCase().includes('upmark') || businessId.toLowerCase().includes('upmark');
-  if (services.length === 0) {
+  if (keywords.length === 0) {
     if (isUpmark) {
-      services = ['SEO & Google Maps Ranking', 'Google & Meta Performance Ads', 'Custom Web Development', 'Brand Strategy', 'Social Media Marketing'];
+      keywords = [
+        'Digital Marketing Agency Ahmedabad',
+        'Local SEO & Google Maps Ranking',
+        'Performance Google & Meta Ads',
+        'Custom Web Development & Shopify',
+        'Social Media Management & Lead Gen'
+      ];
     } else if (business?.category) {
-      services = [business.category, 'Expert Solutions', 'Premium Customer Service'];
+      keywords = [
+        business.category,
+        `Top ${business.category} in ${business.city || 'Ahmedabad'}`,
+        `Best ${business.category} Near Me`
+      ];
     }
   }
+
+  // Google Maps address & micro-location
+  const businessAddress = branch?.address || business?.address || (isUpmark ? '503, Ambience, Commerce Six Roads, Navrangpura, Ahmedabad, Gujarat 380009' : undefined);
+  const businessCity = branch?.city || business?.city || 'Ahmedabad';
 
   // Generate dynamic seed for every request to guarantee 100% fresh, varied posts
   const seed = Date.now() + Math.floor(Math.random() * 1000000);
@@ -1016,23 +1068,26 @@ gmbRoutes.post('/posts/generate', async (c) => {
   }
 
   const result = await generateGooglePostDrafts(c.env.AI, {
-    businessName: business?.name || (isUpmark ? 'Upmark' : 'Local Business'),
-    category: business?.category || (isUpmark ? 'Digital Agency & IT' : 'Local Business'),
-    city: business?.city || 'Ahmedabad',
-    address: business?.address || (isUpmark ? '503, Ambience, Commerce Six Roads, Navrangpura, Ahmedabad, Gujarat 380009' : undefined),
-    phone: business?.phone || (isUpmark ? '+91 83206 99679' : undefined),
+    businessName: branch?.name || business?.name || (isUpmark ? 'Upmark' : 'Local Business'),
+    category: business?.category || (isUpmark ? 'Digital Agency & IT Services' : 'Local Business'),
+    city: businessCity,
+    address: businessAddress,
+    phone: branch?.phone || business?.phone || (isUpmark ? '+91 83206 99679' : undefined),
     website: business?.googleReviewUrl || 'https://loctimize.in',
     postType,
     customTopic: effectiveTopic,
     tone,
     seed,
-    services
+    services: keywords,
+    keywords: keywords
   });
 
   return c.json({
     success: true,
     drafts: result.drafts,
     usedFallback: result.usedFallback,
+    managedKeywords: keywords,
+    googleMapsAddress: businessAddress,
     seed
   });
 });
@@ -1064,6 +1119,8 @@ gmbRoutes.post('/posts/publish', async (c) => {
   let searchUrl: string | null = null;
   let googleNotice = '';
 
+  const postMediaUrl = draft.mediaUrl || draft.imageUrl || null;
+
   // If connected via OAuth, attempt live Google Local Posts API publish
   if (savedToken) {
     try {
@@ -1076,6 +1133,16 @@ gmbRoutes.post('/posts/publish', async (c) => {
           summary: draft.summary,
           topicType: draft.topicType === 'OFFER' ? 'OFFER' : 'STANDARD'
         };
+
+        // Attach real uploaded business photo if present
+        if (postMediaUrl && typeof postMediaUrl === 'string' && postMediaUrl.startsWith('http')) {
+          payload.media = [
+            {
+              mediaFormat: 'PHOTO',
+              sourceUrl: postMediaUrl
+            }
+          ];
+        }
 
         if (draft.topicType === 'OFFER') {
           const startDateObj = new Date();
@@ -1159,7 +1226,7 @@ gmbRoutes.post('/posts/publish', async (c) => {
     couponCode: draft.couponCode || null,
     callToActionType: draft.callToAction?.type || 'CALL',
     callToActionUrl: draft.callToAction?.url || null,
-    mediaUrl: draft.mediaUrl || null,
+    mediaUrl: postMediaUrl,
     googlePostId,
     searchUrl,
     status: googlePostStatus,

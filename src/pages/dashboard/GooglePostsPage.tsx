@@ -60,6 +60,7 @@ interface SavedPostItem {
   couponCode?: string | null;
   callToActionType?: string | null;
   callToActionUrl?: string | null;
+  mediaUrl?: string | null;
   googlePostId?: string | null;
   searchUrl?: string | null;
   status: string;
@@ -91,6 +92,20 @@ export function GooglePostsPage() {
   const [drafts, setDrafts] = useState<GooglePostDraft[]>([]);
   const [notice, setNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Managed Keywords & Google Maps Pin Location
+  const [managedKeywords, setManagedKeywords] = useState<string[]>([]);
+  const [googleMapsAddress, setGoogleMapsAddress] = useState<string>('');
+
+  // Real Uploaded Photos per draft id
+  const [uploadedPhotos, setUploadedPhotos] = useState<{
+    [draftId: string]: {
+      url: string;
+      preview: string;
+      isUploading: boolean;
+      fileName?: string;
+    };
+  }>({});
+
   // Editable Draft Text map
   const [editedSummaries, setEditedSummaries] = useState<{ [id: string]: string }>({});
 
@@ -104,6 +119,28 @@ export function GooglePostsPage() {
   const [gmbStatus, setGmbStatus] = useState<GmbStatus | null>(null);
   const [isConnectingGmb, setIsConnectingGmb] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'published' | 'draft'>('all');
+
+  // Load keywords & Google Maps location from active business
+  useEffect(() => {
+    if (!activeBusiness) return;
+    setGoogleMapsAddress(activeBusiness.address || `${activeBusiness.city || 'Ahmedabad'}, Gujarat`);
+    if (activeBusiness.chipsJson) {
+      try {
+        const parsed = JSON.parse(activeBusiness.chipsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setManagedKeywords(parsed.map(String).map((s) => s.trim()).filter(Boolean));
+          return;
+        }
+      } catch {}
+    }
+    // Default high-intent keywords if none configured
+    setManagedKeywords([
+      'Digital Marketing Agency Ahmedabad',
+      'Local SEO & Google Maps Ranking',
+      'Performance Google & Meta Ads',
+      'Shopify & Web Development'
+    ]);
+  }, [activeBusiness]);
 
   // Load GMB connection status & past posts
   useEffect(() => {
@@ -163,14 +200,91 @@ export function GooglePostsPage() {
     ];
   }, [postType]);
 
-  // Generate AI Posts
+  // Real Photo Upload Handler
+  const handlePhotoSelect = async (draftId: string, file: File) => {
+    if (!file) return;
+
+    if (file.size > 15 * 1024 * 1024) {
+      setNotice({ message: 'Photo size must be under 15MB for Google Maps.', type: 'error' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result as string;
+      setUploadedPhotos((prev) => ({
+        ...prev,
+        [draftId]: {
+          url: '',
+          preview: base64Data,
+          isUploading: true,
+          fileName: file.name
+        }
+      }));
+
+      try {
+        const res = await apiFetch<{ success: boolean; mediaUrl: string; mediaId: string }>(
+          '/api/gmb/posts/upload-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: base64Data,
+              contentType: file.type || 'image/jpeg'
+            })
+          }
+        );
+
+        if (res?.success && res.mediaUrl) {
+          setUploadedPhotos((prev) => ({
+            ...prev,
+            [draftId]: {
+              url: res.mediaUrl,
+              preview: base64Data,
+              isUploading: false,
+              fileName: file.name
+            }
+          }));
+          setNotice({
+            message: '📸 Real business photo attached! Ready to publish directly to Google Maps.',
+            type: 'success'
+          });
+        } else {
+          throw new Error('Photo upload failed');
+        }
+      } catch (err: any) {
+        setUploadedPhotos((prev) => {
+          const next = { ...prev };
+          delete next[draftId];
+          return next;
+        });
+        setNotice({ message: err?.message || 'Failed to upload photo.', type: 'error' });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = (draftId: string) => {
+    setUploadedPhotos((prev) => {
+      const next = { ...prev };
+      delete next[draftId];
+      return next;
+    });
+  };
+
+  // Generate AI Posts with Managed Keywords & Google Maps Pin
   const handleGeneratePosts = async () => {
     if (!activeBusiness?.id) return;
     setIsGenerating(true);
     setNotice(null);
 
     try {
-      const res = await apiFetch<{ success: boolean; drafts: GooglePostDraft[]; usedFallback: boolean }>(
+      const res = await apiFetch<{
+        success: boolean;
+        drafts: GooglePostDraft[];
+        usedFallback: boolean;
+        managedKeywords?: string[];
+        googleMapsAddress?: string;
+      }>(
         '/api/gmb/posts/generate',
         {
           method: 'POST',
@@ -190,6 +304,14 @@ export function GooglePostsPage() {
           initialMap[d.id] = d.summary;
         });
         setEditedSummaries(initialMap);
+
+        if (res.managedKeywords && res.managedKeywords.length > 0) {
+          setManagedKeywords(res.managedKeywords);
+        }
+        if (res.googleMapsAddress) {
+          setGoogleMapsAddress(res.googleMapsAddress);
+        }
+
         setNotice({
           message: '✨ 3 Brand-New AI Google Maps Posts Generated! Review on mobile cards below and hit publish.',
           type: 'success'
@@ -211,6 +333,7 @@ export function GooglePostsPage() {
     setNotice(null);
 
     const summaryToSend = editedSummaries[draft.id] || draft.summary;
+    const photoUrl = uploadedPhotos[draft.id]?.url;
 
     try {
       const res = await apiFetch<{
@@ -224,7 +347,8 @@ export function GooglePostsPage() {
           businessId: activeBusiness.id,
           draft: {
             ...draft,
-            summary: summaryToSend
+            summary: summaryToSend,
+            mediaUrl: photoUrl || undefined
           }
         })
       });
@@ -463,6 +587,40 @@ export function GooglePostsPage() {
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 space-y-5">
+          {/* Active Keywords & Google Maps Pin Integration Banner */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-50/80 via-blue-50/80 to-indigo-50/80 border border-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                <MapPin className="w-4 h-4 text-red-500 shrink-0" />
+                <span>Verified Google Maps Location:</span>
+                <span className="font-semibold text-slate-600 truncate max-w-[280px] sm:max-w-md">
+                  {googleMapsAddress || activeBusiness?.address || 'Ahmedabad, Gujarat'}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-bold text-purple-900 text-[11px] flex items-center gap-1">
+                  <Sparkles size={11} className="text-purple-600" />
+                  Target Keywords from Keyword Management:
+                </span>
+                {managedKeywords.slice(0, 4).map((kw, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-white/90 text-purple-950 border border-purple-200/90 px-2 py-0.5 rounded-lg text-[10px] font-bold shadow-2xs"
+                  >
+                    #{kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <a
+              href="/dashboard/keywords"
+              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0 bg-white px-2.5 py-1.5 rounded-xl border border-blue-200 shadow-2xs cursor-pointer"
+            >
+              <span>Keyword Manager</span>
+              <ExternalLink size={11} />
+            </a>
+          </div>
+
           {/* Goal Selector Cards */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
@@ -714,17 +872,82 @@ export function GooglePostsPage() {
                       </Badge>
                     </div>
 
-                    {/* Photo Placeholder Visual Banner */}
-                    <div className="p-3 bg-gradient-to-r from-purple-50/70 to-indigo-50/70 border-b border-slate-100 flex items-center justify-between text-[11px] text-indigo-900">
-                      <div className="flex items-center gap-1.5 line-clamp-1 pr-2">
-                        <Camera className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        <span className="font-semibold text-slate-700 truncate">
-                          Photo: {draft.suggestedPhoto}
-                        </span>
-                      </div>
-                      <span className="text-[9px] font-black bg-white px-2 py-0.5 rounded-full border border-purple-200 text-purple-700 shrink-0">
-                        High CTR
-                      </span>
+                    {/* Real Business Photo Upload & Preview */}
+                    <div className="border-b border-slate-100 bg-slate-50/70 p-3">
+                      {uploadedPhotos[draft.id] ? (
+                        <div className="space-y-2">
+                          <div className="relative rounded-2xl overflow-hidden aspect-[16/9] bg-slate-900 border border-slate-200 shadow-xs group">
+                            <img
+                              src={uploadedPhotos[draft.id].preview}
+                              alt="Uploaded business post"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                              <Check size={10} /> Real Photo Attached
+                            </div>
+                            {uploadedPhotos[draft.id].isUploading && (
+                              <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center text-white text-xs font-bold gap-2">
+                                <RefreshCw className="w-4 h-4 animate-spin text-purple-300" />
+                                <span>Uploading photo…</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] pt-0.5">
+                            <label className="text-purple-700 hover:text-purple-900 font-bold cursor-pointer flex items-center gap-1">
+                              <Camera size={12} />
+                              <span>Change Photo</span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/jpg"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handlePhotoSelect(draft.id, f);
+                                }}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(draft.id)}
+                              className="text-red-500 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 size={12} />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-slate-500 font-medium truncate max-w-[190px]">
+                              💡 Idea: {draft.suggestedPhoto}
+                            </span>
+                            <span className="text-[9px] font-bold bg-white text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded-full shrink-0">
+                              High CTR
+                            </span>
+                          </div>
+                          <label className="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-white hover:bg-purple-50/50 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition text-center group">
+                            <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition shadow-2xs">
+                              <Camera size={15} />
+                            </div>
+                            <span className="text-xs font-black text-slate-800">
+                              Upload Real Photo
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              JPG, PNG, WEBP · Storefront, team, work or food
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/jpg"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePhotoSelect(draft.id, f);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
 
                     {/* Headline & Editable Text */}
@@ -927,35 +1150,46 @@ export function GooglePostsPage() {
                     key={post.id}
                     className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
                   >
-                    <div className="space-y-1.5 max-w-2xl">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] uppercase font-black px-2 py-0.5 ${
-                            post.status === 'published'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
-                        >
-                          {post.status === 'published' ? '🟢 Live on Google Maps' : '📝 Saved in App'}
-                        </Badge>
-                        <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          {dateStr}
-                        </span>
-                        {post.couponCode && (
-                          <span className="text-[10px] font-mono font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                            Code: {post.couponCode}
-                          </span>
-                        )}
-                      </div>
-
-                      {post.headline && (
-                        <p className="text-xs font-bold text-slate-900">{post.headline}</p>
+                    <div className="flex items-start gap-3.5">
+                      {post.mediaUrl && (
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-slate-200 shadow-2xs">
+                          <img
+                            src={post.mediaUrl}
+                            alt="Post photo"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       )}
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {post.summary}
-                      </p>
+                      <div className="space-y-1.5 max-w-2xl">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] uppercase font-black px-2 py-0.5 ${
+                              post.status === 'published'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {post.status === 'published' ? '🟢 Live on Google Maps' : '📝 Saved in App'}
+                          </Badge>
+                          <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" />
+                            {dateStr}
+                          </span>
+                          {post.couponCode && (
+                            <span className="text-[10px] font-mono font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                              Code: {post.couponCode}
+                            </span>
+                          )}
+                        </div>
+
+                        {post.headline && (
+                          <p className="text-xs font-bold text-slate-900">{post.headline}</p>
+                        )}
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {post.summary}
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
