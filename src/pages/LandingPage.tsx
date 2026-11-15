@@ -1429,18 +1429,6 @@ export function LandingPage() {
                       {googlePostScenarios[activePostScenario].summary}
                     </p>
 
-                    {/* Coupon Code Pill */}
-                    {googlePostScenarios[activePostScenario].couponCode && (
-                      <div className="flex items-center justify-between p-1 px-1.5 rounded-md bg-amber-50 border border-amber-300 text-[9px] text-amber-950 font-semibold">
-                        <span className="flex items-center gap-1">
-                          <Tag size={10} className="text-amber-600" /> Voucher:
-                        </span>
-                        <span className="font-mono font-black tracking-wider text-amber-900 bg-white px-1.5 py-0.2 rounded border border-amber-200">
-                          {googlePostScenarios[activePostScenario].couponCode}
-                        </span>
-                      </div>
-                    )}
-
                     {/* Google Action Button */}
                     <div className="p-1.5 rounded-md bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center gap-1.5 shadow-xs">
                       {googlePostScenarios[activePostScenario].ctaType === 'Call Now' ? (

@@ -990,19 +990,6 @@ export function GooglePostsPage() {
                         </div>
                       </div>
 
-                      {/* Coupon Code Pill if Offer */}
-                      {draft.couponCode && (
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/90 border border-amber-300 text-xs text-amber-950 font-semibold">
-                          <div className="flex items-center gap-1.5">
-                            <Tag className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span>Voucher Code:</span>
-                          </div>
-                          <span className="font-mono font-black tracking-widest text-amber-900 bg-white px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
-                            {draft.couponCode}
-                          </span>
-                        </div>
-                      )}
-
                       {/* Official Google CTA Mock Button */}
                       <div className="p-2.5 rounded-xl bg-slate-100 text-center font-bold text-xs text-slate-800 border border-slate-200 flex items-center justify-center gap-2">
                         {draft.callToAction.type === 'CALL' ? (

@@ -1301,13 +1301,13 @@ function getDeterministicPostFallbacks(params: GenerateGooglePostParams): Google
 
   // 12 High-Converting Dynamic Google Maps Post Archetypes with Managed Keywords & Maps Pin
   const allTemplates = [
-    // 1. Limited Flash Offer
+    // 1. Limited Flash Special
     {
-      topicType: 'OFFER' as const,
-      headline: `⚡ Exclusive Limited Offer: ${kw1} at ${businessName}! 🌟`,
-      summary: `Looking to scale with top-tier ${kw1} in ${loc}? 🌟\n\nFor a limited time, get premium privileges, priority consulting, and verified ROI-focused solutions right here at our ${targetArea} office.\n\n${customNote ? `${customNote}\n\n` : ''}📍 Google Maps Pin: ${address || `${targetArea}, ${loc}`}\n📞 Call now or tap below with promo code "${couponCode}" before slots fill up!`,
+      topicType: 'STANDARD' as const,
+      headline: `⚡ Exclusive Feature: ${kw1} at ${businessName}! 🌟`,
+      summary: `Looking to scale with top-tier ${kw1} in ${loc}? 🌟\n\nGet premium privileges, priority consulting, and verified ROI-focused solutions right here at our ${targetArea} office.\n\n${customNote ? `${customNote}\n\n` : ''}📍 Google Maps Pin: ${address || `${targetArea}, ${loc}`}\n📞 Call now or tap below to connect with our senior specialists today!`,
       callToAction: { type: 'CALL' as const, url: ctaPhone, label: 'Call Now' },
-      couponCode: couponCode,
+      couponCode: null,
       suggestedPhoto: 'Front office reception, team in meeting, or certified work desk',
       hashtags: [`#${kw1.replace(/[^a-zA-Z0-9]/g, '')}`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}Deals`, `#GoogleMapsSEO`]
     },
@@ -1373,11 +1373,11 @@ function getDeterministicPostFallbacks(params: GenerateGooglePostParams): Google
     },
     // 8. Festive & Seasonal Special
     {
-      topicType: 'OFFER' as const,
+      topicType: 'STANDARD' as const,
       headline: `🎉 Special Seasonal Package at ${businessName} (${loc})!`,
-      summary: `Celebrate new growth milestones with ${businessName}! 🎉\n\nWe have rolled out comprehensive ${cat} upgrade packages with complimentary onboarding and priority technical support. Perfect timing to position your brand as the #1 choice in ${loc}.\n\n🎁 Exclusive Code: "${couponCode}"\n📍 Visit us at ${address || loc}\n👉 Tap below to claim your seasonal bundle!`,
+      summary: `Celebrate new growth milestones with ${businessName}! 🎉\n\nWe have rolled out comprehensive ${cat} upgrade packages with complimentary onboarding and priority technical support. Perfect timing to position your brand as the #1 choice in ${loc}.\n\n📍 Visit us at ${address || loc}\n👉 Tap below to claim your seasonal package today!`,
       callToAction: { type: 'BOOK' as const, url: ctaWeb, label: 'Book Online' },
-      couponCode: couponCode,
+      couponCode: null,
       suggestedPhoto: 'Festive branding display, gift hamper, or team celebration',
       hashtags: [`#SeasonalSpecial`, `#FestiveGrowth`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}`]
     },
@@ -1403,13 +1403,13 @@ function getDeterministicPostFallbacks(params: GenerateGooglePostParams): Google
     },
     // 11. Midweek VIP Fast-Track
     {
-      topicType: 'OFFER' as const,
-      headline: `⚡ Midweek Fast-Track: 20% Off at ${businessName}!`,
-      summary: `Give your business the boost it deserves this ${dayName}! ⚡\n\nLock in our VIP ${cat} package before this weekend and enjoy 20% off plus an in-depth competitor gap analysis free of charge.\n\n🏷️ Use Code: "${couponCode}"\n📍 Serving ${loc} (${targetArea})\n👉 Tap Book Online to claim your discount before slots are gone!`,
+      topicType: 'STANDARD' as const,
+      headline: `⚡ Midweek Fast-Track: Accelerate with ${businessName}!`,
+      summary: `Give your business the boost it deserves this ${dayName}! ⚡\n\nLock in our top-tier ${cat} package before this weekend and enjoy priority onboarding plus an in-depth competitor gap analysis free of charge.\n\n📍 Serving ${loc} (${targetArea})\n👉 Tap Book Online to claim your priority slot before slots are gone!`,
       callToAction: { type: 'BOOK' as const, url: ctaWeb, label: 'Book Online' },
-      couponCode: couponCode,
+      couponCode: null,
       suggestedPhoto: 'High-contrast VIP badge or modern laptop showing analytics',
-      hashtags: [`#MidweekSpecial`, `#VIPDiscount`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}`]
+      hashtags: [`#MidweekSpecial`, `#VIPGrowth`, `#${loc.replace(/[^a-zA-Z0-9]/g, '')}`]
     },
     // 12. Local Dominance Showcase
     {
@@ -1502,20 +1502,21 @@ CRITICAL COPYWRITING & FORMATTING RULES:
 4. GOOGLE MAPS MICRO-LOCATION: The business is verified at: "${address || loc}". Prominently reference the micro-area or street landmark ("${microLocation}" or "${loc}") so local customers recognize the exact spot and Google Maps ranks this post for "near me" searches.
 5. HASHTAGS: Derive 1-2 hashtags directly from the target keywords (e.g. #${activeKeywords[0]?.replace(/[^a-zA-Z0-9]/g, '') || 'LocalSEO'}).
 6. EMOJIS: Use 2 to 4 tasteful emojis per post to command attention in the Google Maps feed.
-7. OPTION 1: Must be topicType "OFFER" (Urgent promo or perk, headline, coupon code e.g. SAVE20 / VIP25, CTA "CALL" or "LEARN_MORE").
-8. OPTION 2: Must be topicType "STANDARD" (What's new, case study, or free audit, CTA "BOOK" or "LEARN_MORE").
-9. OPTION 3: Must be topicType "STANDARD" (Trust, community appreciation, insider tip, or weekend walk-in, CTA "LEARN_MORE" or "CALL").
-10. Tone: ${tone || 'persuasive, high-energy, and professional'}.
+7. ALL 3 OPTIONS MUST BE topicType "STANDARD": Never generate "OFFER" topicType or redemption coupon codes (so Google Maps never shows the "Show this code at the shop" voucher box). All posts must be clean, high-converting Google updates with direct Call/Book/Learn More buttons!
+- Option 1: High-impact promotion, VIP perks, or featured service (topicType: "STANDARD", couponCode: null, CTA "CALL" or "LEARN_MORE").
+- Option 2: Local case study, free strategy audit, or new framework (topicType: "STANDARD", couponCode: null, CTA "BOOK" or "LEARN_MORE").
+- Option 3: Local community trust, team expertise, or walk-in consultation (topicType: "STANDARD", couponCode: null, CTA "LEARN_MORE" or "CALL").
+8. Tone: ${tone || 'persuasive, high-energy, and professional'}.
 
 RETURN STRICTLY A SINGLE VALID JSON OBJECT matching this structure, with no markdown backticks, no commentary:
 {
   "drafts": [
     {
-      "topicType": "OFFER",
+      "topicType": "STANDARD",
       "headline": "Catchy headline with emoji",
       "summary": "Punchy 50-85 word post body with local call to action",
       "callToActionType": "CALL",
-      "couponCode": "SAVE20",
+      "couponCode": null,
       "suggestedPhoto": "Short photo recommendation",
       "hashtags": ["#Tag1", "#Tag2", "#Tag3"]
     },
@@ -1574,7 +1575,7 @@ Write 3 brand-new, uniquely worded Google Maps posts now. Strictly 50-85 words p
 
         return {
           id: `ai_post_${Date.now()}_${idx + 1}_${Math.random().toString(36).substring(2, 6)}`,
-          topicType: d.topicType === 'OFFER' ? 'OFFER' : 'STANDARD',
+          topicType: 'STANDARD',
           headline: String(d.headline || fallback.headline).trim(),
           summary: String(d.summary || fallback.summary).trim(),
           callToAction: {
@@ -1582,7 +1583,7 @@ Write 3 brand-new, uniquely worded Google Maps posts now. Strictly 50-85 words p
             url: ctaUrl,
             label: ctaLabel
           },
-          couponCode: d.couponCode ? String(d.couponCode).trim() : (d.topicType === 'OFFER' ? 'SAVE20' : null),
+          couponCode: null,
           suggestedPhoto: String(d.suggestedPhoto || fallback.suggestedPhoto).trim(),
           hashtags: Array.isArray(d.hashtags) && d.hashtags.length > 0 ? d.hashtags.map((t: any) => String(t).trim()) : fallback.hashtags
         };

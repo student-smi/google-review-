@@ -1128,10 +1128,11 @@ gmbRoutes.post('/posts/publish', async (c) => {
       if (cleanAcc && cleanLoc) {
         const postUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/localPosts`;
         
+        // Publish as clean standard Google Update (no awkward "Show this code at the shop" coupon cards)
         const payload: any = {
           languageCode: 'en-US',
           summary: draft.summary,
-          topicType: draft.topicType === 'OFFER' ? 'OFFER' : 'STANDARD'
+          topicType: 'STANDARD'
         };
 
         // Attach real uploaded business photo if present
@@ -1142,31 +1143,6 @@ gmbRoutes.post('/posts/publish', async (c) => {
               sourceUrl: postMediaUrl
             }
           ];
-        }
-
-        if (draft.topicType === 'OFFER') {
-          const startDateObj = new Date();
-          const endDateObj = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          payload.event = {
-            title: draft.headline || 'Special Limited Offer',
-            schedule: {
-              startDate: {
-                year: startDateObj.getFullYear(),
-                month: startDateObj.getMonth() + 1,
-                day: startDateObj.getDate()
-              },
-              endDate: {
-                year: endDateObj.getFullYear(),
-                month: endDateObj.getMonth() + 1,
-                day: endDateObj.getDate()
-              }
-            }
-          };
-          if (draft.couponCode) {
-            payload.offer = {
-              couponCode: draft.couponCode
-            };
-          }
         }
 
         // Call to action: If actionType is CALL, url MUST NOT be set (Google API strict rule).
