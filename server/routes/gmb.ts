@@ -1054,16 +1054,16 @@ gmbRoutes.post('/posts/generate', async (c) => {
 
   let effectiveTopic = customTopic?.trim() || '';
   if (!effectiveTopic) {
+    const kwA = keywords[0] || (isUpmark ? 'Digital Marketing Course' : (business?.category || 'Quality Services'));
+    const kwB = keywords[1] || (isUpmark ? 'Practical Training & Job Placement' : 'Expert Solutions');
+    const kwC = keywords[2] || (isUpmark ? 'SEO Training' : 'Top Rated Services');
+
     if (postType === 'offer') {
-      effectiveTopic = isUpmark
-        ? 'Flat 20% off on complete Google Business Profile local SEO setup and digital audit'
-        : 'Special limited seasonal offer with priority consultation and exclusive savings';
+      effectiveTopic = `Special limited promotional offer on our top-rated ${kwA} and ${kwB} with priority enrollment and exclusive savings`;
     } else if (postType === 'update') {
-      effectiveTopic = isUpmark
-        ? 'Announcing high-performance Meta and Google Ads growth frameworks for local businesses'
-        : 'Highlighting certified service upgrades, streamlined appointments, and 5-star customer experience';
+      effectiveTopic = `Announcing latest updates, live practical training sessions, and certified outcomes for ${kwA} and ${kwB}`;
     } else if (postType === 'festive') {
-      effectiveTopic = 'Community celebration, customer appreciation, and warm walk-in consultations';
+      effectiveTopic = `Celebrating local success and community trust for ${kwA} and ${kwC} in ${businessCity}`;
     }
   }
 

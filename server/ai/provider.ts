@@ -1498,7 +1498,10 @@ TASK: Write 3 DISTINCT, HIGH-CONVERTING, FRESH GOOGLE MAPS UPDATE POSTS for "${b
 CRITICAL COPYWRITING & FORMATTING RULES:
 1. PUNCHY LENGTH: Each post summary MUST be strictly between 50 and 85 words. NEVER write rambling or cut-off sentences. Google Maps users read on mobile!
 2. DISTINCT TONE & ANGLES: Never use the same phrases or templates twice. Every option must have a fresh, unique opening hook and clear value proposition.
-3. MANAGED KEYWORDS INTEGRATION: Strictly weave 1 or 2 of these active target keywords naturally into each post summary: [${keywordsText}]. Do not stuff keywords—weave them seamlessly into benefits.
+3. MANDATORY KEYWORD INCLUSION IN SUMMARY TEXT:
+You MUST explicitly write at least 2 of the business's target keywords directly INSIDE THE BODY SENTENCES of each post summary.
+The target keywords are: [${keywordsText}].
+DO NOT just leave keywords in hashtags! Searchers and Google must read the exact keywords (e.g. "${activeKeywords[0] || 'service'}", "${activeKeywords[1] || 'training'}") inside the readable sentences of the post.
 4. GOOGLE MAPS MICRO-LOCATION: The business is verified at: "${address || loc}". Prominently reference the micro-area or street landmark ("${microLocation}" or "${loc}") so local customers recognize the exact spot and Google Maps ranks this post for "near me" searches.
 5. HASHTAGS: Derive 1-2 hashtags directly from the target keywords (e.g. #${activeKeywords[0]?.replace(/[^a-zA-Z0-9]/g, '') || 'LocalSEO'}).
 6. EMOJIS: Use 2 to 4 tasteful emojis per post to command attention in the Google Maps feed.
@@ -1541,20 +1544,36 @@ RETURN STRICTLY A SINGLE VALID JSON OBJECT matching this structure, with no mark
   ]
 }`;
 
+  const kwPrompt1 = activeKeywords[0] || 'Top Services';
+  const kwPrompt2 = activeKeywords[1] || 'Expert Training';
+  const kwPrompt3 = activeKeywords[2] || 'Practical Solutions';
+  const kwPrompt4 = activeKeywords[3] || activeKeywords[0] || 'Certified Guidance';
+
   const userPrompt = `Business Name: ${businessName}
 Category: ${cat}
 Verified Google Maps Address: ${address || loc}
 Local Landmark / Micro-Area: ${microLocation}
-Active Target Keywords from Keyword Management: ${keywordsText}
+
+MANDATORY KEYWORDS TO INCLUDE DIRECTLY IN BODY SENTENCES:
+1. "${kwPrompt1}"
+2. "${kwPrompt2}"
+3. "${kwPrompt3}"
+4. "${kwPrompt4}"
+
+Draft-Specific Keyword Instructions:
+- Option 1 Summary MUST include "${kwPrompt1}" and "${kwPrompt2}" directly inside the sentences.
+- Option 2 Summary MUST include "${kwPrompt2}" and "${kwPrompt3}" directly inside the sentences.
+- Option 3 Summary MUST include "${kwPrompt1}" and "${kwPrompt4}" directly inside the sentences.
+
 Custom Note / Offer: ${customTopic || 'Showcase top-tier services, exceptional customer care, and limited booking advantages'}
 Unique Batch Hash: #${randomSeed}
 
 Creative Angle Directives for this generation:
-- Option 1 (OFFER): ${angle1}
-- Option 2 (UPDATE): ${angle2}
+- Option 1 (FEATURE/PROMO): ${angle1}
+- Option 2 (CASE STUDY/AUDIT): ${angle2}
 - Option 3 (COMMUNITY/TRUST): ${angle3}
 
-Write 3 brand-new, uniquely worded Google Maps posts now. Strictly 50-85 words per summary!`;
+Write 3 brand-new, uniquely worded Google Maps posts now. Strictly 50-85 words per summary, with the assigned keywords woven right inside the sentences!`;
 
   try {
     const response = await aiBinding.run('@cf/meta/llama-3.2-3b-instruct', {
