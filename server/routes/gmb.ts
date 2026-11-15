@@ -1110,9 +1110,27 @@ gmbRoutes.post('/posts/publish', async (c) => {
     if (fallbackBiz) business = fallbackBiz;
   }
 
-  const { accessToken: savedToken, meta } = await getGmbConnection(c, businessId, ownerId);
+  const { accessToken: savedToken, meta, isExpired } = await getGmbConnection(c, businessId, ownerId);
   const now = Math.floor(Date.now() / 1000);
   const postId = `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  // 1. Guard: Check if Google account is connected
+  if (!savedToken) {
+    return c.json({
+      success: false,
+      notConnected: true,
+      error: 'Google Business Profile is not connected. Please connect your Google Profile first to publish directly to Google Maps.'
+    }, 400);
+  }
+
+  // 2. Guard: Check if Google session is expired
+  if (isExpired) {
+    return c.json({
+      success: false,
+      sessionExpired: true,
+      error: 'Google session has expired. Please 1-click sync your Google account first to publish directly to Google Maps.'
+    }, 401);
+  }
 
   let googlePostStatus = 'draft';
   let googlePostId: string | null = null;
@@ -1121,74 +1139,85 @@ gmbRoutes.post('/posts/publish', async (c) => {
 
   const postMediaUrl = draft.mediaUrl || draft.imageUrl || null;
 
-  // If connected via OAuth, attempt live Google Local Posts API publish
-  if (savedToken) {
-    try {
-      const { cleanAcc, cleanLoc } = await resolveGmbIds(savedToken, meta, business);
-      if (cleanAcc && cleanLoc) {
-        const postUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/localPosts`;
-        
-        // Publish as clean standard Google Update (no awkward "Show this code at the shop" coupon cards)
-        const payload: any = {
-          languageCode: 'en-US',
-          summary: draft.summary,
-          topicType: 'STANDARD'
-        };
-
-        // Attach real uploaded business photo if present
-        if (postMediaUrl && typeof postMediaUrl === 'string' && postMediaUrl.startsWith('http')) {
-          payload.media = [
-            {
-              mediaFormat: 'PHOTO',
-              sourceUrl: postMediaUrl
-            }
-          ];
-        }
-
-        // Call to action: If actionType is CALL, url MUST NOT be set (Google API strict rule).
-        // If BOOK / LEARN_MORE / ORDER, pass valid website url.
-        if (draft.callToAction?.type && draft.callToAction.type !== 'NONE') {
-          if (draft.callToAction.type === 'CALL') {
-            payload.callToAction = {
-              actionType: 'CALL'
-            };
-          } else {
-            payload.callToAction = {
-              actionType: draft.callToAction.type,
-              url: draft.callToAction.url || business?.googleReviewUrl || 'https://loctimize.in'
-            };
-          }
-        }
-
-        const gmbRes = await fetch(postUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${savedToken}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (gmbRes.ok) {
-          const gmbData: any = await gmbRes.json();
-          googlePostStatus = 'published';
-          googlePostId = gmbData.name || null;
-          searchUrl = gmbData.searchUrl || null;
-          googleNotice = 'Successfully published directly to your Google Business Profile!';
-        } else if (gmbRes.status === 401) {
-          googleNotice = 'Google session expired. Saved locally. Please re-authorize Google Business Profile.';
-        } else {
-          const errText = await gmbRes.text().catch(() => '');
-          googleNotice = `Google API returned status ${gmbRes.status}. Post saved to dashboard.`;
-          console.warn('Google localPost error:', gmbRes.status, errText);
-        }
-      }
-    } catch (err: any) {
-      console.warn('Google API post execution failed:', err);
-      googleNotice = err?.message || 'Could not reach Google API. Post saved locally.';
+  // Attempt live Google Local Posts API publish
+  try {
+    const { cleanAcc, cleanLoc } = await resolveGmbIds(savedToken, meta, business);
+    if (!cleanAcc || !cleanLoc) {
+      return c.json({
+        success: false,
+        error: 'Google Business Location ID could not be resolved. Please sync your Google Profile.'
+      }, 400);
     }
-  } else {
-    googleNotice = 'Saved to dashboard. Connect Google account for direct 1-click publishing or use Copy & Open Google.';
+
+    const postUrl = `https://mybusiness.googleapis.com/v4/accounts/${cleanAcc}/locations/${cleanLoc}/localPosts`;
+    
+    // Publish as clean standard Google Update (no awkward "Show this code at the shop" coupon cards)
+    const payload: any = {
+      languageCode: 'en-US',
+      summary: draft.summary,
+      topicType: 'STANDARD'
+    };
+
+    // Attach real uploaded business photo if present
+    if (postMediaUrl && typeof postMediaUrl === 'string' && postMediaUrl.startsWith('http')) {
+      payload.media = [
+        {
+          mediaFormat: 'PHOTO',
+          sourceUrl: postMediaUrl
+        }
+      ];
+    }
+
+    // Call to action: If actionType is CALL, url MUST NOT be set (Google API strict rule).
+    // If BOOK / LEARN_MORE / ORDER, pass valid website url.
+    if (draft.callToAction?.type && draft.callToAction.type !== 'NONE') {
+      if (draft.callToAction.type === 'CALL') {
+        payload.callToAction = {
+          actionType: 'CALL'
+        };
+      } else {
+        payload.callToAction = {
+          actionType: draft.callToAction.type,
+          url: draft.callToAction.url || business?.googleReviewUrl || 'https://loctimize.in'
+        };
+      }
+    }
+
+    const gmbRes = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${savedToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (gmbRes.ok) {
+      const gmbData: any = await gmbRes.json();
+      googlePostStatus = 'published';
+      googlePostId = gmbData.name || null;
+      searchUrl = gmbData.searchUrl || null;
+      googleNotice = 'Successfully published directly to your Google Business Profile!';
+    } else if (gmbRes.status === 401) {
+      return c.json({
+        success: false,
+        sessionExpired: true,
+        error: 'Google session expired or was revoked. Please 1-click sync your Google account first to publish directly to Google Maps.'
+      }, 401);
+    } else {
+      const errText = await gmbRes.text().catch(() => '');
+      console.warn('Google localPost error:', gmbRes.status, errText);
+      return c.json({
+        success: false,
+        error: `Google API returned status ${gmbRes.status}: ${errText || 'Could not publish to Google Maps'}`
+      }, 400);
+    }
+  } catch (err: any) {
+    console.warn('Google API post execution failed:', err);
+    return c.json({
+      success: false,
+      error: err?.message || 'Could not reach Google API. Please check your internet connection or sync again.'
+    }, 500);
   }
 
   // Record in D1 gmbPosts table

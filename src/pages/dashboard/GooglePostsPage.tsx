@@ -33,6 +33,13 @@ import {
   Star
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import {
+  fetchGmbStatus,
+  requestFreshGoogleToken,
+  connectGmb,
+  type GmbStatus
+} from '@/lib/gmb';
+import { cn } from '@/lib/utils';
 import type { BusinessItem } from './DashboardLayout';
 
 interface GooglePostDraft {
@@ -67,16 +74,6 @@ interface SavedPostItem {
   errorMessage?: string | null;
   publishedAt?: number | null;
   createdAt: number;
-}
-
-interface GmbStatus {
-  connected: boolean;
-  meta?: {
-    connectedEmail?: string;
-    businessTitle?: string;
-    locationName?: string;
-  };
-  requiresReauth?: boolean;
 }
 
 export function GooglePostsPage() {
@@ -116,8 +113,8 @@ export function GooglePostsPage() {
   // History & Status
   const [savedPosts, setSavedPosts] = useState<SavedPostItem[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
-  const [gmbStatus, setGmbStatus] = useState<GmbStatus | null>(null);
-  const [isConnectingGmb, setIsConnectingGmb] = useState(false);
+  const [gmbStatus, setGmbStatus] = useState<GmbStatus>({ isConnected: false });
+  const [isSyncingGmb, setIsSyncingGmb] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   // Load keywords & Google Maps location from active business
@@ -142,20 +139,58 @@ export function GooglePostsPage() {
     ]);
   }, [activeBusiness]);
 
-  // Load GMB connection status & past posts
+  // Load GMB connection status & past posts + listen to status changes
   useEffect(() => {
     if (!activeBusiness?.id) return;
     loadGmbStatus();
     loadPastPosts();
+
+    const handleGmbStatusChanged = (e: any) => {
+      if (!e?.detail?.businessId || e.detail.businessId === activeBusiness.id) {
+        loadGmbStatus();
+      }
+    };
+
+    window.addEventListener('gmb-status-changed', handleGmbStatusChanged);
+    return () => {
+      window.removeEventListener('gmb-status-changed', handleGmbStatusChanged);
+    };
   }, [activeBusiness?.id]);
 
   const loadGmbStatus = async () => {
     if (!activeBusiness?.id) return;
     try {
-      const res = await apiFetch<GmbStatus>(`/api/gmb/status?businessId=${activeBusiness.id}`);
-      setGmbStatus(res || { connected: false });
+      const res = await fetchGmbStatus(activeBusiness.id);
+      setGmbStatus(res);
     } catch {
-      setGmbStatus({ connected: false });
+      setGmbStatus({ isConnected: false });
+    }
+  };
+
+  // 1-Click Instant Google OAuth Token Sync
+  const handleSyncGmb = async () => {
+    if (!activeBusiness?.id) return;
+    setIsSyncingGmb(true);
+    setNotice(null);
+    try {
+      const freshToken = await requestFreshGoogleToken('consent');
+      if (freshToken) {
+        await connectGmb(activeBusiness.id, freshToken);
+        const updated = await fetchGmbStatus(activeBusiness.id);
+        setGmbStatus(updated);
+        setNotice({
+          message: '✅ Google session synced successfully! Ready to publish directly to Google Maps.',
+          type: 'success'
+        });
+      }
+    } catch (err: any) {
+      console.warn('Google Sync failed:', err);
+      setNotice({
+        message: err?.message || 'Google sync cancelled or failed. Please grant permissions on Google sign-in.',
+        type: 'error'
+      });
+    } finally {
+      setIsSyncingGmb(false);
     }
   };
 
@@ -329,6 +364,27 @@ export function GooglePostsPage() {
   // 1-Click Direct Publish to Google Maps
   const handlePublishPost = async (draft: GooglePostDraft) => {
     if (!activeBusiness?.id) return;
+
+    // Guard 1: Check if Google Profile is connected
+    if (!gmbStatus.isConnected) {
+      setNotice({
+        message: '⚠️ Google Profile connect nahi hai! Live publish karne ke liye pehle "Connect Google Profile" karein.',
+        type: 'error'
+      });
+      handleSyncGmb();
+      return;
+    }
+
+    // Guard 2: Check if Google session is expired
+    if (gmbStatus.isExpired) {
+      setNotice({
+        message: '⚠️ Google session expire ho gaya hai! Post publish nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+        type: 'error'
+      });
+      handleSyncGmb();
+      return;
+    }
+
     setPublishingId(draft.id);
     setNotice(null);
 
@@ -338,9 +394,12 @@ export function GooglePostsPage() {
     try {
       const res = await apiFetch<{
         success: boolean;
-        post: SavedPostItem;
-        googlePublished: boolean;
-        message: string;
+        post?: SavedPostItem;
+        googlePublished?: boolean;
+        message?: string;
+        sessionExpired?: boolean;
+        notConnected?: boolean;
+        error?: string;
       }>('/api/gmb/posts/publish', {
         method: 'POST',
         body: JSON.stringify({
@@ -353,22 +412,33 @@ export function GooglePostsPage() {
         })
       });
 
-      if (res?.success) {
-        if (res.googlePublished) {
-          setNotice({
-            message: '🎉 Awesome! Post is now LIVE directly on Google Maps and Google Search!',
-            type: 'success'
-          });
-        } else {
-          setNotice({
-            message: `Post saved to dashboard! ${res.message || 'Connect Google account to enable 100% direct publishing.'}`,
-            type: 'info'
-          });
-        }
+      if (res?.success && res.googlePublished) {
+        setNotice({
+          message: '🎉 Awesome! Post is now LIVE directly on Google Maps and Google Search!',
+          type: 'success'
+        });
         await loadPastPosts();
+      } else if (res?.sessionExpired) {
+        setGmbStatus((prev) => ({ ...prev, isConnected: true, isExpired: true }));
+        setNotice({
+          message: '⚠️ Google session expire ho gaya hai! Post live nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+          type: 'error'
+        });
+        handleSyncGmb();
+      } else {
+        throw new Error(res?.error || res?.message || 'Failed to publish post');
       }
     } catch (err: any) {
-      setNotice({ message: err?.message || 'Failed to publish post.', type: 'error' });
+      if (err?.message?.includes('expired') || err?.status === 401) {
+        setGmbStatus((prev) => ({ ...prev, isConnected: true, isExpired: true }));
+        setNotice({
+          message: '⚠️ Google session expire ho gaya hai! Post live nahi hua. Pehle "⚡ 1-Click Sync Google" karein.',
+          type: 'error'
+        });
+        handleSyncGmb();
+      } else {
+        setNotice({ message: err?.message || 'Failed to publish post to Google Maps.', type: 'error' });
+      }
     } finally {
       setPublishingId(null);
     }
@@ -381,19 +451,6 @@ export function GooglePostsPage() {
     setCopiedId(draft.id);
     setTimeout(() => setCopiedId(null), 3000);
 
-    if (activeBusiness?.id) {
-      apiFetch('/api/gmb/posts/publish', {
-        method: 'POST',
-        body: JSON.stringify({
-          businessId: activeBusiness.id,
-          draft: {
-            ...draft,
-            summary: textToCopy
-          }
-        })
-      }).then(() => loadPastPosts()).catch(() => {});
-    }
-
     const placeId = activeBusiness?.googlePlaceId || '';
     const googlePostUrl = placeId
       ? `https://search.google.com/local/posts?placeid=${placeId}`
@@ -401,22 +458,9 @@ export function GooglePostsPage() {
     window.open(googlePostUrl, '_blank', 'noopener,noreferrer');
   };
 
-  // Connect Google Profile OAuth trigger
-  const handleConnectGoogle = async () => {
-    if (!activeBusiness?.id) return;
-    setIsConnectingGmb(true);
-    try {
-      const res = await apiFetch<{ authUrl: string }>(`/api/gmb/connect?businessId=${activeBusiness.id}`, {
-        method: 'POST'
-      });
-      if (res?.authUrl) {
-        window.location.href = res.authUrl;
-      }
-    } catch (err: any) {
-      setNotice({ message: err?.message || 'Failed to initiate Google authorization.', type: 'error' });
-    } finally {
-      setIsConnectingGmb(false);
-    }
+  // Connect Google Profile OAuth trigger (uses GIS popup helper)
+  const handleConnectGoogle = () => {
+    handleSyncGmb();
   };
 
   // Delete past post
@@ -500,23 +544,13 @@ export function GooglePostsPage() {
 
           {/* Connection Status Card */}
           <div className="shrink-0 bg-white/10 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-white/15 flex items-center gap-3">
-            {gmbStatus?.connected ? (
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Google Account Connected</span>
-                </div>
-                <p className="text-[11px] text-slate-300 font-mono">
-                  {gmbStatus.meta?.connectedEmail || '1-Click Direct Publish Live'}
-                </p>
-              </div>
-            ) : (
+            {!gmbStatus.isConnected ? (
               <Button
-                onClick={handleConnectGoogle}
-                disabled={isConnectingGmb}
-                className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 px-4 h-10 cursor-pointer border-0"
+                onClick={handleSyncGmb}
+                disabled={isSyncingGmb}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-md gap-1.5 px-4 h-10 cursor-pointer border-0"
               >
-                {isConnectingGmb ? (
+                {isSyncingGmb ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     <span>Connecting…</span>
@@ -528,6 +562,49 @@ export function GooglePostsPage() {
                   </>
                 )}
               </Button>
+            ) : gmbStatus.isExpired ? (
+              <div className="flex items-center gap-2.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span>Session Expired</span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/90 font-mono">
+                    Sync required to publish
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSyncGmb}
+                  disabled={isSyncingGmb}
+                  className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 px-3 h-8.5 cursor-pointer border-0 shrink-0"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", isSyncingGmb && "animate-spin")} />
+                  <span>{isSyncingGmb ? 'Syncing...' : '⚡ Sync'}</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Google Connected & Live</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-mono truncate max-w-[150px]">
+                    {gmbStatus.connectedEmail || 'Ready to Publish'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncGmb}
+                  disabled={isSyncingGmb}
+                  className="h-8 px-2.5 text-[11px] text-white border-white/20 bg-white/5 hover:bg-white/10 hover:text-white rounded-lg cursor-pointer"
+                  title="Re-sync Google Token"
+                >
+                  <RefreshCw className={cn("w-3 h-3 mr-1 text-slate-300", isSyncingGmb && "animate-spin")} />
+                  <span>Sync</span>
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -565,6 +642,38 @@ export function GooglePostsPage() {
           </div>
         </div>
       </div>
+
+      {/* Expired Session Alert Banner */}
+      {gmbStatus.isConnected && gmbStatus.isExpired && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-400 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-xs font-black">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                  Google Maps Session Expired
+                </h3>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 shadow-2xs">
+                  ⚡ Sync Required
+                </span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed max-w-2xl">
+                Google security policy ke hisaab se OAuth session expire ho gaya hai. Google Maps par live post karne ke liye pehle 1-click sync karein.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={handleSyncGmb}
+            disabled={isSyncingGmb}
+            className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md gap-1.5 px-5 h-10 shrink-0 cursor-pointer border-0"
+          >
+            <RefreshCw className={cn("w-4 h-4", isSyncingGmb && "animate-spin")} />
+            <span>{isSyncingGmb ? 'Syncing Session…' : '⚡ 1-Click Sync Google Now'}</span>
+          </Button>
+        </div>
+      )}
 
       {/* Main Studio Controls Card */}
       <Card className="rounded-3xl border-slate-200 shadow-sm overflow-hidden bg-white">
@@ -1015,23 +1124,63 @@ export function GooglePostsPage() {
 
                   {/* Publishing Actions Footer */}
                   <div className="p-4 pt-0 space-y-2 border-t border-slate-100 bg-slate-50/40">
-                    <Button
-                      onClick={() => handlePublishPost(draft)}
-                      disabled={isPublishingThis}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer"
-                    >
-                      {isPublishingThis ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Publishing to Google Maps…</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Publish to Google Maps (1-Click)</span>
-                        </>
-                      )}
-                    </Button>
+                    {gmbStatus.isExpired ? (
+                      <Button
+                        onClick={handleSyncGmb}
+                        disabled={isSyncingGmb}
+                        className="w-full bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer border-0"
+                        title="Google session has expired. Click to 1-click sync and publish"
+                      >
+                        {isSyncingGmb ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Syncing Google Session…</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>⚡ Pehle Google Sync Karein (Session Expired)</span>
+                          </>
+                        )}
+                      </Button>
+                    ) : !gmbStatus.isConnected ? (
+                      <Button
+                        onClick={handleSyncGmb}
+                        disabled={isSyncingGmb}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer"
+                        title="Connect Google Business Profile to publish directly"
+                      >
+                        {isSyncingGmb ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Connecting Google…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Store className="w-3.5 h-3.5" />
+                            <span>Pehle Google Connect Karein</span>
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handlePublishPost(draft)}
+                        disabled={isPublishingThis}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs gap-1.5 h-10 cursor-pointer"
+                      >
+                        {isPublishingThis ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Publishing to Google Maps…</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Publish to Google Maps (1-Click)</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
 
                     <Button
                       variant="outline"
