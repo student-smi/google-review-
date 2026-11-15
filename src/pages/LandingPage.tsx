@@ -278,8 +278,8 @@ const googlePostScenarios = [
     badge: 'Special Offer',
     badgeColor: 'amber',
     headline: '⚡ Flat 20% Off Weekend Cold Brew & Bakery Special!',
-    summary: 'Make your weekend mornings special with fresh single-origin brews and artisanal pastries at The Roastery. Show this post at our Navrangpura counter or order for priority pickup!',
-    couponCode: 'ROAST20',
+    summary: 'Make your weekend mornings special with fresh single-origin brews and artisanal pastries at The Roastery. Visit our Navrangpura cafe or call for priority counter pickup!',
+    imageUrl: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80',
     ctaType: 'Call Now',
     photoTip: 'Signature cold brew pour & artisanal croissant display',
     hashtags: ['#AhmedabadCafes', '#WeekendSpecial', '#NavrangpuraEats'],
@@ -295,7 +295,7 @@ const googlePostScenarios = [
     badgeColor: 'blue',
     headline: '✨ Painless Laser Teeth Whitening Now Available!',
     summary: 'Upgrade your smile in just 45 minutes! We have introduced advanced German laser whitening technology with zero sensitivity and immediate results. 100% painless and supervised by certified specialists.',
-    couponCode: null,
+    imageUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80',
     ctaType: 'Book Online',
     photoTip: 'Modern sterile treatment suite & consultation desk',
     hashtags: ['#DentalAhmedabad', '#LaserWhitening', '#BodakdevDentist'],
@@ -311,7 +311,7 @@ const googlePostScenarios = [
     badgeColor: 'purple',
     headline: '❤️ Celebrating 500+ Five-Star Google Reviews!',
     summary: 'A heartfelt thank you to our wonderful Ahmedabad patrons! Your trust fuels our artistry everyday. To celebrate, enjoy a complimentary deep conditioning treatment with any hair styling this week.',
-    couponCode: 'LUXE500',
+    imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
     ctaType: 'Call Now',
     photoTip: 'Styling team celebration & 5-star Google recognition plaque',
     hashtags: ['#LuxeHairStudio', '#PrahladNagarSalon', '#5StarHairCare'],
@@ -1271,7 +1271,7 @@ export function LandingPage() {
               Turn Google Maps Into a <span className="text-blue-600">24/7 Customer Magnet.</span>
             </h2>
             <p className="text-slate-600 text-xs sm:text-[13px] max-w-lg mx-auto leading-normal">
-              Publish weekly discounts, service launches, and updates directly to Google Maps in 1-click. Active profiles win up to 2.4x more customer calls.
+              Publish weekly discounts, service launches & real business photos directly to Google Maps in 1-click. Active profiles win up to 2.4x more customer calls.
             </p>
           </div>
 
@@ -1320,9 +1320,9 @@ export function LandingPage() {
                     02
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 leading-tight">2.4x More Customer Phone Calls</h3>
+                    <h3 className="text-xs sm:text-[13px] font-bold text-slate-900 leading-tight">Attach Real Photos (2.4x Engagement)</h3>
                     <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 leading-snug">
-                      Customers browsing Google Maps see your active offer with a direct "Call Now" or "Book Online" action button before competitors.
+                      Upload real photos of your shopfront, food, team, or clinic directly from your phone/PC. Real customer photos command 2.4x higher trust than generic art.
                     </p>
                   </div>
                 </div>
@@ -1411,13 +1411,21 @@ export function LandingPage() {
                     </span>
                   </div>
 
-                  {/* Suggested Photo Advice Banner */}
-                  <div className="px-2.5 py-1 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[8.5px] text-slate-600">
-                    <span className="flex items-center gap-1 truncate pr-1">
-                      <Camera size={10} className="text-blue-600 shrink-0" />
-                      <span className="truncate">{googlePostScenarios[activePostScenario].photoTip}</span>
-                    </span>
-                    <span className="text-[7.5px] font-bold text-blue-600 shrink-0 bg-blue-50 px-1 py-0.2 rounded">High CTR</span>
+                  {/* Real Uploaded Photo in Google Maps Card */}
+                  <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900 border-b border-slate-100 group">
+                    <img
+                      src={googlePostScenarios[activePostScenario].imageUrl}
+                      alt={googlePostScenarios[activePostScenario].businessName}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-1.5 left-1.5 bg-black/65 backdrop-blur-xs text-white text-[7.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                      <Camera size={9} className="text-emerald-400" />
+                      <span>Real Photo Attached</span>
+                    </div>
+                    <div className="absolute bottom-1 right-1.5 bg-white/90 backdrop-blur-xs text-slate-800 text-[7px] font-semibold px-1.5 py-0.2 rounded shadow-xs">
+                      1-Tap Upload from Phone/PC
+                    </div>
                   </div>
 
                   {/* Post Content */}
