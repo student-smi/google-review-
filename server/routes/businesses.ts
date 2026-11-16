@@ -9,6 +9,60 @@ export const businessRoutes = new Hono<{ Bindings: Env; Variables: { ownerId: st
 
 const getOwnerId = (c: any): string => c.get('ownerId') || c.req.header('X-Owner-Id') || c.req.header('X-Dev-Owner-Id') || 'owner-default';
 
+export async function purgeBusinessKvCache(kv: any, db: any, businessId: string, knownSlug?: string | null) {
+  if (!kv) return;
+  try {
+    const keys = new Set<string>();
+    if (knownSlug) {
+      keys.add(`qr:${knownSlug}`);
+      keys.add(`qr:${knownSlug.toLowerCase()}`);
+      const base = knownSlug.split('-')[0]?.toLowerCase();
+      if (base) keys.add(`qr:${base}`);
+    }
+    keys.add(`qr:${businessId}`);
+
+    // Business record itself
+    try {
+      const [biz] = await db.select({ slug: businesses.slug }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+      if (biz?.slug) {
+        keys.add(`qr:${biz.slug}`);
+        keys.add(`qr:${biz.slug.toLowerCase()}`);
+        const base = biz.slug.split('-')[0]?.toLowerCase();
+        if (base) keys.add(`qr:${base}`);
+      }
+    } catch {}
+
+    // QR codes
+    try {
+      const qrs = await db.select({ code: qrCodes.code }).from(qrCodes).where(eq(qrCodes.businessId, businessId));
+      for (const q of qrs) {
+        if (q.code) {
+          keys.add(`qr:${q.code}`);
+          keys.add(`qr:${q.code.toLowerCase()}`);
+        }
+      }
+    } catch {}
+
+    // Branch locations
+    try {
+      const locs = await db.select({ id: locations.id, slug: locations.slug }).from(locations).where(eq(locations.businessId, businessId));
+      for (const l of locs) {
+        if (l.id) keys.add(`qr:${l.id}`);
+        if (l.slug) {
+          keys.add(`qr:${l.slug}`);
+          keys.add(`qr:${l.slug.toLowerCase()}`);
+        }
+      }
+    } catch {}
+
+    for (const key of keys) {
+      await kv.delete(key).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('purgeBusinessKvCache warning:', err);
+  }
+}
+
 // List all businesses belonging to current owner (with search, filter & location enrichment)
 businessRoutes.get('/', async (c) => {
   const ownerId = getOwnerId(c);
@@ -202,17 +256,7 @@ businessRoutes.patch('/:id', async (c) => {
     const updated = await scoped.updateBusiness(businessId, updatePayload);
 
     // Invalidate KV cache so updated chips show up on customer scan immediately
-    if (c.env.KV) {
-      try {
-        if (updated?.slug) await c.env.KV.delete(`qr:${updated.slug}`);
-        const relatedQrs = await db.select({ code: qrCodes.code }).from(qrCodes).where(eq(qrCodes.businessId, businessId));
-        for (const q of relatedQrs) {
-          if (q.code) await c.env.KV.delete(`qr:${q.code}`);
-        }
-      } catch (kvErr) {
-        console.warn('KV invalidate error:', kvErr);
-      }
-    }
+    await purgeBusinessKvCache(c.env.KV, db, businessId, updated?.slug);
 
     return c.json({ business: updated });
   } catch (err: any) {
@@ -246,15 +290,7 @@ businessRoutes.post('/:id/keywords', async (c) => {
       chipsJson
     });
 
-    if (c.env.KV) {
-      try {
-        if (updated?.slug) await c.env.KV.delete(`qr:${updated.slug}`);
-        const relatedQrs = await db.select({ code: qrCodes.code }).from(qrCodes).where(eq(qrCodes.businessId, businessId));
-        for (const q of relatedQrs) {
-          if (q.code) await c.env.KV.delete(`qr:${q.code}`);
-        }
-      } catch {}
-    }
+    await purgeBusinessKvCache(c.env.KV, db, businessId, updated?.slug);
 
     return c.json({ success: true, chips: chipsList, chipsJson, business: updated });
   } catch (err: any) {
@@ -414,6 +450,7 @@ businessRoutes.patch('/:id/locations/:locId', async (c) => {
 
   try {
     const updated = await scoped.updateLocation(businessId, locId, body);
+    await purgeBusinessKvCache(c.env.KV, db, businessId, updated?.slug);
     return c.json({ success: true, location: updated });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
@@ -429,6 +466,7 @@ businessRoutes.delete('/:id/locations/:locId', async (c) => {
 
   try {
     await scoped.deleteLocation(businessId, locId);
+    await purgeBusinessKvCache(c.env.KV, db, businessId);
     return c.json({ success: true, message: 'Location deleted successfully' });
   } catch (err: any) {
     return c.json({ error: err.message }, 403);
@@ -448,6 +486,7 @@ businessRoutes.post('/:id/locations/:locId/set-primary', async (c) => {
 
     await db.update(locations).set({ isPrimary: false }).where(eq(locations.businessId, businessId));
     await db.update(locations).set({ isPrimary: true }).where(and(eq(locations.businessId, businessId), eq(locations.id, locId)));
+    await purgeBusinessKvCache(c.env.KV, db, businessId);
 
     return c.json({ success: true, message: 'Primary branch location updated successfully' });
   } catch (err: any) {
@@ -482,13 +521,7 @@ businessRoutes.post('/:id/locations/:locId/keywords', async (c) => {
       chipsJson
     });
 
-    if (c.env.KV) {
-      try {
-        if (updated?.slug) await c.env.KV.delete(`qr:${updated.slug}`);
-      } catch (kvErr) {
-        console.warn('KV invalidate error:', kvErr);
-      }
-    }
+    await purgeBusinessKvCache(c.env.KV, db, businessId, updated?.slug);
 
     return c.json({ success: true, location: updated, chips: chipsList });
   } catch (err: any) {

@@ -25,7 +25,11 @@ publicRoutes.get('/r/:code', async (c) => {
     return c.json({ error: 'Code is required' }, 400);
   }
 
-  const kvKey = `qr:${code}`;
+  const cleanCode = code.toLowerCase().trim();
+  const cleanParam = cleanCode.replace(/^qr_/, '');
+  const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true';
+  const kvKey = `qr:${cleanCode}`;
+
   let qrData: {
     id: string;
     code: string;
@@ -44,48 +48,112 @@ publicRoutes.get('/r/:code', async (c) => {
     styleJson: string;
   } | null = null;
 
-  // 1. KV Cache Look-up (Free Tier friendly: 100k reads/day)
-  try {
-    if (c.env.KV) {
-      const cached = await c.env.KV.get(kvKey, { type: 'json' });
-      if (cached) {
-        qrData = cached;
+  // 1. KV Cache Look-up (Bypassed if preview/refresh requested)
+  if (!isPreview) {
+    try {
+      if (c.env.KV) {
+        const cached = await c.env.KV.get(kvKey, { type: 'json' });
+        if (cached) {
+          qrData = cached;
+        }
       }
+    } catch (err) {
+      console.warn('KV read warning:', err);
     }
-  } catch (err) {
-    console.warn('KV read warning:', err);
   }
 
-  // 2. D1 Database Fallback on Cache Miss
+  // 2. D1 Database Strict Priority Lookup on Cache Miss
   if (!qrData) {
     const db = getDb(c.env.DB);
-    const results = await db
-      .select({
-        id: qrCodes.id,
-        code: qrCodes.code,
-        label: qrCodes.label,
-        businessId: qrCodes.businessId,
-        businessName: businesses.name,
-        category: businesses.category,
-        address: businesses.address,
-        city: businesses.city,
-        googlePlaceId: businesses.googlePlaceId,
-        chipsJson: businesses.chipsJson,
-        googleReviewUrl: businesses.googleReviewUrl,
-        logoUrl: businesses.logoUrl,
-        brandColor: businesses.brandColor,
-        brandColorSecondary: businesses.brandColorSecondary,
-        styleJson: qrCodes.styleJson
-      })
-      .from(qrCodes)
-      .innerJoin(businesses, eq(qrCodes.businessId, businesses.id))
-      .where(and(eq(qrCodes.code, code), eq(qrCodes.isActive, 1)))
-      .limit(1);
 
-    if (!results.length) {
-      const cleanCode = code.toLowerCase().trim();
+    // Priority 1: Exact match on QR codes table
+    try {
+      const qrResults = await db
+        .select({
+          id: qrCodes.id,
+          code: qrCodes.code,
+          label: qrCodes.label,
+          businessId: qrCodes.businessId,
+          branchId: qrCodes.branchId,
+          businessName: businesses.name,
+          category: businesses.category,
+          address: businesses.address,
+          city: businesses.city,
+          googlePlaceId: businesses.googlePlaceId,
+          chipsJson: businesses.chipsJson,
+          googleReviewUrl: businesses.googleReviewUrl,
+          logoUrl: businesses.logoUrl,
+          brandColor: businesses.brandColor,
+          brandColorSecondary: businesses.brandColorSecondary,
+          styleJson: qrCodes.styleJson
+        })
+        .from(qrCodes)
+        .innerJoin(businesses, eq(qrCodes.businessId, businesses.id))
+        .where(
+          and(
+            or(
+              eq(qrCodes.code, code),
+              eq(qrCodes.code, cleanCode),
+              eq(qrCodes.code, cleanParam)
+            ),
+            eq(qrCodes.isActive, 1)
+          )
+        )
+        .limit(1);
 
-      // Check if code or slug matches a specific branch location first
+      if (qrResults.length > 0) {
+        const q = qrResults[0];
+        let chipsJson = q.chipsJson;
+        let reviewUrl = q.googleReviewUrl;
+        let placeId = q.googlePlaceId;
+        let address = q.address;
+        let city = q.city;
+        let name = q.businessName;
+
+        if (q.branchId) {
+          try {
+            const [branchLoc] = await db
+              .select()
+              .from(locations)
+              .where(eq(locations.id, q.branchId))
+              .limit(1);
+            if (branchLoc) {
+              if (branchLoc.chipsJson) chipsJson = branchLoc.chipsJson;
+              if (branchLoc.googleReviewUrl) reviewUrl = branchLoc.googleReviewUrl;
+              if (branchLoc.googlePlaceId) placeId = branchLoc.googlePlaceId;
+              if (branchLoc.address) address = branchLoc.address;
+              if (branchLoc.city) city = branchLoc.city;
+              if (branchLoc.name) name = branchLoc.name;
+            }
+          } catch (e) {
+            console.warn('Branch enrich error:', e);
+          }
+        }
+
+        qrData = {
+          id: q.id,
+          code: q.code,
+          label: q.label,
+          businessId: q.businessId,
+          businessName: name,
+          category: q.category,
+          address: address || '',
+          city: city || '',
+          googlePlaceId: placeId || '',
+          chipsJson: chipsJson,
+          googleReviewUrl: reviewUrl.startsWith('http') ? reviewUrl : `https://${reviewUrl}`,
+          logoUrl: q.logoUrl,
+          brandColor: q.brandColor,
+          brandColorSecondary: q.brandColorSecondary,
+          styleJson: q.styleJson
+        };
+      }
+    } catch (qrErr) {
+      console.warn('QR code lookup error:', qrErr);
+    }
+
+    // Priority 2: Exact match on branch locations table (slug or id)
+    if (!qrData) {
       try {
         const branchMatches = await db
           .select({
@@ -100,27 +168,27 @@ publicRoutes.get('/r/:code', async (c) => {
             businessId: businesses.id,
             businessName: businesses.name,
             category: businesses.category,
-            chipsJson: businesses.chipsJson,
+            bizChipsJson: businesses.chipsJson,
+            bizReviewUrl: businesses.googleReviewUrl,
             logoUrl: businesses.logoUrl,
             brandColor: businesses.brandColor,
             brandColorSecondary: businesses.brandColorSecondary
           })
           .from(locations)
           .innerJoin(businesses, eq(locations.businessId, businesses.id))
-          .limit(50);
+          .where(
+            or(
+              eq(locations.slug, cleanCode),
+              eq(locations.slug, cleanParam),
+              eq(locations.id, cleanCode),
+              eq(locations.id, code)
+            )
+          )
+          .limit(1);
 
-        const matchedLoc = branchMatches.find((l) => {
-          const locSlug = (l.locSlug || '').toLowerCase();
-          const cleanParam = cleanCode.replace(/^qr_/, '');
-          return (
-            l.locId === cleanCode ||
-            locSlug === cleanCode ||
-            locSlug === cleanParam ||
-            (locSlug && cleanParam.startsWith(locSlug))
-          );
-        });
-
-        if (matchedLoc) {
+        if (branchMatches.length > 0) {
+          const matchedLoc = branchMatches[0];
+          const reviewUrl = matchedLoc.locReviewUrl || matchedLoc.bizReviewUrl || (matchedLoc.locPlaceId ? `https://search.google.com/local/writereview?placeid=${matchedLoc.locPlaceId}` : '');
           qrData = {
             id: `qr_${matchedLoc.locId}`,
             code,
@@ -131,8 +199,8 @@ publicRoutes.get('/r/:code', async (c) => {
             address: matchedLoc.locAddress || '',
             city: matchedLoc.locCity || '',
             googlePlaceId: matchedLoc.locPlaceId || '',
-            chipsJson: matchedLoc.locChipsJson || matchedLoc.chipsJson,
-            googleReviewUrl: matchedLoc.locReviewUrl || (matchedLoc.locPlaceId ? `https://search.google.com/local/writereview?placeid=${matchedLoc.locPlaceId}` : ''),
+            chipsJson: matchedLoc.locChipsJson || matchedLoc.bizChipsJson,
+            googleReviewUrl: reviewUrl.startsWith('http') ? reviewUrl : `https://${reviewUrl}`,
             logoUrl: matchedLoc.logoUrl,
             brandColor: matchedLoc.brandColor,
             brandColorSecondary: matchedLoc.brandColorSecondary,
@@ -142,72 +210,218 @@ publicRoutes.get('/r/:code', async (c) => {
       } catch (locErr) {
         console.warn('Branch location public check warning:', locErr);
       }
+    }
 
-      if (!qrData) {
-        // Fetch businesses ordered by latest created
-        const allBiz = await db
+    // Priority 3: Exact match on businesses table (slug or id)
+    if (!qrData) {
+      try {
+        const bizMatches = await db
           .select()
           .from(businesses)
-          .orderBy(desc(businesses.createdAt))
-          .limit(20);
+          .where(
+            or(
+              eq(businesses.slug, cleanCode),
+              eq(businesses.slug, cleanParam),
+              eq(businesses.id, cleanCode),
+              eq(businesses.id, code)
+            )
+          )
+          .limit(1);
 
-      // Match best business:
-      // a) exact or prefix match on slug
-      // b) base slug match (e.g., 'upmark' from 'upmark-o9qi')
-      // c) name match
-      // d) fallback to latest created business
-      const matched = allBiz.find((b) => {
-        const slug = (b.slug || '').toLowerCase();
-        const baseSlug = slug.split('-')[0];
-        const bizNameClean = (b.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const codeClean = cleanCode.replace(/[^a-z0-9]/g, '');
+        if (bizMatches.length > 0) {
+          const matched = bizMatches[0];
+          let effectiveChips = matched.chipsJson;
+          let effectiveReviewUrl = matched.googleReviewUrl;
+          let effectivePlaceId = matched.googlePlaceId;
+          let effectiveAddress = matched.address;
+          let effectiveCity = matched.city;
 
-        return (
-          cleanCode === slug ||
-          cleanCode.startsWith(slug) ||
-          slug.startsWith(cleanCode) ||
-          (baseSlug && baseSlug.length >= 3 && cleanCode.includes(baseSlug)) ||
-          (bizNameClean && bizNameClean.length >= 3 && codeClean.includes(bizNameClean))
-        );
-      }) || allBiz[0];
+          // Check if primary branch has chips or updated review URL
+          try {
+            const locList = await db
+              .select()
+              .from(locations)
+              .where(eq(locations.businessId, matched.id))
+              .orderBy(desc(locations.isPrimary))
+              .limit(5);
 
-      if (matched) {
-        qrData = {
-          id: `qr_${matched.id}`,
-          code,
-          label: 'Main Standee',
-          businessId: matched.id,
-          businessName: matched.name,
-          category: matched.category,
-          address: matched.address,
-          city: matched.city,
-          googlePlaceId: matched.googlePlaceId,
-          chipsJson: matched.chipsJson,
-          googleReviewUrl: matched.googleReviewUrl.startsWith('http')
-            ? matched.googleReviewUrl
-            : `https://${matched.googleReviewUrl}`,
-          logoUrl: matched.logoUrl,
-          brandColor: matched.brandColor,
-          brandColorSecondary: matched.brandColorSecondary,
-          styleJson: '{}'
-        };
-      } else {
+            const bestLoc = locList.find((l) => l.isPrimary && l.chipsJson) || locList.find((l) => l.chipsJson) || locList[0];
+            if (bestLoc) {
+              if (bestLoc.chipsJson) effectiveChips = bestLoc.chipsJson;
+              if (bestLoc.googleReviewUrl) effectiveReviewUrl = bestLoc.googleReviewUrl;
+              if (bestLoc.googlePlaceId) effectivePlaceId = bestLoc.googlePlaceId;
+              if (bestLoc.address) effectiveAddress = bestLoc.address;
+              if (bestLoc.city) effectiveCity = bestLoc.city;
+            }
+          } catch (e) {
+            console.warn('Primary location lookup warning:', e);
+          }
+
+          qrData = {
+            id: `qr_${matched.id}`,
+            code,
+            label: 'Main Standee',
+            businessId: matched.id,
+            businessName: matched.name,
+            category: matched.category,
+            address: effectiveAddress || '',
+            city: effectiveCity || '',
+            googlePlaceId: effectivePlaceId || '',
+            chipsJson: effectiveChips || matched.chipsJson,
+            googleReviewUrl: effectiveReviewUrl?.startsWith('http')
+              ? effectiveReviewUrl
+              : `https://${effectiveReviewUrl}`,
+            logoUrl: matched.logoUrl,
+            brandColor: matched.brandColor,
+            brandColorSecondary: matched.brandColorSecondary,
+            styleJson: '{}'
+          };
+        }
+      } catch (bizErr) {
+        console.warn('Exact business lookup warning:', bizErr);
+      }
+    }
+
+    // Priority 4: Branch prefix matching (e.g. upmark-g6zq matching branch upmark-g6zq-main)
+    if (!qrData) {
+      try {
+        const allLocs = await db
+          .select({
+            locId: locations.id,
+            locName: locations.name,
+            locSlug: locations.slug,
+            locAddress: locations.address,
+            locCity: locations.city,
+            locPlaceId: locations.googlePlaceId,
+            locReviewUrl: locations.googleReviewUrl,
+            locChipsJson: locations.chipsJson,
+            businessId: businesses.id,
+            businessName: businesses.name,
+            category: businesses.category,
+            bizChipsJson: businesses.chipsJson,
+            bizReviewUrl: businesses.googleReviewUrl,
+            logoUrl: businesses.logoUrl,
+            brandColor: businesses.brandColor,
+            brandColorSecondary: businesses.brandColorSecondary
+          })
+          .from(locations)
+          .innerJoin(businesses, eq(locations.businessId, businesses.id))
+          .limit(100);
+
+        const matchedLoc = allLocs.find((l) => {
+          const locSlug = (l.locSlug || '').toLowerCase();
+          return (
+            locSlug &&
+            (locSlug.startsWith(cleanCode) ||
+              locSlug.startsWith(cleanParam) ||
+              cleanCode.startsWith(locSlug) ||
+              cleanParam.startsWith(locSlug))
+          );
+        });
+
+        if (matchedLoc) {
+          const reviewUrl = matchedLoc.locReviewUrl || matchedLoc.bizReviewUrl || (matchedLoc.locPlaceId ? `https://search.google.com/local/writereview?placeid=${matchedLoc.locPlaceId}` : '');
+          qrData = {
+            id: `qr_${matchedLoc.locId}`,
+            code,
+            label: matchedLoc.locName,
+            businessId: matchedLoc.businessId,
+            businessName: matchedLoc.locName || matchedLoc.businessName,
+            category: matchedLoc.category,
+            address: matchedLoc.locAddress || '',
+            city: matchedLoc.locCity || '',
+            googlePlaceId: matchedLoc.locPlaceId || '',
+            chipsJson: matchedLoc.locChipsJson || matchedLoc.bizChipsJson,
+            googleReviewUrl: reviewUrl.startsWith('http') ? reviewUrl : `https://${reviewUrl}`,
+            logoUrl: matchedLoc.logoUrl,
+            brandColor: matchedLoc.brandColor,
+            brandColorSecondary: matchedLoc.brandColorSecondary,
+            styleJson: '{}'
+          };
+        }
+      } catch (locPrefixErr) {
+        console.warn('Branch prefix lookup warning:', locPrefixErr);
+      }
+    }
+
+    // Priority 5: Scored Fallback on Active Businesses (strict ranking to prevent cross-business hijacking)
+    if (!qrData) {
+      try {
+        const candidateBizs = await db
+          .select()
+          .from(businesses)
+          .where(eq(businesses.isArchived, false));
+
+        let bestCandidate: any = null;
+        let highestScore = 0;
+
+        for (const b of candidateBizs) {
+          const slug = (b.slug || '').toLowerCase();
+          const baseSlug = slug.split('-')[0];
+          const bizNameClean = (b.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const codeClean = cleanCode.replace(/[^a-z0-9]/g, '');
+
+          let score = 0;
+
+          if (slug === cleanCode || slug === cleanParam) {
+            score = 1000;
+          } else if (slug.startsWith(cleanCode) || cleanCode.startsWith(slug)) {
+            score = 500;
+          } else if (baseSlug && baseSlug.length >= 3 && (baseSlug === cleanCode || cleanCode === baseSlug)) {
+            score = 300;
+          } else if (bizNameClean && bizNameClean.length >= 3 && bizNameClean === codeClean) {
+            score = 200;
+          } else if (baseSlug && baseSlug.length >= 4 && cleanCode.startsWith(baseSlug)) {
+            score = 100;
+          }
+
+          if (score > 0) {
+            if (b.status === 'active') score += 10;
+            if (b.chipsJson && b.chipsJson !== '[]' && b.chipsJson.length > 20) score += 20;
+            if (b.googleReviewUrl && b.googleReviewUrl.length > 10) score += 5;
+          }
+
+          if (score > highestScore) {
+            highestScore = score;
+            bestCandidate = b;
+          }
+        }
+
+        const matched = highestScore >= 100 ? bestCandidate : null;
+
+        if (matched) {
+          qrData = {
+            id: `qr_${matched.id}`,
+            code,
+            label: 'Main Standee',
+            businessId: matched.id,
+            businessName: matched.name,
+            category: matched.category,
+            address: matched.address,
+            city: matched.city,
+            googlePlaceId: matched.googlePlaceId,
+            chipsJson: matched.chipsJson,
+            googleReviewUrl: matched.googleReviewUrl.startsWith('http')
+              ? matched.googleReviewUrl
+              : `https://${matched.googleReviewUrl}`,
+            logoUrl: matched.logoUrl,
+            brandColor: matched.brandColor,
+            brandColorSecondary: matched.brandColorSecondary,
+            styleJson: '{}'
+          };
+        } else {
+          return c.json({ error: 'QR Code not found or inactive' }, 404);
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback business lookup warning:', fallbackErr);
         return c.json({ error: 'QR Code not found or inactive' }, 404);
       }
     }
-  } else {
-    qrData = {
-        ...results[0],
-        googleReviewUrl: results[0].googleReviewUrl.startsWith('http')
-          ? results[0].googleReviewUrl
-          : `https://${results[0].googleReviewUrl}`
-      };
-    }
 
-    // Cache in KV for subsequent scans (only writes on cache miss, never per request)
+    // Cache in KV for subsequent scans
     if (c.env.KV && qrData) {
       try {
-        await c.env.KV.put(kvKey, JSON.stringify(qrData), { expirationTtl: 86400 * 7 });
+        await c.env.KV.put(kvKey, JSON.stringify(qrData), { expirationTtl: 86400 });
       } catch (err) {
         console.warn('KV cache put failed:', err);
       }
@@ -348,6 +562,16 @@ publicRoutes.post('/r/:code/event', async (c) => {
         if (matchedBiz) {
           businessId = matchedBiz.id;
           qrId = `qr_${matchedBiz.id}`;
+        } else {
+          const [matchedLoc] = await db
+            .select({ id: locations.id, businessId: locations.businessId })
+            .from(locations)
+            .where(or(eq(locations.id, code), eq(locations.slug, cleanCode)))
+            .limit(1);
+          if (matchedLoc) {
+            businessId = matchedLoc.businessId;
+            qrId = `qr_${matchedLoc.id}`;
+          }
         }
       }
 

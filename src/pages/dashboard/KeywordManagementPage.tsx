@@ -343,7 +343,7 @@ export function KeywordManagementPage() {
             )}
           </div>
 
-          <a href={`/r/${selectedBranch?.slug || activeBusiness?.slug || 'demo'}`} target="_blank" rel="noopener noreferrer">
+          <a href={`/r/${selectedBranch?.slug || activeBusiness?.slug || 'demo'}?preview=true`} target="_blank" rel="noopener noreferrer">
             <Button
               variant="outline"
               size="sm"
@@ -427,7 +427,7 @@ export function KeywordManagementPage() {
                 Active Outlet: <strong>{selectedBranch.name}</strong> {selectedBranch.address ? `• ${selectedBranch.address}` : ''}
               </span>
               <a
-                href={`/r/${selectedBranch.slug || activeBusiness?.slug}`}
+                href={`/r/${selectedBranch.slug || activeBusiness?.slug}?preview=true`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-bold text-blue-600 hover:underline flex items-center gap-1"

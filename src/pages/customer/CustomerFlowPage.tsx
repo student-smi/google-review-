@@ -82,7 +82,8 @@ export function CustomerFlowPage() {
 
   useEffect(() => {
     if (code) {
-      fetch(`/api/public/r/${code}`)
+      const search = window.location.search;
+      fetch(`/api/public/r/${code}${search}`)
         .then((res) => (res.ok ? (res.json() as Promise<any>) : null))
         .then((payload) => {
           if (payload?.data) {
@@ -99,9 +100,21 @@ export function CustomerFlowPage() {
               googlePlaceId: payload.data.googlePlaceId
             });
 
+            let loadedChips: string[] = [];
             if (Array.isArray(payload.data.chips) && payload.data.chips.length > 0) {
-              setCustomChips(payload.data.chips);
-              setSelectedChips([payload.data.chips[0], payload.data.chips[1] || payload.data.chips[0]]);
+              loadedChips = payload.data.chips;
+            } else if (payload.data.chipsJson) {
+              try {
+                const parsed = typeof payload.data.chipsJson === 'string' ? JSON.parse(payload.data.chipsJson) : payload.data.chipsJson;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  loadedChips = parsed;
+                }
+              } catch {}
+            }
+
+            if (loadedChips.length > 0) {
+              setCustomChips(loadedChips);
+              setSelectedChips([loadedChips[0], loadedChips[1] || loadedChips[0]]);
             }
           } else {
             // Check local stored businesses
