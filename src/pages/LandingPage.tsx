@@ -658,59 +658,90 @@ export function LandingPage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
         variants={fadeInUp}
-        className="scroll-mt-20 pt-20 pb-12 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-white flex items-center justify-center overflow-hidden"
+        className="scroll-mt-20 pt-20 pb-12 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/60 via-slate-50/30 to-white flex items-center justify-center overflow-hidden"
       >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           <div>
-            <div className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2 bg-white border border-slate-200/90 rounded-full px-3 sm:px-3.5 py-1 text-[11px] sm:text-xs font-semibold text-slate-600 shadow-2xs mb-4 sm:mb-5 max-w-full">
-              <span className="text-amber-400 font-bold tracking-wider">★★★★★</span>
-              <span>4.9 / 5 Rating</span>
-              <span className="text-slate-300">·</span>
-              <span>Trusted by 1,200+ Businesses in India</span>
-              <span className="text-slate-300">·</span>
-              <a href="#google-posts" className="text-indigo-600 font-bold hover:underline flex items-center gap-1">
-                <span>✨ New: Google Posts Studio</span>
-              </a>
+            {/* Top Pill Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/95 border border-blue-200/80 rounded-full px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs mb-5 backdrop-blur-md">
+              <span className="flex items-center text-amber-500 font-bold tracking-tight">★ 4.9</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-700 font-medium">1,200+ Active Standees in India</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+              <span className="text-emerald-700 font-bold text-[11px]">Pan-India Delivery</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#04143c] tracking-tight leading-[1.14] break-words">
-              Turn Happy Customers Into <span className="text-blue-600">Google Reviews.</span>
+
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-5xl lg:text-[56px] font-black text-[#04143c] tracking-tight leading-[1.12] break-words">
+              Turn Walk-In Customers Into{' '}
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">
+                5-Star Google Reviews.
+              </span>
             </h1>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl">
-              Make it effortless for customers to share their experiences with a simple QR scan or contactless NFC tap. Build unbeatable local Google Maps trust with Loctimize.
+
+            {/* Subheading */}
+            <p className="mt-4 text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl">
+              Smart NFC tap & QR review standees starting at just <strong>₹499</strong>. Customers leave authentic Google reviews with your custom SEO keywords in 10 seconds — zero app download required.
             </p>
-            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+
+            {/* CTA Buttons */}
+            <div className="mt-7 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
               <button
                 type="button"
                 onClick={handleCtaClick}
-                className="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm sm:text-base cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-sm sm:text-base cursor-pointer"
               >
                 {userLoggedIn ? (
                   <Fragment>Go to Dashboard <ArrowRight size={16} /></Fragment>
                 ) : (
-                  <Fragment>Get Your Review QR <ArrowRight size={16} /></Fragment>
+                  <Fragment>Get Review Standee (From ₹499) <ArrowRight size={16} /></Fragment>
                 )}
               </button>
-              <a href="#how-it-works" className="w-full sm:w-auto justify-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs">
-                See How It Works <ArrowDown size={16} />
+              <a
+                href="#products"
+                className="w-full sm:w-auto justify-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs cursor-pointer"
+              >
+                View Pricing & Models <ArrowDown size={16} />
               </a>
             </div>
-            <div className="mt-5 sm:mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-500">
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 1-Tap NFC & QR Standees</span>
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-600" /> 1-Click AI Review Replies</span>
-              <span className="flex items-center gap-1.5"><Check size={14} className="text-indigo-600" /> Weekly Google Maps Posts Studio</span>
+
+            {/* Feature Pills */}
+            <div className="mt-7 flex flex-wrap gap-2 text-xs font-semibold">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200/60 text-blue-900">
+                <Zap size={13} className="text-blue-600 fill-blue-600" />
+                <span>1-Tap NFC · No App Needed</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/60 text-emerald-900">
+                <Check size={13} className="text-emerald-600 stroke-[3]" />
+                <span>Target SEO Keywords Included</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50/80 border border-indigo-200/60 text-indigo-900">
+                <ShieldCheck size={13} className="text-indigo-600" />
+                <span>100% Google Anti-Gating Safe</span>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col items-center justify-center">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200/90 bg-white w-full max-w-md lg:max-w-none">
-              <img src={heroImage} alt="Loctimize ReviewQR acrylic standee and customer phone" className="w-full h-auto max-h-[420px] object-cover" loading="eager" />
-              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-full px-3.5 py-1 text-xs font-bold text-blue-700 flex items-center gap-1.5 shadow-sm">
-                <Zap size={13} className="text-blue-600 fill-blue-600" /> 1-Tap NFC · No App Needed
+
+          {/* Right Visual Card with Ambient Glow */}
+          <div className="flex flex-col items-center justify-center relative">
+            <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/20 via-indigo-500/15 to-purple-500/10 rounded-3xl blur-2xl pointer-events-none" />
+
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200/90 bg-white w-full max-w-md lg:max-w-none group">
+              <img
+                src={heroImage}
+                alt="Loctimize Smart NFC & QR Google review acrylic standee on coffee shop billing counter"
+                className="w-full h-auto max-h-[420px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                loading="eager"
+              />
+              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-full px-3.5 py-1.5 text-xs font-bold text-blue-700 flex items-center gap-1.5 shadow-md">
+                <Zap size={13} className="text-blue-600 fill-blue-600" />
+                <span>1-Tap Contactless NFC</span>
               </div>
-              <div className="absolute bottom-4 right-4 bg-emerald-600 text-white rounded-full px-3.5 py-1 text-xs font-bold shadow-md flex items-center gap-1">
-                ↗ +300% Review Growth
+              <div className="absolute bottom-4 right-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-full px-3.5 py-1.5 text-xs font-bold shadow-lg flex items-center gap-1">
+                <span>↗ +300% Review Growth</span>
               </div>
             </div>
-            <p className="mt-3 text-xs text-slate-500 font-medium">A small touchpoint. An easier way to share.</p>
+            <p className="mt-3 text-xs text-slate-500 font-medium">Place on billing counter or table. Start capturing 5-star reviews.</p>
           </div>
         </div>
       </motion.section>
@@ -1924,133 +1955,88 @@ export function LandingPage() {
       {/* 14. FOOTER */}
       <footer className="w-full bg-[#04143c] text-white py-14 px-4 sm:px-8 lg:px-12 border-t border-slate-800">
         <div className="max-w-6xl w-full mx-auto flex flex-col justify-between">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pb-10 border-b border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 pb-10 border-b border-slate-800/80">
+            {/* Col 1: Brand & Credibility */}
             <div className="sm:col-span-2 lg:col-span-1">
               <a href="#home" aria-label="Loctimize home">
                 <img src={footerLogo} className="h-8 w-auto mb-3" alt="Loctimize — Optimize Local. Grow Global." />
               </a>
               <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                ReviewQR makes it easier for customers to find your review link — on their own terms.
+                Smart NFC tap & QR review standees helping Indian retail shops, restaurants, salons, and clinics capture authentic 5-star Google reviews.
               </p>
-              <span className="text-[11px] text-slate-500 block mb-3">
-                Loctimize is an independent product and is not affiliated with Google.
-              </span>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
-                <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
-                <span>100% Policy Compliant</span>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+                  <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
+                  <span>100% Google Anti-Gating Compliant</span>
+                </div>
+                <span className="text-[11px] text-slate-400 block font-medium">
+                  📍 Programmed & Dispatched from Ahmedabad, Gujarat
+                </span>
               </div>
             </div>
 
+            {/* Col 2: Standees & Pricing */}
             <div>
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Products</h4>
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Smart Standees</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
                 {products.map((prod) => (
                   <li key={prod.name}>
-                    <button type="button" className="hover:text-white transition text-left cursor-pointer" onClick={() => handleSelectProduct(prod.name)}>
-                      {prod.name}
+                    <button type="button" className="hover:text-white transition text-left cursor-pointer flex items-center justify-between w-full" onClick={() => handleSelectProduct(prod.name)}>
+                      <span>{prod.name}</span>
+                      <span className="text-blue-400 font-semibold text-[11px] ml-2">{prod.price}</span>
                     </button>
                   </li>
                 ))}
-                <li><a href="#pricing" className="hover:text-white transition">Proposed plans</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Solutions</h4>
-              <ul className="flex flex-col gap-2 text-xs text-slate-400">
-                <li><a href="#features" className="hover:text-white transition">Review writing help</a></li>
-                <li><a href="#ai-replies" className="hover:text-white transition">AI-assisted replies</a></li>
-                <li><a href="#features" className="hover:text-white transition">Review QR features</a></li>
-                <li><a href="#businesses" className="hover:text-white transition">Business benefits</a></li>
-              </ul>
-            </div>
-
-            {/* Google Policies */}
-            <div>
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Google Policies</h4>
-              <ul className="flex flex-col gap-2 text-xs text-slate-400">
                 <li>
-                  <a
-                    href="https://support.google.com/contributionpolicy/answer/7400114"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>Google Maps Review Policy</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://support.google.com/business/answer/3474122"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>Merchant Review Guidelines</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://support.google.com/contributionpolicy/answer/7400114#zippy="
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>Prohibited Content Policy</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://policies.google.com/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>Google Privacy Policy</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://policies.google.com/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>Google Terms of Service</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                  <a href="#pricing" className="hover:text-white transition flex items-center gap-1 text-slate-300">
+                    <span>Software Plans (Free & Pro)</span>
+                    <ArrowRight size={11} className="text-blue-400" />
                   </a>
                 </li>
               </ul>
             </div>
 
+            {/* Col 3: Platform Features */}
             <div>
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Contact & Support</h4>
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Features & Solutions</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
-                <li><span className="text-slate-300">Ahmedabad, Gujarat, India</span></li>
+                <li><a href="#features" className="hover:text-white transition">AI Review Writing Assistant</a></li>
+                <li><a href="#ai-replies" className="hover:text-white transition">1-Click AI Reply Copilot</a></li>
+                <li><a href="#google-posts" className="hover:text-white transition">Google Posts Studio (New)</a></li>
+                <li><a href="#features" className="hover:text-white transition">Multi-Branch Keyword Manager</a></li>
+                <li><a href="#businesses" className="hover:text-white transition">Local Maps Rank Booster</a></li>
+              </ul>
+            </div>
+
+            {/* Col 4: Contact & Support */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Contact & Orders</h4>
+              <ul className="flex flex-col gap-2 text-xs text-slate-400">
+                <li>
+                  <a
+                    href="https://wa.me/918320699679?text=Hi%20Loctimize%2C%20I%20want%20to%20order%20Review%20Standees"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition inline-flex items-center gap-1.5 text-emerald-400 font-semibold"
+                  >
+                    <span>WhatsApp: +91 83206 99679</span>
+                    <ExternalLink size={11} className="shrink-0" />
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+918320699679" className="hover:text-white transition">
+                    Call: +91 83206 99679
+                  </a>
+                </li>
                 <li>
                   <a href="mailto:begaindvs@gmail.com" className="hover:text-white transition">
                     begaindvs@gmail.com
                   </a>
                 </li>
                 <li>
-                  <a href="tel:+918320699679" className="hover:text-white transition">
-                    +91 83206 99679
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://wa.me/918320699679?text=Hi%20Loctimize%2C%20I%20have%20an%20enquiry%20about%20ReviewQR"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition inline-flex items-center gap-1 group"
-                  >
-                    <span>WhatsApp: +91 83206 99679</span>
-                    <ExternalLink size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
-                  </a>
+                  <span className="text-slate-400 text-[11px] leading-tight block">
+                    Commerce Six Roads, Navrangpura, Ahmedabad, Gujarat 380009
+                  </span>
                 </li>
                 <li>
                   <a
@@ -2059,48 +2045,47 @@ export function LandingPage() {
                       e.preventDefault();
                       document.getElementById('bulk-inquiry')?.scrollIntoView({ behavior: 'smooth' });
                     }}
-                    className="hover:text-white transition inline-flex items-center gap-1 group font-medium text-slate-300 cursor-pointer"
+                    className="hover:text-white transition inline-flex items-center gap-1 font-semibold text-blue-400 cursor-pointer pt-1"
                   >
-                    <span>Corporate Enquiries (Contact Form)</span>
-                    <ArrowRight size={11} className="text-slate-500 group-hover:text-white transition shrink-0" />
+                    <span>Bulk Corporate Orders Form</span>
+                    <ArrowRight size={11} />
                   </a>
                 </li>
               </ul>
             </div>
           </div>
 
-          {/* SEO Popular Searches & Keyword Indexing Strip */}
-          <div className="pt-8 pb-4 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-2">
-            <div className="font-semibold text-slate-300 text-xs flex items-center gap-2">
-              <span>Popular Searches for Google Review Standees in India:</span>
+          {/* SEO Popular Searches Tag Cloud (Modern, Clean Pill Badges) */}
+          <div className="pt-8 pb-6 border-b border-slate-800/80">
+            <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-300">
+              <span className="text-blue-400 text-sm">🔍</span>
+              <span className="uppercase tracking-wider text-[11px] text-slate-400 font-bold">Popular Searches for Review Standees in India</span>
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-slate-400/90 leading-relaxed">
-              <span>Google Review Standee India (₹499)</span>
-              <span>·</span>
-              <span>NFC Google Review Standee (₹999)</span>
-              <span>·</span>
-              <span>Premium Branded NFC Standee (₹1,499)</span>
-              <span>·</span>
-              <span>Smart Review Standee for Billing Counter</span>
-              <span>·</span>
-              <span>Google Review QR Standee Ahmedabad</span>
-              <span>·</span>
-              <span>Contactless Tap to Review NFC Card</span>
-              <span>·</span>
-              <span>Buy Google Review Standee Online India</span>
-              <span>·</span>
-              <span>Google Review Standee for Restaurants & Cafes</span>
-              <span>·</span>
-              <span>Google Review Standee for Salons & Clinics</span>
-              <span>·</span>
-              <span>Custom Branded Acrylic Review Standee</span>
-              <span>·</span>
-              <span>Google Business Profile SEO Booster</span>
-              <span>·</span>
-              <span>NFC Review Card Manufacturer Gujarat</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                'Google Review Standee India (₹499)',
+                'NFC Google Review Standee (₹999)',
+                'Premium Acrylic Standee (₹1,499)',
+                'Contactless Tap to Review NFC Card',
+                'Smart QR Standee for Billing Counter',
+                'Google Review Standee Ahmedabad',
+                'Buy Google Review Standee Online',
+                'Review Standees for Restaurants & Cafes',
+                'Review Cards for Salons & Clinics',
+                'Google Business Profile SEO Booster',
+                'NFC Review Standee Manufacturer Gujarat'
+              ].map((term) => (
+                <span
+                  key={term}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium transition-colors cursor-default"
+                >
+                  {term}
+                </span>
+              ))}
             </div>
           </div>
 
+          {/* Copyright & Legal Bar */}
           <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center md:text-left">
             <div>© {new Date().getFullYear()} Loctimize Technologies. All rights reserved.</div>
             <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-2 text-xs">
@@ -2110,7 +2095,7 @@ export function LandingPage() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
               >
-                <span>Google Maps Review Policy</span>
+                <span>Google Review Policies</span>
                 <ExternalLink size={11} className="text-slate-500" />
               </a>
               <a
@@ -2119,7 +2104,7 @@ export function LandingPage() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
               >
-                <span>Google Privacy Policy</span>
+                <span>Privacy</span>
                 <ExternalLink size={11} className="text-slate-500" />
               </a>
               <a
@@ -2128,12 +2113,11 @@ export function LandingPage() {
                 rel="noopener noreferrer"
                 className="hover:text-white transition inline-flex items-center gap-1 text-slate-400 hover:underline underline-offset-2"
               >
-                <span>Google Terms</span>
+                <span>Terms</span>
                 <ExternalLink size={11} className="text-slate-500" />
               </a>
-              <span className="text-emerald-400 font-medium inline-flex items-center gap-1">
-                <CheckCircle2 size={12} /> Ungated & Anti-Review Gating Compliant
-              </span>
+              <span className="text-slate-500">·</span>
+              <span className="text-slate-400 font-medium">🇮🇳 Made with pride for Indian businesses</span>
             </div>
           </div>
         </div>
