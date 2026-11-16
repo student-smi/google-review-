@@ -662,34 +662,38 @@ export function LandingPage() {
       >
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
           <div>
-            {/* Top Pill Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/95 border border-blue-200/80 rounded-full px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs mb-5 backdrop-blur-md">
-              <span className="flex items-center text-amber-500 font-bold tracking-tight">★ 4.9</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-slate-700 font-medium">1,200+ Active Standees in India</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
-              <span className="text-emerald-700 font-bold text-[11px]">Pan-India Delivery</span>
+            {/* Top Pill Badge - 100% Responsive & Wrap-Safe */}
+            <div className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 bg-white/95 border border-blue-200/80 rounded-2xl sm:rounded-full px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-semibold text-slate-800 shadow-xs mb-4 sm:mb-5 backdrop-blur-md max-w-full">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="flex items-center text-amber-500 font-bold tracking-tight">★ 4.9</span>
+                <span className="text-slate-300">|</span>
+                <span className="text-slate-700 font-medium">1,200+ Active Standees</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-emerald-700 font-bold">Pan-India Delivery</span>
+              </div>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[56px] font-black text-[#04143c] tracking-tight leading-[1.12] break-words">
+            {/* Main Headline - No Hyphen Breaking on '5-Star' */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[56px] font-black text-[#04143c] tracking-tight leading-[1.18] sm:leading-[1.14]">
               Turn Walk-In Customers Into{' '}
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">
-                5-Star Google Reviews.
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent inline-block">
+                <span className="whitespace-nowrap">5-Star</span> Google Reviews.
               </span>
             </h1>
 
             {/* Subheading */}
-            <p className="mt-4 text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl">
+            <p className="mt-3.5 sm:mt-4 text-xs sm:text-base lg:text-lg text-slate-600 leading-relaxed max-w-xl">
               Smart NFC tap & QR review standees starting at just <strong>₹499</strong>. Customers leave authentic Google reviews with your custom SEO keywords in 10 seconds — zero app download required.
             </p>
 
             {/* CTA Buttons */}
-            <div className="mt-7 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+            <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-4 items-stretch sm:items-center">
               <button
                 type="button"
                 onClick={handleCtaClick}
-                className="w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-7 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-sm sm:text-base cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 text-sm sm:text-base cursor-pointer"
               >
                 {userLoggedIn ? (
                   <Fragment>Go to Dashboard <ArrowRight size={16} /></Fragment>
@@ -699,25 +703,25 @@ export function LandingPage() {
               </button>
               <a
                 href="#products"
-                className="w-full sm:w-auto justify-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-semibold px-5 py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs cursor-pointer"
+                className="w-full sm:w-auto justify-center bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-semibold px-5 py-3 sm:py-3.5 rounded-xl transition flex items-center gap-2 text-sm sm:text-base shadow-2xs cursor-pointer"
               >
                 View Pricing & Models <ArrowDown size={16} />
               </a>
             </div>
 
-            {/* Feature Pills */}
-            <div className="mt-7 flex flex-wrap gap-2 text-xs font-semibold">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200/60 text-blue-900">
-                <Zap size={13} className="text-blue-600 fill-blue-600" />
-                <span>1-Tap NFC · No App Needed</span>
+            {/* Feature Pills - Clean Compact Wrap on Mobile */}
+            <div className="mt-6 sm:mt-7 flex flex-wrap gap-2 text-[11px] sm:text-xs font-semibold">
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-50/80 border border-blue-200/60 text-blue-900">
+                <Zap size={13} className="text-blue-600 fill-blue-600 shrink-0" />
+                <span>1-Tap NFC · No App</span>
               </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/60 text-emerald-900">
-                <Check size={13} className="text-emerald-600 stroke-[3]" />
-                <span>Target SEO Keywords Included</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/60 text-emerald-900">
+                <Check size={13} className="text-emerald-600 stroke-[3] shrink-0" />
+                <span>SEO Keywords Included</span>
               </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50/80 border border-indigo-200/60 text-indigo-900">
-                <ShieldCheck size={13} className="text-indigo-600" />
-                <span>100% Google Anti-Gating Safe</span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-50/80 border border-indigo-200/60 text-indigo-900">
+                <ShieldCheck size={13} className="text-indigo-600 shrink-0" />
+                <span>100% Policy Safe</span>
               </div>
             </div>
           </div>
@@ -1953,9 +1957,9 @@ export function LandingPage() {
       </motion.section>
 
       {/* 14. FOOTER */}
-      <footer className="w-full bg-[#04143c] text-white py-14 px-4 sm:px-8 lg:px-12 border-t border-slate-800">
+      <footer className="w-full bg-[#04143c] text-white py-10 sm:py-14 px-4 sm:px-8 lg:px-12 border-t border-slate-800 overflow-hidden">
         <div className="max-w-6xl w-full mx-auto flex flex-col justify-between">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 pb-10 border-b border-slate-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 pb-8 sm:pb-10 border-b border-slate-800/80">
             {/* Col 1: Brand & Credibility */}
             <div className="sm:col-span-2 lg:col-span-1">
               <a href="#home" aria-label="Loctimize home">
@@ -2029,7 +2033,7 @@ export function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <a href="mailto:begaindvs@gmail.com" className="hover:text-white transition">
+                  <a href="mailto:begaindvs@gmail.com" className="hover:text-white transition break-all sm:break-normal">
                     begaindvs@gmail.com
                   </a>
                 </li>
@@ -2056,7 +2060,7 @@ export function LandingPage() {
           </div>
 
           {/* SEO Popular Searches Tag Cloud (Modern, Clean Pill Badges) */}
-          <div className="pt-8 pb-6 border-b border-slate-800/80">
+          <div className="pt-6 sm:pt-8 pb-5 sm:pb-6 border-b border-slate-800/80">
             <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-300">
               <span className="text-blue-400 text-sm">🔍</span>
               <span className="uppercase tracking-wider text-[11px] text-slate-400 font-bold">Popular Searches for Review Standees in India</span>
@@ -2077,7 +2081,7 @@ export function LandingPage() {
               ].map((term) => (
                 <span
                   key={term}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 text-[11px] font-medium transition-colors cursor-default"
+                  className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 text-[10px] sm:text-[11px] font-medium transition-colors cursor-default max-w-full break-words"
                 >
                   {term}
                 </span>
@@ -2086,9 +2090,9 @@ export function LandingPage() {
           </div>
 
           {/* Copyright & Legal Bar */}
-          <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center md:text-left">
+          <div className="pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] sm:text-xs text-slate-400 gap-3 sm:gap-4 text-center sm:text-left">
             <div>© {new Date().getFullYear()} Loctimize Technologies. All rights reserved.</div>
-            <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-2 text-xs">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3.5 sm:gap-x-5 gap-y-1.5 text-[11px] sm:text-xs">
               <a
                 href="https://support.google.com/contributionpolicy/answer/7400114"
                 target="_blank"
