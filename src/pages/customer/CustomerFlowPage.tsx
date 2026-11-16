@@ -34,6 +34,95 @@ export interface ReviewOption {
   wordCount: number;
 }
 
+export function CustomerFlowSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-between max-w-md mx-auto relative shadow-2xl font-sans select-none">
+      {/* Top Header Skeleton */}
+      <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {/* Store Icon Avatar */}
+            <div className="h-9 w-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-400 shrink-0">
+              <Store className="h-4 w-4 opacity-50" />
+            </div>
+            <div className="space-y-1.5">
+              {/* Business Name */}
+              <div className="h-4 w-36 rounded-md bg-slate-300 dark:bg-slate-700 animate-pulse" />
+              {/* Google Review Assistant */}
+              <div className="h-3 w-28 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Language Switcher Pills Skeleton */}
+          <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 p-0.5 gap-1">
+            <div className="h-6 w-9 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            <div className="h-6 w-8 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            <div className="h-6 w-7 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Subline Notice Skeleton */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="h-3 w-36 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+          <div className="h-3 w-20 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Main Content Body Skeleton */}
+      <div className="flex-1 p-4 sm:p-5 space-y-5 pb-52">
+        {/* Title & Prompt */}
+        <div className="space-y-2">
+          <div className="h-7 w-56 rounded-lg bg-slate-300 dark:bg-slate-700 animate-pulse" />
+          <div className="h-3.5 w-full rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+          <div className="h-3.5 w-4/5 rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+        </div>
+
+        {/* Keyword Pills Grid Skeleton (Matches exact distribution in screenshot) */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {/* Active selection pills representation */}
+          <div className="h-10 w-44 rounded-xl bg-indigo-200/90 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-800 animate-pulse" />
+          <div className="h-10 w-48 rounded-xl bg-indigo-200/90 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-800 animate-pulse" />
+          {/* Other pills */}
+          <div className="h-10 w-24 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+          <div className="h-10 w-20 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+          <div className="h-10 w-36 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+          <div className="h-10 w-32 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+          <div className="h-10 w-52 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+          <div className="h-10 w-64 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+        </div>
+
+        {/* Free-Text Input & Voice Skeleton */}
+        <div className="space-y-2 pt-3">
+          <div className="flex items-center justify-between">
+            <div className="h-3.5 w-44 rounded-md bg-slate-300 dark:bg-slate-700 animate-pulse" />
+            {/* Orange voice button skeleton */}
+            <div className="h-7 w-36 rounded-full bg-amber-200/90 dark:bg-amber-900/50 border border-amber-300 dark:border-amber-800 animate-pulse" />
+          </div>
+          {/* Textarea skeleton */}
+          <div className="h-22 w-full rounded-xl bg-slate-200/70 dark:bg-slate-800/70 border border-slate-300/60 dark:border-slate-700/60 animate-pulse" />
+        </div>
+
+        {/* Customer Name Box Skeleton */}
+        <div className="p-3.5 rounded-2xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="h-3.5 w-24 rounded-md bg-purple-300/80 dark:bg-purple-800 animate-pulse" />
+            <div className="h-3 w-32 rounded-md bg-purple-200/70 dark:bg-purple-900 animate-pulse" />
+          </div>
+          <div className="h-9 w-full rounded-lg bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Sticky Bottom Action Bar Skeleton */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 space-y-2 z-30">
+        {/* Main CTA Button Skeleton */}
+        <div className="w-full h-13 rounded-2xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 animate-pulse shadow-md" />
+        {/* Secondary Skip Link Skeleton */}
+        <div className="h-3.5 w-48 mx-auto rounded-md bg-slate-200 dark:bg-slate-800 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export function CustomerFlowPage() {
   const { code } = useParams<{ code: string }>();
   const { t, i18n } = useTranslation();
@@ -265,6 +354,7 @@ export function CustomerFlowPage() {
   // Generate 3 Review Options
   const handleGenerateDrafts = async () => {
     setIsGenerating(true);
+    setStep(2);
     const randomSeed = Date.now() + Math.floor(Math.random() * 10000);
 
     // Call funnel analytics event
@@ -406,6 +496,12 @@ export function CustomerFlowPage() {
       }
     }, 500);
   };
+
+  const isSkeletonPreview = typeof window !== 'undefined' && window.location.search.includes('skeleton=true');
+
+  if ((isLoading && !bizData.businessName) || isSkeletonPreview) {
+    return <CustomerFlowSkeleton />;
+  }
 
   return (
     <div
@@ -671,96 +767,134 @@ export function CustomerFlowPage() {
 
             {/* 3 Review Options Cards List */}
             <div className="space-y-3">
-              {reviewOptions.map((opt, idx) => {
-                const isSelected = selectedOptionIndex === idx;
-                return (
-                  <div
-                    key={opt.id || idx}
-                    onClick={() => {
-                      setSelectedOptionIndex(idx);
-                      setActiveReviewText(opt.text);
-                    }}
-                    className={`rounded-2xl border-2 p-4 transition-all cursor-pointer relative shadow-xs ${
-                      isSelected
-                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-md'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
-                    }`}
-                  >
-                    {/* Top Card Badge & Radio */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
-                          }`}
-                        >
-                          {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-                        </span>
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          {idx === 0 && 'Option 1: Short & Crisp'}
-                          {idx === 1 && 'Option 2: Warm & Detailed'}
-                          {idx === 2 && 'Option 3: Balanced & Friendly'}
-                        </span>
+              {isGenerating ? (
+                <div className="space-y-3 animate-in fade-in duration-200">
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/40 flex items-center gap-2.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                    <Sparkles className="h-4 w-4 animate-spin shrink-0 text-indigo-600" />
+                    <span>
+                      {draftLanguage === 'gu'
+                        ? 'AI તમારા માટે ૩ સુંદર રિવ્યૂ બનાવી રહ્યું છે...'
+                        : draftLanguage === 'hi'
+                        ? 'AI आपके लिए ३ सुंदर रिव्यू विकल्प तैयार कर रहा है...'
+                        : 'AI is crafting 3 authentic review options tailored for you...'}
+                    </span>
+                  </div>
+                  {[1, 2, 3].map((idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900 animate-pulse space-y-3 shadow-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 rounded-full bg-slate-300 dark:bg-slate-700" />
+                          <div className="h-4 w-36 rounded-md bg-slate-300 dark:bg-slate-700" />
+                        </div>
+                        <div className="h-4 w-20 rounded-md bg-emerald-100 dark:bg-emerald-950/40" />
+                      </div>
+                      <div className="space-y-2 pt-1">
+                        <div className="h-3.5 w-full rounded bg-slate-200 dark:bg-slate-800" />
+                        <div className="h-3.5 w-11/12 rounded bg-slate-200 dark:bg-slate-800" />
+                        <div className="h-3.5 w-4/5 rounded bg-slate-200 dark:bg-slate-800" />
+                      </div>
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <div className="h-8 w-24 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                        <div className="h-8 w-32 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                reviewOptions.map((opt, idx) => {
+                  const isSelected = selectedOptionIndex === idx;
+                  return (
+                    <div
+                      key={opt.id || idx}
+                      onClick={() => {
+                        setSelectedOptionIndex(idx);
+                        setActiveReviewText(opt.text);
+                      }}
+                      className={`rounded-2xl border-2 p-4 transition-all cursor-pointer relative shadow-xs ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-md'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      {/* Top Card Badge & Radio */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                              isSelected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300'
+                            }`}
+                          >
+                            {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {idx === 0 && 'Option 1: Short & Crisp'}
+                            {idx === 1 && 'Option 2: Warm & Detailed'}
+                            {idx === 2 && 'Option 3: Balanced & Friendly'}
+                          </span>
+                        </div>
+
+                        <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800">
+                          {opt.wordCount || opt.text.trim().split(/\s+/).filter(Boolean).length} words • {draftLanguage === 'gu' ? 'પરફેક્ટ સાઇઝ' : draftLanguage === 'hi' ? 'परफेक्ट साइज़' : 'Ideal Length'}
+                        </Badge>
                       </div>
 
-                      <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800">
-                        {opt.wordCount || opt.text.trim().split(/\s+/).filter(Boolean).length} words • {draftLanguage === 'gu' ? 'પરફેક્ટ સાઇઝ' : draftLanguage === 'hi' ? 'परफेक्ट साइज़' : 'Ideal Length'}
-                      </Badge>
+                      {/* Review text */}
+                      <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
+                        "{opt.text}"
+                      </p>
+
+                      {/* Direct Quick Copy Buttons on Each Card */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <Button
+                          id={`copy-btn-${idx}`}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyReviewOnly(opt.text, opt.id || `${idx}`);
+                          }}
+                          className={`h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold transition-all ${
+                            copiedReviewId === (opt.id || `${idx}`)
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
+                              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                          }`}
+                        >
+                          {copiedReviewId === (opt.id || `${idx}`) ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 stroke-[3]" />
+                              <span>{draftLanguage === 'gu' ? 'કૉપી થયું ✓' : draftLanguage === 'hi' ? 'कॉपी हुआ ✓' : 'Copied! ✓'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>{draftLanguage === 'gu' ? 'કૉપી કરો' : draftLanguage === 'hi' ? 'कॉपी करें' : 'Copy'}</span>
+                            </>
+                          )}
+                        </Button>
+
+                        <Button
+                          id={`copy-and-go-btn-${idx}`}
+                          type="button"
+                          size="sm"
+                          variant={isSelected ? 'saffron' : 'outline'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyReviewAndOpenGoogle(opt.text);
+                          }}
+                          className="h-8 px-3 text-xs gap-1.5 font-bold cursor-pointer"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>Copy & Go to Google ↗</span>
+                        </Button>
+                      </div>
                     </div>
-
-                    {/* Review text */}
-                    <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                      "{opt.text}"
-                    </p>
-
-                    {/* Direct Quick Copy Buttons on Each Card */}
-                    <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2">
-                      <Button
-                        id={`copy-btn-${idx}`}
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyReviewOnly(opt.text, opt.id || `${idx}`);
-                        }}
-                        className={`h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold transition-all ${
-                          copiedReviewId === (opt.id || `${idx}`)
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600'
-                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
-                        }`}
-                      >
-                        {copiedReviewId === (opt.id || `${idx}`) ? (
-                          <>
-                            <Check className="h-3.5 w-3.5 stroke-[3]" />
-                            <span>{draftLanguage === 'gu' ? 'કૉપી થયું ✓' : draftLanguage === 'hi' ? 'कॉपी हुआ ✓' : 'Copied! ✓'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            <span>{draftLanguage === 'gu' ? 'કૉપી કરો' : draftLanguage === 'hi' ? 'कॉपी करें' : 'Copy'}</span>
-                          </>
-                        )}
-                      </Button>
-
-                      <Button
-                        id={`copy-and-go-btn-${idx}`}
-                        type="button"
-                        size="sm"
-                        variant={isSelected ? 'saffron' : 'outline'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopyReviewAndOpenGoogle(opt.text);
-                        }}
-                        className="h-8 px-3 text-xs gap-1.5 font-bold cursor-pointer"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        <span>Copy & Go to Google ↗</span>
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Editable Box for Selected Review */}
@@ -935,17 +1069,33 @@ export function CustomerFlowPage() {
           <>
             <Button
               size="lg"
+              disabled={isGenerating}
               onClick={() => handleCopyReviewAndOpenGoogle()}
-              className="w-full h-13 text-base font-bold gap-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer border-0"
+              className="w-full h-13 text-base font-bold gap-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-600/35 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer border-0 disabled:opacity-50"
             >
-              <Copy className="h-5 w-5 text-indigo-200 shrink-0" />
-              <span className="tracking-wide">
-                {draftLanguage === 'gu'
-                  ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
-                  : draftLanguage === 'hi'
-                  ? 'रिव्यू कॉपी करके गूगल खोलें ↗'
-                  : 'Copy Selected Review & Open Google ↗'}
-              </span>
+              {isGenerating ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin text-indigo-200 shrink-0" />
+                  <span>
+                    {draftLanguage === 'gu'
+                      ? 'રિવ્યૂ તૈયાર થઈ રહ્યા છે...'
+                      : draftLanguage === 'hi'
+                      ? 'रिव्यू तैयार हो रहे हैं...'
+                      : 'Preparing Reviews...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-5 w-5 text-indigo-200 shrink-0" />
+                  <span className="tracking-wide">
+                    {draftLanguage === 'gu'
+                      ? 'પસંદ કરેલ રિવ્યૂ કૉપી કરી ગૂગલ ખોલો ↗'
+                      : draftLanguage === 'hi'
+                      ? 'रिव्यू कॉपी करके गूगल खोलें ↗'
+                      : 'Copy Selected Review & Open Google ↗'}
+                  </span>
+                </>
+              )}
             </Button>
 
             <a
