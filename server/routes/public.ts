@@ -18,17 +18,13 @@ export interface Env {
 
 export const publicRoutes = new Hono<{ Bindings: Env }>();
 
-// Resolve short-code with KV cache & async scan counter
-const handleQrResolve = async (c: any) => {
-  const rawCode = c.req.param('code') || '';
-  const code = rawCode.trim().replace(/\/+$/, '');
-  if (!code) {
-    return c.json({ error: 'Code is required' }, 400);
-  }
+// Pure resolver for QR metadata (used by API endpoint and HTML pre-injection for zero-latency loading)
+export async function resolveQrPayload(env: Env, rawCode: string, isPreview = false) {
+  const code = (rawCode || '').trim().replace(/\/+$/, '');
+  if (!code) return null;
 
   const cleanCode = code.toLowerCase().trim();
   const cleanParam = cleanCode.replace(/^qr_/, '');
-  const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true' || !!c.req.query('_t');
   const kvKey = `qr:${cleanCode}`;
 
   let qrData: {
@@ -52,8 +48,8 @@ const handleQrResolve = async (c: any) => {
   // 1. KV Cache Look-up (Bypassed if preview/refresh requested)
   if (!isPreview) {
     try {
-      if (c.env.KV) {
-        const cached = await c.env.KV.get(kvKey, { type: 'json' });
+      if (env.KV) {
+        const cached = await env.KV.get(kvKey, { type: 'json' });
         if (cached) {
           qrData = cached;
         }
@@ -65,7 +61,7 @@ const handleQrResolve = async (c: any) => {
 
   // 2. D1 Database Strict Priority Lookup on Cache Miss
   if (!qrData) {
-    const db = getDb(c.env.DB);
+    const db = getDb(env.DB);
 
     // Priority 1: Exact match on QR codes table
     try {
@@ -410,26 +406,52 @@ const handleQrResolve = async (c: any) => {
             brandColorSecondary: matched.brandColorSecondary,
             styleJson: '{}'
           };
-        } else {
-          return c.json({ error: 'QR Code not found or inactive' }, 404);
         }
       } catch (fallbackErr) {
         console.warn('Fallback business lookup warning:', fallbackErr);
-        return c.json({ error: 'QR Code not found or inactive' }, 404);
       }
     }
 
     // Cache in KV for subsequent scans
-    if (c.env.KV && qrData) {
+    if (env.KV && qrData) {
       try {
-        await c.env.KV.put(kvKey, JSON.stringify(qrData), { expirationTtl: 86400 });
+        await env.KV.put(kvKey, JSON.stringify(qrData), { expirationTtl: 86400 });
       } catch (err) {
         console.warn('KV cache put failed:', err);
       }
     }
   }
 
-  // 3. Count scan asynchronously via ctx.waitUntil (Non-blocking response)
+  if (!qrData) return null;
+
+  // Extract custom chips
+  let customChips: string[] = [];
+  if (qrData.chipsJson) {
+    try {
+      const parsed = JSON.parse(qrData.chipsJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        customChips = parsed;
+      }
+    } catch {}
+  }
+
+  return {
+    ...qrData,
+    chips: customChips
+  };
+}
+
+// Resolve short-code with KV cache & async scan counter
+const handleQrResolve = async (c: any) => {
+  const rawCode = c.req.param('code') || '';
+  const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true' || !!c.req.query('_t');
+
+  const resolved = await resolveQrPayload(c.env, rawCode, isPreview);
+  if (!resolved) {
+    return c.json({ error: 'QR Code not found or inactive' }, 404);
+  }
+
+  // Count scan asynchronously via ctx.waitUntil (Non-blocking response)
   const userAgent = c.req.header('user-agent') || '';
   const isMobile = /Android|iPhone|iPad|Mobile/i.test(userAgent);
   const deviceClass = isMobile ? 'mobile' : /iPad|Tablet/i.test(userAgent) ? 'tablet' : 'desktop';
@@ -440,15 +462,13 @@ const handleQrResolve = async (c: any) => {
   const scanTrackingPromise = (async () => {
     try {
       const db = getDb(c.env.DB);
-
-      // Upsert daily counter
-      const dailyId = `stat_${qrData.id}_${today}`;
+      const dailyId = `stat_${resolved.id}_${today}`;
       await db
         .insert(scanDailyStats)
         .values({
           id: dailyId,
-          qrId: qrData.id,
-          businessId: qrData.businessId,
+          qrId: resolved.id,
+          businessId: resolved.businessId,
           day: today,
           scanCount: 1,
           helpMeWriteCount: 0,
@@ -464,12 +484,11 @@ const handleQrResolve = async (c: any) => {
           }
         });
 
-      // Insert short-lived ephemeral scan
       const scanId = `sc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       await db.insert(scans).values({
         id: scanId,
-        qrId: qrData.id,
-        businessId: qrData.businessId,
+        qrId: resolved.id,
+        businessId: resolved.businessId,
         deviceClass,
         referrer: referrer.substring(0, 255),
         createdAt: now
@@ -482,7 +501,6 @@ const handleQrResolve = async (c: any) => {
   if (c.executionCtx?.waitUntil) {
     c.executionCtx.waitUntil(scanTrackingPromise);
   } else {
-    // Local / test fallback
     scanTrackingPromise.catch(() => {});
   }
 
@@ -499,22 +517,11 @@ const handleQrResolve = async (c: any) => {
         mimeType: mediaAssets.mimeType
       })
       .from(mediaAssets)
-      .where(and(eq(mediaAssets.businessId, qrData.businessId), eq(mediaAssets.isRecommended, 1)))
+      .where(and(eq(mediaAssets.businessId, resolved.businessId), eq(mediaAssets.isRecommended, 1)))
       .orderBy(desc(mediaAssets.createdAt))
       .limit(6);
   } catch (err) {
     console.warn('Could not fetch media for business:', err);
-  }
-
-  // Fetch custom chips configured by shopkeeper
-  let customChips: string[] = [];
-  if (qrData.chipsJson) {
-    try {
-      const parsed = JSON.parse(qrData.chipsJson);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        customChips = parsed;
-      }
-    } catch {}
   }
 
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
@@ -525,8 +532,7 @@ const handleQrResolve = async (c: any) => {
   return c.json({
     success: true,
     data: {
-      ...qrData,
-      chips: customChips,
+      ...resolved,
       media: mediaList
     }
   });

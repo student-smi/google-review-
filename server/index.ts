@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { publicRoutes, type Env } from './routes/public';
+import { publicRoutes, resolveQrPayload, type Env } from './routes/public';
 import { businessRoutes } from './routes/businesses';
 import { qrRoutes } from './routes/qr';
 import { analyticsRoutes } from './routes/analytics';
@@ -58,6 +58,46 @@ app.get('/api/health', (c) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// High-Speed Customer Standee Entry: Preload keywords directly into HTML (Zero-latency render)
+const handleCustomerPageServe = async (c: any) => {
+  const code = c.req.param('code');
+  if (c.env.ASSETS) {
+    const url = new URL(c.req.url);
+    url.pathname = '/';
+    let htmlRes = await c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw));
+    if (htmlRes.status >= 300 && htmlRes.status < 400 && htmlRes.headers.get('Location')) {
+      const loc = htmlRes.headers.get('Location')!;
+      htmlRes = await c.env.ASSETS.fetch(new Request(new URL(loc, c.req.url).toString(), c.req.raw));
+    }
+
+    try {
+      const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true' || !!c.req.query('_t');
+      const payload = await resolveQrPayload(c.env, code, isPreview);
+      if (payload) {
+        let html = await htmlRes.text();
+        if (html && html.includes('</head>')) {
+          const safeJson = JSON.stringify({ success: true, data: payload }).replace(/</g, '\\u003c');
+          const injection = `<script>window.__PRELOADED_QR_DATA__=${safeJson};</script>`;
+          html = html.replace('</head>', `${injection}</head>`);
+          return c.html(html, 200, {
+            'Content-Type': 'text/html; charset=UTF-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Customer page HTML pre-injection warning:', e);
+    }
+    return htmlRes;
+  }
+  return c.text('Not Found', 404);
+};
+
+app.get('/r/:code', handleCustomerPageServe);
+app.get('/r/:code/', handleCustomerPageServe);
 
 // Fallback: Serve static assets & SPA routes via Workers ASSETS binding
 app.all('*', async (c) => {

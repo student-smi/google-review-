@@ -41,7 +41,16 @@ export function CustomerFlowPage() {
   // Wizard Step: 1: Express visit / Chips, 2: 3 Review Options Selection, 3: Success Handoff
   const [step, setStep] = useState(1);
 
-  // Business metadata fetched via /api/public/r/:code
+  // Read preloaded data injected directly in HTML by Cloudflare Worker for frame-0 zero latency render
+  const initialPreload = useRef(
+    typeof window !== 'undefined' && (window as any).__PRELOADED_QR_DATA__?.data
+      ? (window as any).__PRELOADED_QR_DATA__.data
+      : null
+  ).current;
+
+  const [isLoading, setIsLoading] = useState(!initialPreload);
+
+  // Business metadata fetched via /api/public/r/:code or preloaded from SSR
   const [bizData, setBizData] = useState<{
     businessId?: string;
     businessName: string;
@@ -53,16 +62,57 @@ export function CustomerFlowPage() {
     address?: string | null;
     city?: string | null;
     googlePlaceId?: string | null;
-  }>({
-    businessName: '',
-    googleReviewUrl: '',
-    brandColor: '#4338CA',
-    brandColorSecondary: '#D97706',
-    label: ''
+  }>(() => {
+    if (initialPreload) {
+      return {
+        businessId: initialPreload.businessId,
+        businessName: initialPreload.businessName || 'Business Review',
+        googleReviewUrl: initialPreload.googleReviewUrl || '',
+        brandColor: initialPreload.brandColor || '#4338CA',
+        brandColorSecondary: initialPreload.brandColorSecondary || '#D97706',
+        label: initialPreload.label || '',
+        category: initialPreload.category,
+        address: initialPreload.address,
+        city: initialPreload.city,
+        googlePlaceId: initialPreload.googlePlaceId
+      };
+    }
+    return {
+      businessName: '',
+      googleReviewUrl: '',
+      brandColor: '#4338CA',
+      brandColorSecondary: '#D97706',
+      label: ''
+    };
+  });
+
+  // Dynamic chips catalog: Shopkeeper custom chips ONLY - ZERO default/dummy chips
+  const [customChips, setCustomChips] = useState<string[]>(() => {
+    if (initialPreload) {
+      if (Array.isArray(initialPreload.chips) && initialPreload.chips.length > 0) {
+        return initialPreload.chips;
+      }
+      if (initialPreload.chipsJson) {
+        try {
+          const parsed = typeof initialPreload.chipsJson === 'string' ? JSON.parse(initialPreload.chipsJson) : initialPreload.chipsJson;
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return [];
   });
 
   // Selected chips & free text
-  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [selectedChips, setSelectedChips] = useState<string[]>(() => {
+    if (initialPreload) {
+      const chips = Array.isArray(initialPreload.chips) && initialPreload.chips.length > 0 ? initialPreload.chips : [];
+      if (chips.length > 0) {
+        return [chips[0], chips[1] || chips[0]];
+      }
+    }
+    return [];
+  });
+
   const [customerName, setCustomerName] = useState('');
   const [freeText, setFreeText] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -81,7 +131,14 @@ export function CustomerFlowPage() {
   const [copiedToast, setCopiedToast] = useState<{ text: string } | null>(null);
 
   useEffect(() => {
+    // If data was already injected into HTML, skip unnecessary fetch waterfall
+    if (initialPreload && initialPreload.chips?.length > 0) {
+      setIsLoading(false);
+      return;
+    }
+
     if (code) {
+      setIsLoading(true);
       const cleanCode = (code || '').trim().replace(/\/+$/, '');
       const search = window.location.search || '';
       const sep = search ? '&' : '?';
@@ -149,9 +206,10 @@ export function CustomerFlowPage() {
             } catch {}
           }
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
     }
-  }, [code]);
+  }, [code, initialPreload]);
 
   // Sync language with i18n
   useEffect(() => {
@@ -160,8 +218,6 @@ export function CustomerFlowPage() {
     }
   }, [draftLanguage, i18n]);
 
-  // Dynamic chips catalog: Shopkeeper custom chips ONLY - ZERO default/dummy chips
-  const [customChips, setCustomChips] = useState<string[]>([]);
   const chipsCatalog = customChips;
 
   const toggleChip = (chip: string) => {
@@ -454,7 +510,7 @@ export function CustomerFlowPage() {
             </div>
 
             {/* Chips Grid */}
-            {chipsCatalog.length > 0 && (
+            {chipsCatalog.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {chipsCatalog.map((chip) => {
                   const isSelected = selectedChips.includes(chip);
@@ -475,7 +531,16 @@ export function CustomerFlowPage() {
                   );
                 })}
               </div>
-            )}
+            ) : isLoading ? (
+              <div className="flex flex-wrap gap-2 animate-pulse" aria-label="Loading keywords...">
+                <div className="h-10 w-24 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-10 w-32 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-10 w-20 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-10 w-28 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-10 w-36 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                <div className="h-10 w-24 rounded-xl bg-slate-200 dark:bg-slate-800" />
+              </div>
+            ) : null}
 
             {/* Optional Free-Text Input & Voice */}
             <div className="space-y-2 pt-2">
