@@ -19,15 +19,16 @@ export interface Env {
 export const publicRoutes = new Hono<{ Bindings: Env }>();
 
 // Resolve short-code with KV cache & async scan counter
-publicRoutes.get('/r/:code', async (c) => {
-  const code = c.req.param('code');
+const handleQrResolve = async (c: any) => {
+  const rawCode = c.req.param('code') || '';
+  const code = rawCode.trim().replace(/\/+$/, '');
   if (!code) {
     return c.json({ error: 'Code is required' }, 400);
   }
 
   const cleanCode = code.toLowerCase().trim();
   const cleanParam = cleanCode.replace(/^qr_/, '');
-  const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true';
+  const isPreview = c.req.query('preview') === 'true' || c.req.query('refresh') === 'true' || !!c.req.query('_t');
   const kvKey = `qr:${cleanCode}`;
 
   let qrData: {
@@ -516,6 +517,11 @@ publicRoutes.get('/r/:code', async (c) => {
     } catch {}
   }
 
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  c.header('Pragma', 'no-cache');
+  c.header('Expires', '0');
+  c.header('Surrogate-Control', 'no-store');
+
   return c.json({
     success: true,
     data: {
@@ -524,7 +530,10 @@ publicRoutes.get('/r/:code', async (c) => {
       media: mediaList
     }
   });
-});
+};
+
+publicRoutes.get('/r/:code', handleQrResolve);
+publicRoutes.get('/r/:code/', handleQrResolve);
 
 // Endpoint to track funnel progression: "help_me_write" or "google_click"
 publicRoutes.post('/r/:code/event', async (c) => {

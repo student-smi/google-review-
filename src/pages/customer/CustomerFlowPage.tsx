@@ -62,7 +62,7 @@ export function CustomerFlowPage() {
   });
 
   // Selected chips & free text
-  const [selectedChips, setSelectedChips] = useState<string[]>(['Prompt service', 'Clean & hygienic']);
+  const [selectedChips, setSelectedChips] = useState<string[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [freeText, setFreeText] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -82,8 +82,12 @@ export function CustomerFlowPage() {
 
   useEffect(() => {
     if (code) {
-      const search = window.location.search;
-      fetch(`/api/public/r/${code}${search}`)
+      const cleanCode = (code || '').trim().replace(/\/+$/, '');
+      const search = window.location.search || '';
+      const sep = search ? '&' : '?';
+      const fetchUrl = `/api/public/r/${encodeURIComponent(cleanCode)}${search}${sep}_t=${Date.now()}`;
+
+      fetch(fetchUrl, { cache: 'no-store' })
         .then((res) => (res.ok ? (res.json() as Promise<any>) : null))
         .then((payload) => {
           if (payload?.data) {
