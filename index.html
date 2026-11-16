@@ -34,6 +34,92 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Schema.org JSON-LD Structured Data for Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://loctimize.in/#organization",
+          "name": "Loctimize",
+          "url": "https://loctimize.in/",
+          "logo": "https://loctimize.in/loctimize-logo-header.png",
+          "description": "Smart NFC & QR Google Review Standees and Local SEO Software for businesses in India.",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Ahmedabad",
+            "addressRegion": "Gujarat",
+            "addressCountry": "IN"
+          }
+        },
+        {
+          "@type": "Product",
+          "@id": "https://loctimize.in/#product-nfc-standee",
+          "name": "Loctimize Smart NFC & QR Google Review Standee",
+          "image": "https://loctimize.in/landing/pricing-nfc-qr-smart.jpg",
+          "description": "Contactless NFC Tap & QR Scan Google Review Standee for shop counters, restaurants, salons, and clinics in India. Helps customers post genuine 5-star Google reviews in 10 seconds.",
+          "brand": {
+            "@type": "Brand",
+            "name": "Loctimize"
+          },
+          "offers": {
+            "@type": "AggregateOffer",
+            "priceCurrency": "INR",
+            "lowPrice": "499",
+            "highPrice": "1499",
+            "offerCount": "3",
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "QR Review Standee",
+                "price": "499",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock",
+                "url": "https://loctimize.in/#pricing"
+              },
+              {
+                "@type": "Offer",
+                "name": "NFC + QR Smart Review Standee",
+                "price": "999",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock",
+                "url": "https://loctimize.in/#pricing"
+              },
+              {
+                "@type": "Offer",
+                "name": "Premium Branded NFC Review Standee",
+                "price": "1499",
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock",
+                "url": "https://loctimize.in/#pricing"
+              }
+            ]
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "reviewCount": "1240",
+            "bestRating": "5",
+            "worstRating": "1"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://loctimize.in/#software",
+          "name": "Loctimize Local SEO & Google Review Assistant",
+          "operatingSystem": "Web, Android, iOS",
+          "applicationCategory": "BusinessApplication",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body class="h-full bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
     <div id="root" class="h-full"></div>

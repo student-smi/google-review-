@@ -2069,6 +2069,38 @@ export function LandingPage() {
             </div>
           </div>
 
+          {/* SEO Popular Searches & Keyword Indexing Strip */}
+          <div className="pt-8 pb-4 border-t border-slate-800/80 text-[11px] text-slate-400 space-y-2">
+            <div className="font-semibold text-slate-300 text-xs flex items-center gap-2">
+              <span>Popular Searches for Google Review Standees in India:</span>
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-slate-400/90 leading-relaxed">
+              <span>Google Review Standee India (₹499)</span>
+              <span>·</span>
+              <span>NFC Google Review Standee (₹999)</span>
+              <span>·</span>
+              <span>Premium Branded NFC Standee (₹1,499)</span>
+              <span>·</span>
+              <span>Smart Review Standee for Billing Counter</span>
+              <span>·</span>
+              <span>Google Review QR Standee Ahmedabad</span>
+              <span>·</span>
+              <span>Contactless Tap to Review NFC Card</span>
+              <span>·</span>
+              <span>Buy Google Review Standee Online India</span>
+              <span>·</span>
+              <span>Google Review Standee for Restaurants & Cafes</span>
+              <span>·</span>
+              <span>Google Review Standee for Salons & Clinics</span>
+              <span>·</span>
+              <span>Custom Branded Acrylic Review Standee</span>
+              <span>·</span>
+              <span>Google Business Profile SEO Booster</span>
+              <span>·</span>
+              <span>NFC Review Card Manufacturer Gujarat</span>
+            </div>
+          </div>
+
           <div className="pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center md:text-left">
             <div>© {new Date().getFullYear()} Loctimize Technologies. All rights reserved.</div>
             <div className="flex flex-wrap items-center justify-center md:justify-end gap-x-5 gap-y-2 text-xs">
