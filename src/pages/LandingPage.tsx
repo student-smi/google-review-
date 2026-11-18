@@ -2004,8 +2004,6 @@ export function LandingPage() {
             <div>
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3">Features & Solutions</h4>
               <ul className="flex flex-col gap-2 text-xs text-slate-400">
-                <li><a href="#features" className="hover:text-white transition">AI Review Writing Assistant</a></li>
-                <li><a href="#ai-replies" className="hover:text-white transition">1-Click AI Reply Copilot</a></li>
                 <li><a href="#google-posts" className="hover:text-white transition">Google Posts Studio (New)</a></li>
                 <li><a href="#features" className="hover:text-white transition">Multi-Branch Keyword Manager</a></li>
                 <li><a href="#businesses" className="hover:text-white transition">Local Maps Rank Booster</a></li>
