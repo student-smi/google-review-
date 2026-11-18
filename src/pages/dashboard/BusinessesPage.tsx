@@ -98,6 +98,7 @@ export function BusinessesPage() {
   const [googlePlaceId, setGooglePlaceId] = useState<string | null>(null);
   const [verifiedPlace, setVerifiedPlace] = useState<GooglePlaceDetails | null>(null);
   const [brandColor, setBrandColor] = useState('#2563EB');
+  const [logoUrl, setLogoUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,6 +136,7 @@ export function BusinessesPage() {
     setGooglePlaceId(null);
     setVerifiedPlace(null);
     setBrandColor('#2563EB');
+    setLogoUrl('');
     setError(null);
     setIsModalOpen(true);
   };
@@ -165,6 +167,7 @@ export function BusinessesPage() {
     setGooglePlaceId(biz.googlePlaceId || null);
     setVerifiedPlace(null);
     setBrandColor(biz.brandColor || '#2563EB');
+    setLogoUrl(biz.logoUrl || '');
     setError(null);
     setIsModalOpen(true);
   };
@@ -208,7 +211,8 @@ export function BusinessesPage() {
       googlePlaceId: googlePlaceId || undefined,
       googleReviewUrl: googleReviewUrl.trim(),
       brandColor,
-      brandColorSecondary: '#F59E0B'
+      brandColorSecondary: '#F59E0B',
+      logoUrl: logoUrl.trim() || undefined
     };
 
     try {
@@ -631,16 +635,22 @@ export function BusinessesPage() {
                 {/* Header: Brand Icon, Name, Category & Status Badge */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`h-11 w-11 rounded-2xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 ${
-                        isMainBranch
-                          ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white ring-2 ring-amber-400/40'
-                          : 'text-white'
-                      }`}
-                      style={{ backgroundColor: !isMainBranch ? biz.brandColor || '#2563EB' : undefined }}
-                    >
-                      {isMainBranch ? <Crown className="h-5 w-5" /> : <Store className="h-5 w-5" />}
-                    </div>
+                    {biz.logoUrl ? (
+                      <div className="h-11 w-11 rounded-2xl overflow-hidden bg-white border border-slate-200/90 shadow-sm flex items-center justify-center p-1 shrink-0">
+                        <img src={biz.logoUrl} alt={biz.name} className="h-full w-full object-contain rounded-xl" />
+                      </div>
+                    ) : (
+                      <div
+                        className={`h-11 w-11 rounded-2xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 ${
+                          isMainBranch
+                            ? 'bg-linear-to-br from-amber-500 to-amber-600 text-white ring-2 ring-amber-400/40'
+                            : 'text-white'
+                        }`}
+                        style={{ backgroundColor: !isMainBranch ? biz.brandColor || '#2563EB' : undefined }}
+                      >
+                        {isMainBranch ? <Crown className="h-5 w-5" /> : <Store className="h-5 w-5" />}
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-base text-slate-900 tracking-tight">
@@ -983,6 +993,61 @@ export function BusinessesPage() {
                       <option value="inactive">🟡 Inactive (Paused)</option>
                       <option value="connection_error">🔴 Connection Error (Attention Needed)</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Company / Business Logo */}
+                <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-800">Company / Business Logo</Label>
+                    <span className="text-[10px] text-slate-500 font-medium">Shows on Customer Review page & Standees</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {logoUrl ? (
+                      <div className="h-12 w-12 rounded-xl border border-slate-300 bg-white p-1 flex items-center justify-center shrink-0 shadow-xs relative group">
+                        <img src={logoUrl} alt="Logo Preview" className="h-full w-full object-contain rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl('')}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-600 cursor-pointer"
+                          title="Remove Logo"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-[10px] shrink-0 font-medium">
+                        No Logo
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1.5">
+                      <Input
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        placeholder="Image URL or upload from device"
+                        className="text-xs h-8 font-mono bg-white"
+                      />
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold cursor-pointer border border-indigo-200 transition-colors">
+                        <span>📁 Choose Logo File (PNG/JPG)</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                if (ev.target?.result) {
+                                  setLogoUrl(ev.target.result as string);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
 

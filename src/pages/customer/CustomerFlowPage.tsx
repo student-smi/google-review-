@@ -41,10 +41,8 @@ export function CustomerFlowSkeleton() {
       <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            {/* Store Icon Avatar */}
-            <div className="h-9 w-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-400 shrink-0">
-              <Store className="h-4 w-4 opacity-50" />
-            </div>
+            {/* Store / Logo Avatar Skeleton */}
+            <div className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0" />
             <div className="space-y-1.5">
               {/* Business Name */}
               <div className="h-4 w-36 rounded-md bg-slate-300 dark:bg-slate-700 animate-pulse" />
@@ -151,6 +149,7 @@ export function CustomerFlowPage() {
     address?: string | null;
     city?: string | null;
     googlePlaceId?: string | null;
+    logoUrl?: string | null;
   }>(() => {
     if (initialPreload) {
       return {
@@ -163,7 +162,8 @@ export function CustomerFlowPage() {
         category: initialPreload.category,
         address: initialPreload.address,
         city: initialPreload.city,
-        googlePlaceId: initialPreload.googlePlaceId
+        googlePlaceId: initialPreload.googlePlaceId,
+        logoUrl: initialPreload.logoUrl || null
       };
     }
     return {
@@ -171,7 +171,8 @@ export function CustomerFlowPage() {
       googleReviewUrl: '',
       brandColor: '#4338CA',
       brandColorSecondary: '#D97706',
-      label: ''
+      label: '',
+      logoUrl: null
     };
   });
 
@@ -247,7 +248,8 @@ export function CustomerFlowPage() {
               category: payload.data.category,
               address: payload.data.address,
               city: payload.data.city,
-              googlePlaceId: payload.data.googlePlaceId
+              googlePlaceId: payload.data.googlePlaceId,
+              logoUrl: payload.data.logoUrl || null
             });
 
             let loadedChips: string[] = [];
@@ -279,7 +281,8 @@ export function CustomerFlowPage() {
                     googleReviewUrl: b.googleReviewUrl,
                     brandColor: b.brandColor || '#4338CA',
                     brandColorSecondary: b.brandColorSecondary || '#D97706',
-                    label: 'Main Billing Counter'
+                    label: 'Main Billing Counter',
+                    logoUrl: b.logoUrl || null
                   });
                   if (b.chipsJson) {
                     try {
@@ -525,17 +528,35 @@ export function CustomerFlowPage() {
       <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs"
-              style={{ backgroundColor: bizData.brandColor }}
-            >
-              <Store className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm tracking-tight leading-none text-slate-900 dark:text-slate-100">
+            {bizData.logoUrl ? (
+              <div className="h-10 w-10 rounded-xl overflow-hidden bg-white border border-slate-200/90 dark:border-slate-700 shadow-xs flex items-center justify-center p-1 shrink-0">
+                <img
+                  src={bizData.logoUrl}
+                  alt={bizData.businessName || 'Company Logo'}
+                  className="h-full w-full object-contain rounded-lg"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    if (target.parentElement) {
+                      target.parentElement.style.backgroundColor = bizData.brandColor || '#4338CA';
+                      target.parentElement.innerHTML = `<span class="text-white font-bold text-sm">${(bizData.businessName || 'B').charAt(0).toUpperCase()}</span>`;
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0"
+                style={{ backgroundColor: bizData.brandColor || '#4338CA' }}
+              >
+                <span>{(bizData.businessName || 'B').charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <h2 className="font-bold text-sm tracking-tight leading-snug text-slate-900 dark:text-slate-100 truncate max-w-[190px] sm:max-w-[230px]">
                 {bizData.businessName}
               </h2>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
                 Google Review Assistant
               </span>
             </div>
